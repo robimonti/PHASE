@@ -3,6 +3,8 @@
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironemntal monitoring) is a MATLAB-based software suite for the automatization of the InSAR PSI processing. <br>
 It is based on the well-known and widely used *snap2stamps* and *StaMPS* software, while coming with a set of new features and improvements.
 
+![Logo](https://github.com/user-attachments/assets/1ced30e1-e8c5-4186-bc7f-4c6dec5ca12d)
+
 ## SAR Satellites compatibility
 - Sentinel-1 (from European Space Agency)
 - COSMO-SkyMed (from Agenzia Spaziale Italiana)
@@ -44,7 +46,7 @@ After installing SNAP on your computer, you are suggested to review the paramete
    pip install shlex
    pip install time
    ```
-3. **Install xterm (Linux Users):** <br>
+3. **Install xterm (only Linux Users):** <br>
    Install xterm by running `sudo apt-get install xterm` in the terminal.
 
 4. **Install StaMPS:** <br>
@@ -66,12 +68,12 @@ Download images from the Alaska SAR satellite facility for Sentinel-1 or manuall
 2.	**Master Image Processing:** <br>
 Split and apply orbit correction. All the configurable parameters can be set through the GUI.
 3.	**Slaves Pre-Processing:** <br>
-Steps include slaves preparation, splitting and orbit correction, coregistration and interferogram formation, StaMPS export, average scene intensity computation, and LIA and coherence images computation. All the configurable parameters can be set through the GUI.
+Steps include slaves preparation, splitting and orbit correction, coregistration and interferogram formation, StaMPS export, average scene intensity computation, and local incidence angle and coherence images computation. All the configurable parameters can be set through the GUI.
 4.	**StaMPS Processing:** <br>
 Data preparation, parameter definition, and execution of StaMPS PS analysis. Displacement time series export in Excel format.
 
 ## Possible Errors and Solutions
-The procedure has been tested with SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.04, and MATLAB 2023b. <br>
+The procedure has been tested on SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.04, and MATLAB 2023b. <br>
 > [!TIP]
 > Refer to the manual for solutions to common errors encountered during the StaMPS processing.
 
@@ -79,9 +81,12 @@ The procedure has been tested with SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20
 - add *macOS* compatibility to the preprocessing application.
 
 ## Acknowledgments
-Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps<sup>1</sup> tool, and Prof. Andy Hooper for the StaMPS<sup>2</sup> development.
+Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps[^1] tool, and Prof. Andy Hooper for the StaMPS[^2] development. <br>
 
-1. Foumelis, M., Delgado Blasco, J. M., Desnos, Y. L., Engdahl, M., Fernández, D., Veci, L. Lu, J. and Wong,
+When using this software, please refer to:<br>
+Monti R., Rossi L., ...
+
+[^1]: Foumelis, M., Delgado Blasco, J. M., Desnos, Y. L., Engdahl, M., Fernández, D., Veci, L. Lu, J. and Wong,
 C. “SNAP - StaMPS Integrated processing for Sentinel-1 Persistent Scatterer Interferometry”. In
 Geoscience and Remote Sensing Symposium (IGARSS), 2018 IEEE International, IEEE. <br>
-2. Hooper, A., A multi-temporal InSAR method incorporating both persistent scatterer and small baseline approaches, Geophys. Res. Lett., 35, L16,302, doi:10.1029/2008GL03465, 2008.
+[^2]: Hooper, A., A multi-temporal InSAR method incorporating both persistent scatterer and small baseline approaches, Geophys. Res. Lett., 35, L16,302, doi:10.1029/2008GL03465, 2008.
