@@ -1,0 +1,136 @@
+<graph id="Graph">
+  <version>1.0</version>
+  <node id="Read">
+    <operator>Read</operator>
+    <sources/>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <useAdvancedOptions>true</useAdvancedOptions>
+      <file>SLAVE</file>
+      <formatName>BEAM-DIMAP</formatName>
+      <copyMetadata>true</copyMetadata>
+      <bandNames>COHBAND</bandNames>
+      <pixelRegion>0,0,951,314</pixelRegion>
+      <maskNames/>
+    </parameters>
+  </node>
+  <node id="Terrain-Correction Coherence">
+    <operator>Terrain-Correction</operator>
+    <sources>
+      <sourceProduct refid="Read"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands>COHBAND</sourceBands>
+      <demName>DEMNAME</demName>
+      <externalDEMFile>DEMFILE</externalDEMFile>
+      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMApplyEGM>false</externalDEMApplyEGM>
+      <demResamplingMethod>DEM_RESAMPLING</demResamplingMethod>
+      <imgResamplingMethod>DEM_RESAMPLING</imgResamplingMethod>
+      <pixelSpacingInMeter>13.95755</pixelSpacingInMeter>
+      <pixelSpacingInDegree>1.2538280493862425E-4</pixelSpacingInDegree>
+      <mapProjection>GEOGCS["WGS84(DD)", 
+			DATUM["WGS84", 
+				SPHEROID["WGS84", 6378137.0, 298.257223563]], 
+			PRIMEM["Greenwich", 0.0], 
+			UNIT["degree", 0.017453292519943295], 
+			AXIS["Geodetic longitude", EAST], 
+			AXIS["Geodetic latitude", NORTH]]</mapProjection>
+      <alignToStandardGrid>false</alignToStandardGrid>
+      <standardGridOriginX>0.0</standardGridOriginX>
+      <standardGridOriginY>0.0</standardGridOriginY>
+      <nodataValueAtSea>true</nodataValueAtSea>
+      <saveDEM>false</saveDEM>
+      <saveLatLon>false</saveLatLon>
+      <saveIncidenceAngleFromEllipsoid>false</saveIncidenceAngleFromEllipsoid>
+      <saveLocalIncidenceAngle>false</saveLocalIncidenceAngle>
+      <saveProjectedLocalIncidenceAngle>false</saveProjectedLocalIncidenceAngle>
+      <saveSelectedSourceBand>true</saveSelectedSourceBand>
+      <saveLayoverShadowMask>false</saveLayoverShadowMask>
+      <outputComplex>false</outputComplex>
+      <applyRadiometricNormalization>false</applyRadiometricNormalization>
+      <saveSigmaNought>false</saveSigmaNought>
+      <saveGammaNought>false</saveGammaNought>
+      <saveBetaNought>false</saveBetaNought>
+      <incidenceAngleForSigma0>Use projected local incidence angle from DEM</incidenceAngleForSigma0>
+      <incidenceAngleForGamma0>Use projected local incidence angle from DEM</incidenceAngleForGamma0>
+      <auxFile>Latest Auxiliary File</auxFile>
+      <externalAuxFile/>
+    </parameters>
+  </node>
+  <node id="Write1">
+    <operator>Write</operator>
+    <sources>
+      <sourceProduct refid="Terrain-Correction Coherence"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <file>OUTPUTCOHFOLDER/OUTPUTFILE_COH</file>
+      <formatName>GeoTIFF</formatName>
+    </parameters>
+  </node>
+  <node id="Terrain-Correction LIA">
+    <operator>Terrain-Correction</operator>
+    <sources>
+      <sourceProduct refid="Read"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands>COHBAND</sourceBands>
+      <demName>DEMNAME</demName>
+      <externalDEMFile>DEMFILE</externalDEMFile>
+      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMApplyEGM>false</externalDEMApplyEGM>
+      <demResamplingMethod>BILINEAR_INTERPOLATION</demResamplingMethod>
+      <imgResamplingMethod>BILINEAR_INTERPOLATION</imgResamplingMethod>
+      <pixelSpacingInMeter>13.95755</pixelSpacingInMeter>
+      <pixelSpacingInDegree>1.2538280493862425E-4</pixelSpacingInDegree>
+      <mapProjection>GEOGCS["WGS84(DD)", 
+			DATUM["WGS84", 
+				SPHEROID["WGS84", 6378137.0, 298.257223563]], 
+			PRIMEM["Greenwich", 0.0], 
+			UNIT["degree", 0.017453292519943295], 
+			AXIS["Geodetic longitude", EAST], 
+			AXIS["Geodetic latitude", NORTH]]</mapProjection>
+      <alignToStandardGrid>false</alignToStandardGrid>
+      <standardGridOriginX>0.0</standardGridOriginX>
+      <standardGridOriginY>0.0</standardGridOriginY>
+      <nodataValueAtSea>true</nodataValueAtSea>
+      <saveDEM>false</saveDEM>
+      <saveLatLon>false</saveLatLon>
+      <saveIncidenceAngleFromEllipsoid>false</saveIncidenceAngleFromEllipsoid>
+      <saveLocalIncidenceAngle>true</saveLocalIncidenceAngle>
+      <saveProjectedLocalIncidenceAngle>false</saveProjectedLocalIncidenceAngle>
+      <saveSelectedSourceBand>true</saveSelectedSourceBand>
+      <saveLayoverShadowMask>false</saveLayoverShadowMask>
+      <outputComplex>false</outputComplex>
+      <applyRadiometricNormalization>false</applyRadiometricNormalization>
+      <saveSigmaNought>false</saveSigmaNought>
+      <saveGammaNought>false</saveGammaNought>
+      <saveBetaNought>false</saveBetaNought>
+      <incidenceAngleForSigma0>Use projected local incidence angle from DEM</incidenceAngleForSigma0>
+      <incidenceAngleForGamma0>Use projected local incidence angle from DEM</incidenceAngleForGamma0>
+      <auxFile>Latest Auxiliary File</auxFile>
+      <externalAuxFile/>
+    </parameters>
+  </node>
+  <node id="Write2">
+    <operator>Write</operator>
+    <sources>
+      <sourceProduct refid="Terrain-Correction LIA"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <file>OUTPUTLIAFOLDER/OUTPUTFILE_LIA</file>
+      <formatName>GeoTIFF</formatName>
+    </parameters>
+  </node>
+  <applicationData id="Presentation">
+    <Description/>
+    <node id="Read">
+            <displayPosition x="37.0" y="134.0"/>
+    </node>
+    <node id="Terrain-Correction">
+      <displayPosition x="209.0" y="143.0"/>
+    </node>
+    <node id="Write">
+            <displayPosition x="455.0" y="135.0"/>
+    </node>
+  </applicationData>
+</graph>
