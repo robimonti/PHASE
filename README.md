@@ -1,6 +1,6 @@
-# PHASE (Persistent scatterer Highly Automated Suite for Environemntal monitoring)
+# PHASE (Persistent scatterer Highly Automated Suite for Environmental monitoring)
 
-**PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironemntal monitoring) is a MATLAB-based software suite for the automatization of the InSAR PSI processing. <br>
+**PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for the automatization of the InSAR PSI processing. <br>
 It is based on the well-known and widely used *snap2stamps* and *StaMPS* software, while coming with a set of new features and improvements.
 
 ![Logo](https://github.com/user-attachments/assets/1ced30e1-e8c5-4186-bc7f-4c6dec5ca12d)
