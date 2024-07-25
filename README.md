@@ -57,7 +57,7 @@ After installing SNAP on your computer, you are suggested to review the paramete
 
 6. **PHASE suite**
    - Download the *PHASE_MANUAL* and the *PHASE_python2* or *PHASE_python3* folder based on your python version.
-   - Move the downloaded folder in your project folder, anywhere on your computer.
+   - Move or copy the downloaded folder (*PHASE_pythonX*) in your project folder, anywhere on your computer.
    - Exectute the *PS_InSAR_Preprocessing.mlapp* MATLAB application.
    - Tune all the configurable parameters across all the available tabs.
    - Once the preprocessing is complete, execute the *StaMPS_Automate.mlapp* MATLAB application (in *Linux* it will automatically open upon completion).
