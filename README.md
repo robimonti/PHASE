@@ -91,6 +91,7 @@ The procedure has been tested on SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.0
 
 ## Updates
 - *September 2024*: added *macOS* compatibility to the preprocessing application.
+![GitHubUpdates](https://github.com/user-attachments/assets/5f353df6-6136-4d9d-a549-723ee0b9cb48)
 
 ## Planned updates
 - improve the errors handling, especially for the master processing.
