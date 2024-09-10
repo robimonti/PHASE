@@ -91,10 +91,10 @@ The procedure has been tested on SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.0
 
 ## Updates
 - *September 2024*: added *macOS* compatibility to the preprocessing application.
-![GitHubUpdates](https://github.com/user-attachments/assets/5f353df6-6136-4d9d-a549-723ee0b9cb48)
+- *September 2024*: improved master error handling.
+![GitHubUpdates](https://github.com/user-attachments/assets/7324e1e9-a191-4dff-bff8-03a27e8040e9)
 
 ## Planned updates
-- improve the errors handling, especially for the master processing.
 - add the support to SAOCOM data processing.
 - next major release will introduce the spatio-temporal time series processing with deterministic and stochastic methods. The same OS compatibility will be kept also for this new module.
 
