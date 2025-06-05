@@ -17,7 +17,7 @@ It is based on the well-known and widely used *snap2stamps* and *StaMPS* softwar
 ## Required OS
 - *Linux*: it is mandatory as StaMPS only works in this environment. The entire processing can be executed from start to end in it.
 - *Windows*: only the preprocessing part can be executed in it.
-- *macOS*: only the preprocessing can be executed in it.
+- *macOS*: only the preprocessing part can be executed in it.
 
 ## Installation and Setup
 
