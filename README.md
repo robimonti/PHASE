@@ -102,7 +102,7 @@ The procedure has been tested on SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.0
 Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps[^1] tool, and Prof. Andy Hooper for the StaMPS[^2] development. <br>
 
 When using this software, please refer to:<br>
-Monti R., Rossi L., PHASE: A MATLAB-Based Software for the DInSAR PS Processing, Geodesy and Cartography, 2024.
+Monti, R., & Rossi, L. (2025). PHASE: a Matlab-based software for the DInSAR PS processing. Geodesy and Cartography, 51(2), 88–99. https://doi.org/10.3846/gac.2025.21995
 
 [^1]: Foumelis, M., Delgado Blasco, J. M., Desnos, Y. L., Engdahl, M., Fernández, D., Veci, L. Lu, J. and Wong,
 C. “SNAP - StaMPS Integrated processing for Sentinel-1 Persistent Scatterer Interferometry”. In
