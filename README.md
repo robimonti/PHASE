@@ -3,8 +3,6 @@
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for the automatization of the InSAR PSI processing. <br>
 It is based on the well-known and widely used *snap2stamps* and *StaMPS* software, while coming with a set of new features and improvements.
 
-![Logo](https://github.com/user-attachments/assets/5bf0b784-c5e6-4e6c-8df5-2da8808263d3)
-
 <img width="5394" height="2653" alt="PHASE_logo" src="https://github.com/user-attachments/assets/a355586a-6af5-4e1c-a03d-cdeef95947b9" />
 
 ## SAR Satellites compatibility
