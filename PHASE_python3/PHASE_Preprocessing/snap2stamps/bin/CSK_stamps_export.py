@@ -10,7 +10,7 @@
 # Step 4 : StaMPS export
 
 # Added option for CACHE and CPU specification by user
-# Planned support for DEM selection and ORBIT type selection 
+# Planned support for DEM selection and ORBIT type selection
 
 
 import os
@@ -58,7 +58,7 @@ finally:
 coregfolder=PROJECT+'/coreg'
 ifgfolder=PROJECT+'/ifg'
 head, tail = os.path.split(MASTER)
-outputexportfolder=PROJECT+'/INSAR_'+tail[27:35]
+outputexportfolder=PROJECT+'/INSAR_'+tail[37:45]
 logfolder=PROJECT+'/logs'
 
 if not os.path.exists(outputexportfolder):
@@ -108,7 +108,7 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
         print(('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.'))
         out_file.write('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.\n')
         if process.returncode != 0 :
-            message='Error exporting '+str(tail)+'\n' 
+            message='Error exporting '+str(tail)+'\n'
             err_file.write(message)
         else:
             message='Stamps export of '+str(tail)+' successfully completed.\n'
@@ -118,4 +118,3 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
             out_file.write(bar_message)
 out_file.close()
 err_file.close()
-

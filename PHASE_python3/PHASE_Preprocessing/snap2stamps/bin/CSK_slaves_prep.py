@@ -9,7 +9,7 @@
 # Step 4 : StaMPS export
 
 # Added option for CACHE and CPU specification by user
-# Planned support for DEM selection and ORBIT type selection 
+# Planned support for DEM selection and ORBIT type selection
 
 
 import os
@@ -51,11 +51,11 @@ err_file = open(errorlog, 'a')
 
 directory=PROJECT+'/slaves'
 for filename in os.listdir(directory):
-    if filename.endswith(".h5") : 
+    if filename.endswith(".h5") :
         print((os.path.join(directory, filename)))
         head, tail = os.path.split(os.path.join(directory, filename))
-        print(tail[27:35])
-        subdirectory=directory+'/'+tail[27:35]
+        print(tail[37:45])
+        subdirectory=directory+'/'+tail[37:45]
         if not os.path.exists(subdirectory):
             os.makedirs(subdirectory)
         #### Moving files
@@ -65,4 +65,3 @@ for filename in os.listdir(directory):
         shutil.move(source,destination)
     else:
         continue
-

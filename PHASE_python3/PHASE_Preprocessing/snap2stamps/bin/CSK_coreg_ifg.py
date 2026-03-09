@@ -104,7 +104,7 @@ out_file.write(bar_message)
 message='## Coregistration and Interferogram computation started:\n'
 print(message)
 out_file.write(message)
-print(bar_message) 
+print(bar_message)
 out_file.write(bar_message)
 k=0
 for dimfile in glob.iglob(subsetfolder + '/*/*.dim'):
@@ -115,7 +115,7 @@ for dimfile in glob.iglob(subsetfolder + '/*/*.dim'):
     print(message)
     out_file.write(message)
     head , tailm = os.path.split(MASTER)
-    outputname=tailm[27:35]+'_'+tail[0:8]+'.dim'
+    outputname=tailm[37:45]+'_'+tail[0:8]+'.dim'
     with open(graphxml, 'r') as file :
        filedata = file.read()
     # Replace the target string
