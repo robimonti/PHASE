@@ -1,5 +1,7 @@
 # PHASE (Persistent scatterer Highly Automated Suite for Environmental monitoring)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18925341.svg)](https://doi.org/10.5281/zenodo.18925341)
+
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
 ![Logo](https://github.com/user-attachments/assets/5bf0b784-c5e6-4e6c-8df5-2da8808263d3)
