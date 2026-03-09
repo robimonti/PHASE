@@ -10,7 +10,7 @@
 # Step 4 : StaMPS export
 
 # Added option for CACHE and CPU specification by user
-# Planned support for DEM selection and ORBIT type selection 
+# Planned support for DEM selection and ORBIT type selection
 
 
 import os
@@ -105,7 +105,7 @@ for acdatefolder in sorted(os.listdir(masterfolder)):
     print files
     out_file.write(str(files)+'\n')
     head, tail = os.path.split(os.path.join(str(files)))
-    outputname=tail[0:56]+'_sub.dim'
+    outputname=tail[0:82]+'_sub.dim'
     graphxml=GRAPH+'/CSK_AOI_subset.xml'
     # Read in the file
     print 'FILE(s) : '+files[0]
@@ -132,7 +132,7 @@ for acdatefolder in sorted(os.listdir(masterfolder)):
     if process.returncode != 0 :
 	message='Error subsetting image '+str(files)
 	err_file.write(message)
-    else: 
+    else:
 	message='Subset image '+str(files)+' successfully completed.\n'
 	print message
 	out_file.write(message)
