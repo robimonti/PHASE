@@ -114,7 +114,6 @@ The procedure has been tested on SNAP 9.x, Python 2.7, Python 3.11, Ubuntu 20.04
 <img width="2100" height="1181" alt="GitHubUpdates" src="https://github.com/user-attachments/assets/376d8baf-72b6-42d1-a08c-9d50f764bb28" />
 
 ## Planned updates
-- Improve the covariance modeling.
 - Improve border constraints based on user selection.
 - Introduce the handling of jumps in the displacement models.
 - Introduce the possibility for a NRT processing.
