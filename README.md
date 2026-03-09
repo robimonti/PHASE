@@ -1,9 +1,8 @@
 # PHASE (Persistent scatterer Highly Automated Suite for Environmental monitoring)
 
-**PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for the automatization of the InSAR PSI processing. <br>
-It is based on the well-known and widely used *snap2stamps* and *StaMPS* software, while coming with a set of new features and improvements.
+**PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
-<img width="5394" height="2653" alt="PHASE_logo" src="https://github.com/user-attachments/assets/a355586a-6af5-4e1c-a03d-cdeef95947b9" />
+![Logo](https://github.com/user-attachments/assets/5bf0b784-c5e6-4e6c-8df5-2da8808263d3)
 
 ## SAR Satellites compatibility
 - Sentinel-1 (from European Space Agency)
@@ -13,11 +12,12 @@ It is based on the well-known and widely used *snap2stamps* and *StaMPS* softwar
 - SNAP
 - MATLAB
 - StaMPS
+- Python 3.x with 'openpyxl' (for geospatial module report generation)
 
 ## Required OS
-- *Linux*: it is mandatory as StaMPS only works in this environment. The entire processing can be executed from start to end in it.
-- *Windows*: only the preprocessing part can be executed in it.
-- *macOS*: only the preprocessing part can be executed in it.
+- *Linux*: mandatory for full processing, including StaMPS, enabling end-to-end execution.
+- *Windows*: supports preprocessing and geospatial analysis modules.
+- *macOS*: supports preprocessing and geospatial analysis modules.
 
 ## Installation and Setup
 
@@ -46,17 +46,10 @@ It is based on the well-known and widely used *snap2stamps* and *StaMPS* softwar
           - snap.jai.defaultTileSize = 512
 
 3. **Install Required Python Modules:** <br>
-   Install [Python](https://www.python.org/downloads/) 2.7 or 3.x on your machine. Ensure you have the necessary libraries; if not, install them with:
-   ```
-   pip install os
-   pip install sys
-   pip install pathlib
-   pip install shutil
-   pip install glob
-   pip install subprocess
-   pip install shlex
-   pip install time
-   ```
+   Install [Python](https://www.python.org/downloads/) 3.x on your machine (Note: Python 2.7 is deprecated, Python 3 is highly recommended). The PHASE suite utilizes standard built-in Python libraries (such as `os`, `sys`, and `shutil`), so you only need to install the external Excel library. Run the following command in your terminal:
+   ```bash
+   pip install openpyxl
+   
 4. **Install xterm (only Linux Users):** <br>
    Install xterm by running `sudo apt-get install xterm` in the terminal.
 
@@ -66,37 +59,65 @@ It is based on the well-known and widely used *snap2stamps* and *StaMPS* softwar
    git clone https://github.com/dbekaert/StaMPS/releases/tag/v4.1-beta
    ```
 
-6. **PHASE suite**
+6. **Install PHASE suite**
    - Download the *PHASE_MANUAL* and the *PHASE_python2* or *PHASE_python3* folder based on your python version.
    - Move or copy the downloaded folder (*PHASE_pythonX*) in your project folder, anywhere on your computer.
    - Exectute the *PS_InSAR_Preprocessing.mlapp* MATLAB application.
    - Tune all the configurable parameters across all the available tabs.
    - Once the preprocessing is complete, execute the *StaMPS_Automate.mlapp* MATLAB application (in *Linux* it will automatically open upon completion).
+   - For geospatial analysis, run *PHASE_model.mlapp* to process displacement time series.
 
 ### Processing Steps
 
+## Module 1: InSAR PSI Processing
+
 1.	**Automated SAR Images Download:** <br>
-Download images from the Alaska SAR satellite facility for Sentinel-1 or manually from the Italian Space Agency website for COSMO-SkyMed.
+Retrieve Sentinel-1 images from the Alaska SAR Facility or COSMO-SkyMed images manually from the Italian Space Agency.
 2.	**Master Image Processing:** <br>
-Split and apply orbit correction. All the configurable parameters can be set through the GUI.
+Perform splitting and orbit correction with configurable parameters via the GUI.
 3.	**Slaves Pre-Processing:** <br>
-Steps include slaves preparation, splitting and orbit correction, coregistration and interferogram formation, StaMPS export, average scene intensity computation, and local incidence angle and coherence images computation. All the configurable parameters can be set through the GUI.
+Includes preparation, splitting, orbit correction, coregistration, interferogram formation, StaMPS export, average scene intensity computation, and local incidence angle/coherence calculations, all configurable via the GUI.
 4.	**StaMPS Processing:** <br>
-Data preparation, parameter definition, and execution of StaMPS PS analysis. Displacement time series export in Excel format.
+Execute data preparation, parameter definition, and StaMPS PS analysis, exporting displacement time series in Excel format.
+
+## Module 2: Geospatial PSI Data Analysis
+
+The geospatial module enhances PHASE by providing advanced interpolation and modeling of PS displacement time series, tailored for Sentinel-1 data but compatible with any SAR data in the same table format. It offers flexible processing options for environmental and infrastructure monitoring, with user-configurable parameters for experts and automated settings for beginners. Key features include:
+
+- **Area of Interest (AOI) Definition**: Specify the AOI via shapefiles (preferred for arbitrary shapes) or bounding boxes, with automatic detection and transformation of geographic (WGS84) or projected (UTM) coordinates. PS outside the AOI are filtered to focus analysis.
+- **Geometry Options**: Supports 1D modeling for linear features (e.g., roads, railways) using centerline interpolation and 2D modeling for expansive areas (e.g., volcanoes, large infrastructures) using grid-based meshes, with user-defined resolutions.
+- **Temporal Modeling**: Independently interpolates each time series using cubic splines for outlier removal, trend, and periodic component modeling, followed by least-squares collocation for residuals. Optional nearest-neighbor interpolation extends results spatially for visualization.
+- **Deterministic Spatio-Temporal Modeling**: Creates a continuous displacement field using temporal cubic splines for data cleaning and multi-dimensional splines for spatial interpolation, with per-epoch GIF visualizations.
+- **Stochastic Spatio-Temporal Modeling**: Combines deterministic cubic spline-based cleaning with Least Squares Collocation for deformation modeling, incorporating covariance modeling for robust uncertainty estimates.
+- **Stability Analysis**: Evaluates PS stability via a thresholding procedure based on average velocity and cumulative displacement, assigning risk levels using standardized statistical criteria and exponential/linear risk scaling.
+
+The module generates a comprehensive Excel report across multiple sheets:
+
+- **General Sheet**: Summarizes project metadata (title, date, location, modeling approach), unwrapping parameters, PS statistics, and visualizations (logo, AOI map, PS plot).
+- **Raw Displacement Sheet**: Presents adjusted raw displacement time series with coordinates and a figure of average scene displacement with velocity annotation.
+- **Modeled Displacement Sheet**: Details modeled displacements with average velocity and a geoscatter plot of velocity across the AOI.
+- **Uncertainty Sheet**: Provides uncertainty estimates with a geoscatter plot of time-averaged uncertainty.
+- **Alerts Sheet**: Reports stability analysis with velocity, cumulative displacement, and global risk percentages.
+- **Interpolation Sheet (Optional)**: Includes extrapolated time series at user-specified coordinates with individual displacement plots.
+
+A shapefile and .mat file are generated in WGS84 (EPSG:4326) coordinates, including PS data, velocities, uncertainties, and risks for GIS compatibility.
 
 ## Possible Errors and Solutions
-The procedure has been tested on SNAP 10.x, Python 2.7, Python 3.11, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2023b. <br>
+The procedure has been tested on SNAP 9.x, Python 2.7, Python 3.11, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a. <br>
 > [!TIP]
 > Refer to the manual for solutions to common errors encountered during the StaMPS processing.
 
 ## Updates
-- *September 2024*: added *macOS* compatibility to the preprocessing application.
-- *September 2024*: improved master error handling.
-![GitHubUpdates](https://github.com/user-attachments/assets/7324e1e9-a191-4dff-bff8-03a27e8040e9)
+- *September 2024*: Added *macOS* compatibility to the preprocessing application.
+- *September 2024*: Improved master error handling.
+- *March 2026*: Introduced Module 2 for geospatial PSI data analysis with deterministic and stochastic modeling.
+<img width="2100" height="1181" alt="GitHubUpdates" src="https://github.com/user-attachments/assets/376d8baf-72b6-42d1-a08c-9d50f764bb28" />
 
 ## Planned updates
-- add the support to SAOCOM data processing.
-- next major release will introduce the spatio-temporal time series processing with deterministic and stochastic methods. The same OS compatibility will be kept also for this new module.
+- Improve the covariance modeling.
+- Improve border constraints based on user selection.
+- Introduce the handling of jumps in the displacement models.
+- Introduce the possibility for a NRT processing.
 
 ## Acknowledgments
 Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps[^1] tool, and Prof. Andy Hooper for the StaMPS[^2] development. <br>
