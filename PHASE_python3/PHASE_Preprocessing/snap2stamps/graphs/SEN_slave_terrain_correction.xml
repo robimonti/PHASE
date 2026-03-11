@@ -9,7 +9,7 @@
       <formatName>BEAM-DIMAP</formatName>
       <copyMetadata>true</copyMetadata>
       <bandNames>COHBAND</bandNames>
-      <pixelRegion>0,0,951,314</pixelRegion>
+      <pixelRegion/>
       <maskNames/>
     </parameters>
   </node>
