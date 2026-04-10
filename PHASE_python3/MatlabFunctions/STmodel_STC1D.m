@@ -740,10 +740,10 @@ while iter < 2
         % 3.7.1) Covariance in TIME
         if isnan(dtCov_STC1D)
             dtCov = mode(diff(t_relIN)); if dtCov==0, dtCov=1; end
-            max_lag_time = ceil((t_relIN(end)-t_relIN(1))/dtCov) + 1;
         else
             dtCov = dtCov_STC1D;
         end
+        max_lag_time = ceil((t_relIN(end)-t_relIN(1))/dtCov) + 1;
         
         num_ps = size(residuals_grid_full, 1);
         accum_T_cells = cell(num_ps, 1);
@@ -1012,7 +1012,7 @@ t_full = (t_relIN(1):step_t:t_relIN(end))'; % [n_t x 1]
 % Define spatial grid 
 s_full = s_full_SAR; 
 
-grid_t_full = repmat(t_full, length(s_full), 1);
+grid_t_full = repmat(t_full', length(s_full), 1);
 grid_s_full = repmat(s_full, 1, length(t_full)); 
 
 % Flatten to column vectors (time-major order)

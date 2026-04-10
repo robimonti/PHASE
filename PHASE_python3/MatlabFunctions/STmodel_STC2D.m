@@ -738,10 +738,10 @@ while iter < 2
         % 3.7.1) Covariance in TIME
         if isnan(dtCov_STC2D)
             dtCov = mode(diff(t_relIN)); if dtCov==0, dtCov=1; end
-            max_lag_time = ceil((t_relIN(end)-t_relIN(1))/dtCov) + 1;
         else
             dtCov = dtCov_STC2D;
         end
+        max_lag_time = ceil((t_relIN(end)-t_relIN(1))/dtCov) + 1;
         
         num_ps = size(residuals_grid_full, 1);
         accum_T_cells = cell(num_ps, 1);
