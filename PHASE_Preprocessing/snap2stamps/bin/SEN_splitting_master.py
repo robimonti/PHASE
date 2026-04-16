@@ -79,12 +79,17 @@ out_file.write(bar_message)
 
 k = 0
 for acdatefolder in sorted(os.listdir(masterfolder)):
+    # SAFEGUARD: Skip any hidden files or loose zips, only process directories
+    folder_path = os.path.join(masterfolder, acdatefolder)
+    if not os.path.isdir(folder_path):
+        continue
+
     k += 1
     print(f'[{k}] Folder: {acdatefolder}')
     out_file.write(f'[{k}] Folder: {acdatefolder}\n')
 
-    files = glob.glob(os.path.join(masterfolder, acdatefolder) + '/*.zip')
-    splitmasterfolder=splitfolder+'/'+acdatefolder
+    files = glob.glob(os.path.join(folder_path, '*.zip'))
+    splitmasterfolder = os.path.join(splitfolder, acdatefolder)
     if not os.path.exists(splitmasterfolder):
         os.makedirs(splitmasterfolder)
 

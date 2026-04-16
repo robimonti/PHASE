@@ -50,12 +50,25 @@ if getattr(sys.modules[__name__], 'AUTO_MASTER', 1) == 0:
     target_date = MANUAL_MASTER
     # Find and move the manually selected files
     files_to_move = glob.glob(os.path.join(slaves_dir, f"*{target_date}*.zip"))
+    
+    if not files_to_move:
+        print(f"ERROR: No files found for manual master date {target_date} in /slaves!")
+        sys.exit(1)
+        
     for f in files_to_move:
-        shutil.move(f, os.path.join(master_dir, os.path.basename(f)))
-    print(f"Moved {len(files_to_move)} file(s) to master folder.")
+        basename = os.path.basename(f)
+        # Replicate the original 67-character S1 folder naming convention
+        folder_name = basename[0:67]
+        master_date_folder = os.path.join(master_dir, folder_name)
+
+        if not os.path.exists(master_date_folder):
+            os.makedirs(master_date_folder)
+
+        shutil.move(f, os.path.join(master_date_folder, basename))
+        
+    print(f"Moved {len(files_to_move)} file(s) to master folder subdirectory.")
     sys.exit(0)
 
-print("\n- AUTO-SELECT ENABLED. Analyzing stack...")
 
 # 2. Group downloaded acquisitions by date
 zip_files = glob.glob(os.path.join(slaves_dir, "**", "*.zip"), recursive=True)
