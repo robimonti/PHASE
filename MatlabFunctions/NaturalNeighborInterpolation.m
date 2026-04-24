@@ -51,6 +51,7 @@ switch projDim
 
         % Create GIF with geobasemap
         fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+        gx = geoaxes(fig);
         v_min = min(round(prctile(values(:), 5), 0), -5); 
         v_max = max(round(prctile(values(:), 95), 0), 5);        
         [lat_ps, lon_ps] = utm2deg(xyIN_AOI(:,1), xyIN_AOI(:,2), repmat(utmZone, size(xyIN_AOI, 1), 1));
@@ -139,6 +140,7 @@ switch projDim
 
         % 1D GIF with geobasemap
         fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+        gx = geoaxes(fig);
         [lat_centerline, lon_centerline] = utm2deg(grid_x, grid_y, repmat(utmZone, length(grid_x), 1));
         v_min = min(round(prctile(values(:), 5), 0), -5); 
         v_max = max(round(prctile(values(:), 95), 0), 5);

@@ -6,3 +6,45 @@
 
 # MATLAB specific
 *.asv
+
+# Python bytecode caches
+__pycache__/
+
+# PHASE_model generated state (per-user, not shared)
+input_model.mat
+
+# PHASE per-user config files (path assoluti locali: Python, SNAP, AOI)
+PHASE_Preprocessing/input_preprocessing.mat
+PHASE_Preprocessing/input_StaMPS.mat
+
+# Processing artifacts (Module 1 preprocessing output)
+PHASE_Preprocessing/master/
+PHASE_Preprocessing/slaves/
+PHASE_Preprocessing/split/
+PHASE_Preprocessing/coreg/
+PHASE_Preprocessing/ifg/
+PHASE_Preprocessing/intensity/
+PHASE_Preprocessing/coherence/
+PHASE_Preprocessing/lia/
+PHASE_Preprocessing/graphs/
+PHASE_Preprocessing/logs/
+PHASE_Preprocessing/INSAR_*/
+
+# snap2stamps per-run generated configs/batch scripts
+PHASE_Preprocessing/snap2stamps/bin/project.conf
+PHASE_Preprocessing/snap2stamps/bin/project_master.conf
+PHASE_Preprocessing/snap2stamps/bin/snap2stamps_*.bat
+
+# Module 2 run output folders
+output_*/
+
+# Log files
+*.log
+
+# geoSplinter stray temp output (generated when CWD != sandbox)
+.grd.txt
+.hdr.txt
+.mat.txt
+.out.txt
+.par.txt
+.std.txt
