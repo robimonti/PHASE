@@ -18,8 +18,12 @@
 - Python 3.x with `openpyxl` (for geospatial module report generation)
 
 ## Required OS
-- *Linux*: mandatory for full processing, including StaMPS, enabling end-to-end execution.
-- *Windows*: guaranteed support for preprocessing and geospatial analysis modules.
+- *Linux*: supported end-to-end, including StaMPS, for the complete PSI pipeline.
+- *Windows*: supported end-to-end for the SNAP-based workflow (preprocessing,
+  StaMPS, and geospatial analysis) via the Windows-native StaMPS fork
+  [`pyccino/StaMPS`](https://github.com/pyccino/StaMPS). PHASE auto-discovers
+  the StaMPS Windows install through `StaMPS_CONFIG.ps1` and shares the Python
+  interpreter with StaMPS via `%APPDATA%\PHASE\python.txt`.
 - *macOS*: supports preprocessing and geospatial analysis modules.
 
 ## Installation and Setup
@@ -104,6 +108,43 @@ A shapefile and .mat file are generated in WGS84 (EPSG:4326) coordinates, includ
 The procedure has been tested on SNAP 9.x, Python 2.7, Python 3.11, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a. <br>
 > [!TIP]
 > Refer to the manual for solutions to common errors encountered during the StaMPS processing.
+
+## Verifying TRAIN on Windows
+
+After the TRAIN Windows port, verify your install with these three checks.
+
+### 1. Degradation path (TRAIN missing)
+
+1. Open MATLAB. Run `which('aps_linear')`. Expected: empty string.
+2. Launch `PHASE_StaMPS.mlapp`. Tick "TRAIN atmospheric correction". Press Save, then Start.
+3. Expected:
+   - Warning id `StaMPS:phase:trainNotAvailable` in diary / `smoketest.log`.
+   - The TRAIN checkbox STAYS TICKED (intentional — preserves intent for re-run).
+   - Processing continues through STEP 1 → STEP 2 → export.
+   - Output contains no `Atmosphere_*` columns.
+   - Exit code 0.
+
+### 2. Linear correction (`a_linear`)
+
+1. Install TRAIN at the audited commit: `git clone https://github.com/dbekaert/TRAIN.git C:/TRAIN && cd C:/TRAIN && git checkout 6c93feb`.
+2. In MATLAB: `addpath(genpath('C:/TRAIN/matlab')); savepath`.
+3. Verify: `which('aps_linear')` returns `C:\TRAIN\matlab\aps_linear.m`.
+4. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_linear'`. Save, Start.
+5. Expected:
+   - No degradation warning.
+   - `aps_linear` runs (console output contains "loading the data").
+   - Output contains `Atmosphere_a_linear_AOI_PS.mat` and `Atmosphere_a_linear_*.csv`.
+   - Velocity values differ from a run with TRAIN unchecked.
+
+### 3. GACOS correction (`a_gacos`) — optional, requires gacos.net data request
+
+1. Same TRAIN install as above.
+2. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_gacos'`. Save, Start.
+3. Expected:
+   - MATLAB pauses at `keyboard` after creating `GACOS/` and `GACOS_download_info.txt`.
+   - Download `.tar.gz` files from gacos.net per the printed instructions, place in `GACOS/`, press Continue in MATLAB editor.
+   - MATLAB extracts/distributes `.ztd` files.
+   - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.

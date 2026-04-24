@@ -794,12 +794,22 @@ for i = 1:size(dataIN_AOI, 1)
                     t_in, t_fin, lambda, num_sig, gS_input_path, gS_output_path, gS_job_path);
     
             % run geoSplinter_analysis with the job file
-            job_execution = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_analysis'), fullfile('.', gS_job_path, [file_out, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
+            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            if isunix
+                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution = ['"' temp_bat '"'];
+            end
             status = system(job_execution);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file: %s', file_out);
             end
-            
+
             % import results
             [gS_out_data_tmp, ~, ~, ~, ~] = ...
                 geoSplinter_noFig(fullfile('.', gS_output_path, file_out), ext);
@@ -1627,7 +1637,17 @@ for i = 1:size(dataIN_AOI, 1)
                         t_in, t_fin, lambda, num_sig, gS_input_path, gS_output_path, gS_job_path);
         
             % run geoSplinter_analysis with the job file
-            job_execution = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_analysis'), fullfile('.', gS_job_path, [file_out, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
+            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            if isunix
+                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution = ['"' temp_bat '"'];
+            end
             status = system(job_execution);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file: %s', file_out);
@@ -1755,7 +1775,17 @@ for i = 1:size(dataIN_AOI, 1)
             jobFile_synthesis(data_dim, type_spl, file_spl, file_est, file_syn, gS_input_path, gS_output_path, gS_job_path, gS_synth_path);
             
             % run geoSplinter_synthesis with the job file
-            job_execution_syn = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_synthesis'), fullfile('.', gS_job_path, [file_syn, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
+            gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
+            if isunix
+                job_execution_syn = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution_syn = ['"' temp_bat '"'];
+            end
             status = system(job_execution_syn);
             if status ~= 0
                 error('Error executing geoSplinter_synthesis for file: %s', file_syn);
@@ -1898,7 +1928,17 @@ for i = 1:size(dataIN_AOI, 1)
                         t_in, t_fin, lambda, num_sig, gS_input_path, gS_output_path, gS_job_path);
         
             % run geoSplinter_analysis with the job file
-            job_execution = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_analysis'), fullfile('.', gS_job_path, [file_out, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
+            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            if isunix
+                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution = ['"' temp_bat '"'];
+            end
             status = system(job_execution);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file: %s', file_out);
@@ -2026,7 +2066,17 @@ for i = 1:size(dataIN_AOI, 1)
             jobFile_synthesis(data_dim, type_spl, file_spl, file_est, file_syn, gS_input_path, gS_output_path, gS_job_path, gS_synth_path);
             
             % run geoSplinter_synthesis with the job file
-            job_execution_syn = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_synthesis'), fullfile('.', gS_job_path, [file_syn, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
+            gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
+            if isunix
+                job_execution_syn = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution_syn = ['"' temp_bat '"'];
+            end
             status = system(job_execution_syn);
             if status ~= 0
                 error('Error executing geoSplinter_synthesis for file: %s', file_syn);
