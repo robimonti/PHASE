@@ -1030,34 +1030,82 @@ clear grid_t_full;
 C_obs_obs = C_obs_obs_m;
 clear C_obs_obs_m
 
+% Weights
+weights = C_obs_obs \ data_final_clean_col;
+
 % Extract coordinates
 t_est = xy_est(:, 1);
-x_est_vec = xy_est(:, 2);
-y_est_vec = xy_est(:, 3);
 
-t_obs = xy_obs(:, 1);
-x_obs = xy_obs(:, 2);
-y_obs = xy_obs(:, 3);
+t_obs = xy_obs(:, 1)';
+x_obs = xy_obs(:, 2)';
+y_obs = xy_obs(:, 3)';
 
-% 4.3.1) Temporal distance (tau_t)
-tau_t = abs(t_est - t_obs'); 
+% 4.4) Divide in batches to avoid RAM limitations
+n_est = size(xy_est, 1);
 
-% 4.3.2) Spatial Euclidean distance (tau_s)
-dx = x_est_vec - x_obs';
-dy = y_est_vec - y_obs';
-tau_s = sqrt(dx.^2 + dy.^2); 
+    % DYNAMIC BATCH SIZING
+    % Define a safe RAM budget for the matrices in the loop (2 GB)
+    target_RAM_GB = 2; 
+    
+    % Number of observations (columns in the cross-covariance matrix)
+    n_obs = length(t_obs);
+    
+    % Estimate bytes per batch row
+    % 8 bytes per double * ~8 simultaneous matrices created in the loop
+    bytes_per_row = n_obs * 8 * 8; 
+    
+    % Calculate dynamic batch size
+    target_bytes = target_RAM_GB * 1024^3;
+    batch_size = floor(target_bytes / bytes_per_row);
+    
+    % Constrain the batch size to sensible absolute minimums and maximums
+    batch_size = max(2000, min(batch_size, 50000));
+    
+    num_batches = ceil(n_est / batch_size);
+    fprintf('\nDynamic batching: %d GB limit -> %d points per batch (%d batches total)...\n', target_RAM_GB, batch_size, num_batches);
 
-% 4.3.3) Evaluate covariance functions
-Ct = mCovF1(c1_t, tau_t);         
-Cs_signal = mCovF2(c1_s, tau_s);  
+coll_est = zeros(n_est, 1);
+num_batches = ceil(n_est / batch_size);
+fprintf('\nPredicting %d points in %d batches...\n', n_est, num_batches);
 
-% 4.3.4) Combine (separable model)
-C_est_obs = (Ct .* Cs_signal) ./ c1_t(1);
+t_start_pred = tic;
 
+for idx = 1:batch_size:n_est
+    idx_end = min(idx + batch_size - 1, n_est);
+    
+    % Extract batch coordinates
+    t_est_batch = xy_est(idx:idx_end, 1);
+    x_est_batch = xy_est(idx:idx_end, 2);
+    y_est_batch = xy_est(idx:idx_end, 3);
 
-% 4.4) Solve Collocation (stochastic component)
-weights = C_obs_obs \ data_final_clean_col;
-coll_est = C_est_obs * weights; 
+    % 4.4.1) Temporal distance (Tau_t)
+    tau_t_batch = abs(t_est_batch - t_obs); 
+
+    % 4.4.2) Spatial Euclidean distance (Tau_s)
+    dx_batch = x_est_batch - x_obs;
+    dy_batch = y_est_batch - y_obs;
+    tau_s_batch = sqrt(dx_batch.^2 + dy_batch.^2); 
+
+    % 4.4.3) Evaluate covariance functions
+    Ct_batch = mCovF1(c1_t, tau_t_batch);         
+    Cs_signal_batch = mCovF2(c1_s, tau_s_batch);  
+
+    % 4.4.4) Combine & multiply 
+    C_est_obs_batch = (Ct_batch .* Cs_signal_batch) ./ c1_t(1);
+    
+    % 4.4.5) Add to final array
+    coll_est(idx:idx_end) = C_est_obs_batch * weights;
+
+        % -- progress tracker --
+        current_batch = ceil(idx / batch_size);
+        if mod(current_batch, 10) == 0 || current_batch == num_batches
+            elapsed = toc(t_start_pred);
+            fraction = current_batch / num_batches;
+            eta_sec = elapsed * (1 / fraction - 1);
+            fprintf('  -> Prediction Batch %d/%d (%.1f%%). ETA: %.1f sec\n', ...
+                current_batch, num_batches, fraction * 100, eta_sec);
+        end
+end
 
 % Reshape stochastic result to [n_spat x n_t]
 n_x = length(x_full);
@@ -1151,11 +1199,11 @@ target_y = y_full_0;
 
 % 4.8.1) Compute stochastic component on full grid
 % Temporal distance
-tau_t_full = abs(target_t - t_obs'); % [np*nt x n_valid_obs]
+tau_t_full = abs(target_t - t_obs); % [np*nt x n_valid_obs]
 
 % Spatial Euclidean distance
-dx_full = target_x - x_obs';
-dy_full = target_y - y_obs';
+dx_full = target_x - x_obs;
+dy_full = target_y - y_obs;
 tau_s_full = sqrt(dx_full.^2 + dy_full.^2);
 
 % Evaluate signal covariance (no noise)
@@ -1346,43 +1394,61 @@ A_est_2D = A_est_2D(:, mask_params);
 A_obs     = A_obs(:, mask_params);
 
 
-% 5.3) Construct C_est_obs_2D
-% Temporal distance
-tau_t_2D = abs(xy_est(:,1) - xy_obs(:,1)');
+% 5.3) Cholesky decomposition method - batched
+fprintf('\n2. Solving system for variances in %d batches...\n', num_batches);
 
-% Spatial Euclidean distance
-dx_2D = xy_est(:,2) - xy_obs(:,2)';
-dy_2D = xy_est(:,3) - xy_obs(:,3)';
-tau_s_2D = sqrt(dx_2D.^2 + dy_2D.^2);
-
-% Combine
-C_est_obs_2D = (mCovF1(c1_t, tau_t_2D) .* mCovF2(c1_s, tau_s_2D)) ./ c1_t(1);
-
-% 5.4) Signal covariance (diagonal of C_sig)
-C_sig_diag = repmat(c1_s(1), n_2D_total, 1);
-
-
-% 5.5) Calculation with Cholesky decomposition method
-% Compute L
 L = chol(C_obs_obs, 'lower'); 
 
-% 5.5.1) Collocation weight term: Y = L \ C_est_obs_2D'
-Y = L \ C_est_obs_2D'; 
-term_coll_reduction = sum(Y.^2, 1)'; % [n_2D x 1]
-
-% 5.5.2) Trend weight term: Z = L \ A_obs
+% Precompute trend weight term
 Z = L \ A_obs;
 N_mat = Z' * Z; 
 N_inv = inv(N_mat);
 
-% 5.5.3) Propagation factor: F = A_est_2D - (Y' * Z)
-F = A_est_2D - (Y' * Z);
+% Pre-allocate variance component arrays
+term_coll_reduction = zeros(n_2D_total, 1);
+term_trend_variance = zeros(n_2D_total, 1);
+C_sig_diag = repmat(c1_s(1), n_2D_total, 1);
 
-% 5.5.4) Trend variance
-term_trend_variance = sum((F * N_inv) .* F, 2);
+t_start_var = tic;
+
+for idx = 1:batch_size:n_2D_total
+    idx_end = min(idx + batch_size - 1, n_2D_total);
+    
+    % Slice estimation and design matrices
+    xy_est_batch = xy_est(idx:idx_end, :);
+    A_est_2D_batch = A_est_2D(idx:idx_end, :);
+    
+    % 5.3.1) Construct C_est_obs_2D (batch)
+    tau_t_2D_batch = abs(xy_est_batch(:,1) - t_obs);
+    dx_2D_batch = xy_est_batch(:,2) - x_obs;
+    dy_2D_batch = xy_est_batch(:,3) - y_obs;
+    tau_s_2D_batch = sqrt(dx_2D_batch.^2 + dy_2D_batch.^2);
+    
+    C_est_obs_2D_batch = (mCovF1(c1_t, tau_t_2D_batch) .* mCovF2(c1_s, tau_s_2D_batch)) ./ c1_t(1);
+
+    % 5.3.2) Collocation weight term: Y = L \ C_est_obs_2D'
+    Y_batch = L \ C_est_obs_2D_batch'; 
+    term_coll_reduction(idx:idx_end) = sum(Y_batch.^2, 1)'; 
+
+    % 5.3.3) Propagation factor: F = A_est_2D - (Y' * Z)
+    F_batch = A_est_2D_batch - (Y_batch' * Z);
+
+    % 5.3.4) Trend variance
+    term_trend_variance(idx:idx_end) = sum((F_batch * N_inv) .* F_batch, 2);
+
+        % -- progress tracker --
+        current_batch = ceil(idx / batch_size);
+        if mod(current_batch, 10) == 0 || current_batch == num_batches
+            elapsed = toc(t_start_var);
+            fraction = current_batch / num_batches;
+            eta_sec = elapsed * (1 / fraction - 1);
+            fprintf('  -> Variance Batch %d/%d (%.1f%%). ETA: %.1f sec\n', ...
+                current_batch, num_batches, fraction * 100, eta_sec);
+        end
+end
 
 
-% 5.6) Final recombination
+% 5.4) Final recombination
 var_2D = C_sig_diag - term_coll_reduction + term_trend_variance;
 
     % Sanity check
