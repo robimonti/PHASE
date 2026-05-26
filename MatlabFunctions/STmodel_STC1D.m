@@ -1483,39 +1483,77 @@ disp('======== Step 7 ========');
 disp('Plots creation started...');
 
 % 7.1) GIF with basemap
-figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+gif_fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+
 v_min = min(round(prctile(final_signal_out(:), 5), 0), -5);
 v_max = max(round(prctile(final_signal_out(:), 95), 0), 5);
+
 h = waitbar(0, 'Plotting epochs...');
+
 for t = 1:length(t_full)
-    waitbar(t/length(t_full), h, sprintf('Plotting epoch %d/%d', t, length(t_full)));
+
+    waitbar(t/length(t_full), h, ...
+        sprintf('Plotting epoch %d/%d', t, length(t_full)));
+
+    % silently target invisible figure
+    set(0, 'CurrentFigure', gif_fig);
 
     displ_at_t = final_signal_shift(:, t);
     displ_at_t_shp = displ_at_t(:);
 
+    % call geoscatter to initialize the geographic axes
+    geoscatter(lat_centerline, lon_centerline, ...
+        markerSize_STC1D, displ_at_t_shp, 'filled');
+    hold on;
+
+    % apply the basemap
     geobasemap satellite;
+
     if t == 1
         pause(20)
     end
-    hold on;
-    geoscatter(lat_centerline, lon_centerline, markerSize_STC1D, displ_at_t_shp, 'filled');
-    geoscatter(lat_ps, lon_ps, markerSize_STC1D/4, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'none');
 
-    colormap(jet); clim([v_min, v_max]);
-    c = colorbar; c.Label.String = 'LOS Displacement [mm]'; c.Label.FontSize = 15;
-    title(sprintf('LOS Displacement on %s (1D)', datestr(dates_full(t))), 'FontSize', 18);
+    % add the second scatter plot
+    geoscatter(lat_ps, lon_ps, markerSize_STC1D/4, ...
+        'filled', ...
+        'MarkerEdgeColor', 'k', ...
+        'MarkerFaceColor', 'none');
+
+    colormap(jet);
+    clim([v_min, v_max]);
+
+    c = colorbar;
+    c.Label.String = 'LOS Displacement [mm]';
+    c.Label.FontSize = 15;
+
+    title(sprintf('LOS Displacement on %s (1D)', ...
+        datestr(dates_full(t))), 'FontSize', 18);
+
     hold off;
-    frame = getframe(gcf);
+
+    % explicitly grab frame from gif_fig
+    frame = getframe(gif_fig);
     im = frame2im(frame);
     [imind, cm] = rgb2ind(im, 256);
+
     if t == 1
-        imwrite(imind, cm, fullfile(figsDir, 'STstc_displ1D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
+        imwrite(imind, cm, ...
+            fullfile(figsDir, 'STstc_displ1D.gif'), ...
+            'gif', 'Loopcount', inf, 'DelayTime', 0.5);
     else
-        imwrite(imind, cm, fullfile(figsDir, 'STstc_displ1D.gif'), 'gif', 'WriteMode', 'append', 'DelayTime', 0.5);
+        imwrite(imind, cm, ...
+            fullfile(figsDir, 'STstc_displ1D.gif'), ...
+            'gif', 'WriteMode', 'append', ...
+            'DelayTime', 0.5);
     end
-    clf;
+
+    % clear only gif figure
+    clf(gif_fig);
+
 end
-close(h); close;
+
+close(h);
+close(gif_fig);
 
 
 % 7.2) Heatmap

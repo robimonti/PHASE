@@ -1860,40 +1860,80 @@ disp('======== Step 7 ========');
 disp('GIF creation started...');
 
 % GIF creation
-figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+gif_fig = figure('Visible', 'off', ...
+    'Position', [100, 100, 1200, 600]);
+
 v_min = min(round(prctile(final_signal_out(:), 5), 0), -5);
 v_max = max(round(prctile(final_signal_out(:), 95), 0), 5);
+
 h = waitbar(0, 'Plotting epochs...');
+
 for t = 1:length(t_full)
-    waitbar(t/length(t_full), h, sprintf('Plotting epoch %d/%d', t, length(t_full)));
+
+    waitbar(t/length(t_full), h, ...
+        sprintf('Plotting epoch %d/%d', ...
+        t, length(t_full)));
+
+    % silently target invisible figure
+    set(0, 'CurrentFigure', gif_fig);
 
     displ_at_t = final_signal_shift(:, :, t);
     displ_at_t = displ_at_t(:);
     displ_at_i_shp = displ_at_t(xyIN_AOI_flag);
 
-    geobasemap satellite;
-    if t == 1
-        pause(5)
-    end
+    % call geoscatter to initialize the geographic axes
+    geoscatter(lat_full_shp, lon_full_shp, ...
+        markerSize_DET2D, displ_at_i_shp, 'filled');
     hold on;
-    geoscatter(lat_full_shp, lon_full_shp, markerSize_DET2D, displ_at_i_shp, 'filled');
-    geoscatter(lat_ps, lon_ps, markerSize_DET2D/4, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'none');
 
-    colormap(jet); clim([v_min, v_max]);
-    c = colorbar; c.Label.String = 'LOS Displacement [mm]'; c.Label.FontSize = 15;
-    title(sprintf('LOS Displacement on %s (2D)', datestr(dates_full(t))), 'FontSize', 18);
+    % apply the basemap
+    geobasemap satellite;
+
+    if t == 1
+        pause(20)
+    end
+
+    % add the second scatter plot
+    geoscatter(lat_ps, lon_ps, markerSize_DET2D/4, ...
+        'filled', ...
+        'MarkerEdgeColor', 'k', ...
+        'MarkerFaceColor', 'none');
+
+    colormap(jet);
+    clim([v_min, v_max]);
+
+    c = colorbar;
+    c.Label.String = 'LOS Displacement [mm]';
+    c.Label.FontSize = 15;
+
+    title(sprintf('LOS Displacement on %s (2D)', ...
+        datestr(dates_full(t))), 'FontSize', 18);
+
     hold off;
-    frame = getframe(gcf);
+
+    % explicitly grab frame from gif_fig
+    frame = getframe(gif_fig);
     im = frame2im(frame);
     [imind, cm] = rgb2ind(im, 256);
+
     if t == 1
-        imwrite(imind, cm, fullfile(figsDir, 'STdet_displ2D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
+        imwrite(imind, cm, ...
+            fullfile(figsDir, 'STdet_displ2D.gif'), ...
+            'gif', 'Loopcount', inf, 'DelayTime', 0.5);
     else
-        imwrite(imind, cm, fullfile(figsDir, 'STdet_displ2D.gif'), 'gif', 'WriteMode', 'append', 'DelayTime', 0.5);
+        imwrite(imind, cm, ...
+            fullfile(figsDir, 'STdet_displ2D.gif'), ...
+            'gif', 'WriteMode', 'append', ...
+            'DelayTime', 0.5);
     end
-    clf;
+
+    % clear only gif figure
+    clf(gif_fig);
+
 end
-close(h); close;
+
+close(h);
+close(gif_fig);
 
 disp('GIF creation completed.');
 

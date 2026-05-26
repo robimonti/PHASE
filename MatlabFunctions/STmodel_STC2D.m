@@ -1118,9 +1118,9 @@ coll_est_3D = reshape(coll_est, n_y, n_x, n_t);
 
 % 4.5) Reconstruct deterministic trend on estimation grid - only for cleanObs case -
 % Centering (must match the loop logic)
-x_est_centered = x_est_vec - x0;
-y_est_centered = y_est_vec - y0;
-t_est_centered = t_est - t0; 
+x_est_centered = xy_est(:, 2) - x0;
+y_est_centered = xy_est(:, 3) - y0;
+t_est_centered = xy_est(:, 1) - t0; 
 
 switch detrend_method
     case 'cleanObs'
@@ -1518,30 +1518,42 @@ disp('======== Step 7 ========');
 disp('GIF creation started...');
 
 % GIF creation
-figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+% 1. Assign a specific name to the GIF figure (e.g., gif_fig)
+gif_fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]); 
 v_min = min(round(prctile(final_signal_out(:), 5), 0), -5);
 v_max = max(round(prctile(final_signal_out(:), 95), 0), 5);
 h = waitbar(0, 'Plotting epochs...');
+
 for t = 1:length(t_full)
     waitbar(t/length(t_full), h, sprintf('Plotting epoch %d/%d', t, length(t_full)));
+
+    % 2. Silently target the invisible figure without making it visible
+    set(0, 'CurrentFigure', gif_fig);
 
     displ_at_t = final_signal_shift(:, :, t);
     displ_at_t = displ_at_t(:);
     displ_at_t_shp = displ_at_t(xyIN_AOI_flag);
 
+    % Call geoscatter to initialize the geographic axes
+    geoscatter(lat_full_shp, lon_full_shp, markerSize_STC2D, displ_at_t_shp, 'filled');
+    hold on;
+    
+    % Apply the basemap since the axes is officially geographic
     geobasemap satellite;
     if t == 1
         pause(20)
     end
-    hold on;
-    geoscatter(lat_full_shp, lon_full_shp, markerSize_STC2D, displ_at_t_shp, 'filled');
+    
+    % Add the second scatter plot
     geoscatter(lat_ps, lon_ps, markerSize_STC2D/4, 'filled', 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'none');
 
     colormap(jet); clim([v_min, v_max]);
     c = colorbar; c.Label.String = 'LOS Displacement [mm]'; c.Label.FontSize = 15;
     title(sprintf('LOS Displacement on %s (2D)', datestr(dates_full(t))), 'FontSize', 18);
     hold off;
-    frame = getframe(gcf);
+    
+    % 3. Explicitly grab the frame from gif_fig, not just gcf
+    frame = getframe(gif_fig);
     im = frame2im(frame);
     [imind, cm] = rgb2ind(im, 256);
     if t == 1
@@ -1549,9 +1561,12 @@ for t = 1:length(t_full)
     else
         imwrite(imind, cm, fullfile(figsDir, 'STstc_displ2D.gif'), 'gif', 'WriteMode', 'append', 'DelayTime', 0.5);
     end
-    clf;
+    
+    % 4. Explicitly clear gif_fig, leaving the waitbar completely alone
+    clf(gif_fig);
 end
-close(h); close;
+close(h); 
+close(gif_fig);
 
 disp('GIF creation completed.');
 
