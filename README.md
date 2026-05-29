@@ -18,8 +18,12 @@
 - Python 3.x with `openpyxl` (for geospatial module report generation)
 
 ## Required OS
-- *Linux*: mandatory for full processing, including StaMPS, enabling end-to-end execution.
-- *Windows*: guaranteed support for preprocessing and geospatial analysis modules.
+- *Linux*: supported end-to-end, including StaMPS, for the complete PSI pipeline.
+- *Windows*: supported end-to-end for the SNAP-based workflow (preprocessing,
+  StaMPS, and geospatial analysis) via the Windows-native StaMPS fork
+  [`pyccino/StaMPS`](https://github.com/pyccino/StaMPS). PHASE auto-discovers
+  the StaMPS Windows install through `StaMPS_CONFIG.ps1` and shares the Python
+  interpreter with StaMPS via `%APPDATA%\PHASE\python.txt`.
 - *macOS*: supports preprocessing and geospatial analysis modules.
 
 ## Installation and Setup
@@ -70,7 +74,7 @@
 ## Module 1: InSAR PSI Processing
 
 1.	**Automated SAR Images Download:** <br>
-Retrieve Sentinel-1 images via the generated Python script from the Alaska SAR Facility, or manually place your COSMO-SkyMed .h5 files into the slaves directory.
+Retrieve Sentinel-1 images via the generated Python script from the Alaska SAR Facility. For COSMO-SkyMed, use the **Images** tab in the Cosmo-SkyMed panel to import your `.h5` files (they are copied into the `slaves` directory automatically).
 2.	**Interactive AOI & Automated Master Selection:** <br>
 Define your precise Area of Interest (AOI) by drawing a bounding box directly on the GUI's geographic map interface. Let PHASE automatically query the Open-Meteo historical weather API to select the optimal, driest master image for your stack.
 3.	**Master & Slave Pre-Processing:** <br>
@@ -101,9 +105,78 @@ The module generates a comprehensive Excel report across multiple sheets:
 A shapefile and .mat file are generated in WGS84 (EPSG:4326) coordinates, including PS data, velocities, uncertainties, and risks for GIS compatibility.
 
 ## Possible Errors and Solutions
-The procedure has been tested on SNAP 9.x, Python 2.7, Python 3.11, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a. <br>
+The procedure has been tested on SNAP 9.x and 13.x, Python 2.7, Python 3.11, Python 3.13, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a/2026a. <br>
 > [!TIP]
 > Refer to the manual for solutions to common errors encountered during the StaMPS processing.
+
+## SNAP version selection (Sentinel-1A/1B/1C/1D)
+
+PHASE preprocessing supports both **SNAP 9.x** (legacy) and **SNAP 13.x** (recommended). Choose based on which Sentinel-1 satellites your dataset includes:
+
+- **SNAP 9.x**: supports Sentinel-1A and Sentinel-1B only. Sentinel-1C (launched Dec 2024) and Sentinel-1D are **not** supported by the SNAP 9 product readers.
+- **SNAP 13.x**: supports the full Sentinel-1A/1B/1C/1D constellation natively. **Required for any dataset containing S1C or S1D acquisitions.**
+
+Point `GPTBIN_PATH` in your `project.conf` to the SNAP version you want PHASE to use:
+```
+GPTBIN_PATH = C:/Program Files/snap13/bin/gpt.exe   # SNAP 13 (S1A/B/C/D)
+# GPTBIN_PATH = C:/Program Files/snap/bin/gpt.exe   # SNAP 9  (S1A/B only)
+```
+
+### Important: do not mix SNAP-9 and SNAP-13 .dim products
+
+SNAP 13's `StampsExport` operator raises `NullPointerException` on tie-point grids written by SNAP 9 (the BEAM-DIMAP TPG format changed between majors). The error is silent — StaMPS later hangs mid-PSI without a clear diagnostic.
+
+PHASE's `SEN_stamps_export.py` automatically detects this mismatch and prints an actionable warning before launching `gpt`. The fix is to **re-run the full preprocessing pipeline** (split + coregistration + interferogram) from the original `.SAFE.zip` files using the same SNAP version that will run `StampsExport`.
+
+### SRTM 3Sec auto-cache
+
+`StampsExport` has SRTM 3Sec hardcoded for the lat/lon geocoding output, regardless of the DEM chosen for coregistration. When the auto-download fails (offline, mirror down, or — on SNAP 13 — silently for some inputs), the geo files are partially corrupted and StaMPS hangs mid-PSI. PHASE pre-caches the required SRTM tiles into `%USERPROFILE%/.snap/auxdata/dem/SRTM 3Sec/` automatically before each `StampsExport` run, eliminating that failure mode.
+
+This requires the project AOI to be present in `project.conf` as `LATMIN`, `LATMAX`, `LONMIN`, `LONMAX`. If the keys are absent the pre-cache is skipped (with a warning) and `StampsExport` falls back to the standard SNAP auto-download path.
+
+## Verifying TRAIN on Windows
+
+After the TRAIN Windows port, verify your install with these three checks.
+
+### 1. Degradation path (TRAIN missing)
+
+1. Open MATLAB. Run `which('aps_linear')`. Expected: empty string.
+2. Launch `PHASE_StaMPS.mlapp`. Tick "TRAIN atmospheric correction". Press Save, then Start.
+3. Expected:
+   - Warning id `StaMPS:phase:trainNotAvailable` in diary / `smoketest.log`.
+   - The TRAIN checkbox STAYS TICKED (intentional — preserves intent for re-run).
+   - Processing continues through STEP 1 → STEP 2 → export.
+   - Output contains no `Atmosphere_*` columns.
+   - Exit code 0.
+
+### 2. Linear correction (`a_linear`)
+
+1. Install TRAIN (Windows-patched fork): `git clone https://github.com/pyccino/TRAIN.git C:/TRAIN`.
+2. In MATLAB: `addpath(genpath('C:/TRAIN/matlab')); savepath`.
+3. Verify: `which('aps_linear')` returns `C:\TRAIN\matlab\aps_linear.m`.
+4. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_linear'`. Save, Start.
+5. Expected:
+   - No degradation warning.
+   - `aps_linear` runs (console output contains "loading the data").
+   - Output contains `Atmosphere_a_linear_AOI_PS.mat` and `Atmosphere_a_linear_*.csv`.
+   - Velocity values differ from a run with TRAIN unchecked.
+
+> **Note on the Windows fork.** `pyccino/TRAIN` (default branch `main`) is forked from `dbekaert/TRAIN` at the audited commit `6c93feb` plus the following Windows-specific additions:
+> - `get_gmt_version.m`: actionable error on Windows when GMT is not on PATH (the upstream loop manipulates Linux-only library env vars).
+> - `aps_gacos_files.m`: replaces Unix `&` background launch with synchronous `system()` call on Windows (cmd.exe parses `&` differently).
+> - `gacosDownloadDialog.m`: new helper that shows the GACOS request parameters in a copy-paste dialog (called from `PHASE_StaMPS.mlapp`).
+>
+> Unix/Mac behavior is unchanged. Use upstream `dbekaert/TRAIN` directly on Linux/macOS if preferred.
+
+### 3. GACOS correction (`a_gacos`) — optional, requires gacos.net data request
+
+1. Same TRAIN install as above. Additionally install [GMT for Windows](https://www.generic-mapping-tools.org/download/) and ensure `C:\Program Files\GMT\bin` (or your install dir) is on PATH; verify with `gmt --version` in a fresh terminal.
+2. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_gacos'`. Save, Start.
+3. Expected:
+   - A "Download GACOS maps" window opens (the gacos.net site and the `GACOS/` folder open automatically). It shows the request parameters (UTC, bounding box, dates) ready to copy into the form at gacos.net — select **Binary grid** as the file type.
+   - Download the `.tar.gz` files from gacos.net, place them in `GACOS/` (do not extract), then press **Continue** in the window.
+   - MATLAB extracts/distributes `.ztd` files.
+   - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.

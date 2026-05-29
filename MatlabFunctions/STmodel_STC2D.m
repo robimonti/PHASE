@@ -157,7 +157,17 @@ for id = 1:size(displIN_AOI,1)
                     t_in, t_fin, lambda, num_sig, gS_input_path, gS_output_path, gS_job_path);
     
             % run geoSplinter_analysis with the job file
-            job_execution = sprintf('%s < %s', fullfile(gS_dir, 'geoSplinter_analysis'), fullfile('.', gS_job_path, [file_out, '.job']));
+            gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
+            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            if isunix
+                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
+            else
+                temp_bat = [tempname() '.bat'];
+                fid = fopen(temp_bat, 'w');
+                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
+                fclose(fid);
+                job_execution = ['"' temp_bat '"'];
+            end
             status = system(job_execution);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file: %s', file_out);
@@ -1525,8 +1535,11 @@ disp('======== Step 7 ========');
 disp('GIF creation started...');
 
 % GIF creation
-% 1. Assign a specific name to the GIF figure (e.g., gif_fig)
-gif_fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]); 
+% R2026a-compat: getframe on invisible figures hangs in R2026a's display
+% pipeline. Use print('-RGBImage') instead — same RGB output, goes through
+% the print pipeline (no display backing store needed).
+gif_fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+geoaxes;
 v_min = min(round(prctile(final_signal_out(:), 5), 0), -5);
 v_max = max(round(prctile(final_signal_out(:), 95), 0), 5);
 h = waitbar(0, 'Plotting epochs...');
@@ -1558,10 +1571,8 @@ for t = 1:length(t_full)
     c = colorbar; c.Label.String = 'LOS Displacement [mm]'; c.Label.FontSize = 15;
     title(sprintf('LOS Displacement on %s (2D)', datestr(dates_full(t))), 'FontSize', 18);
     hold off;
-    
-    % 3. Explicitly grab the frame from gif_fig, not just gcf
-    frame = getframe(gif_fig);
-    im = frame2im(frame);
+    % R2026a-safe frame capture, targeting the named gif figure
+    im = print(gif_fig, '-RGBImage');
     [imind, cm] = rgb2ind(im, 256);
     if t == 1
         imwrite(imind, cm, fullfile(figsDir, 'STstc_displ2D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
@@ -1574,6 +1585,7 @@ for t = 1:length(t_full)
 end
 close(h); 
 close(gif_fig);
+
 
 disp('GIF creation completed.');
 
