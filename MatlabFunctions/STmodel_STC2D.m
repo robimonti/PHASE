@@ -72,6 +72,13 @@ disp('Splines-based outlier rejection started...');
 % minimum time interval in days
 minT = minMonths * 30;  % months -> days
 
+% enforce a maximum allowable interval to guarantee at least 3 splines
+if round(t_relIN(end) / minT, 0) < 3
+    safe_minT = t_relIN(end) / 3;
+    warning('The specified minimum spline period (%.1f months) is too large for the time series duration (%.0f days). Automatically reducing it to %.1f months.', minMonths, t_relIN(end), safe_minT / 30);
+    minT = safe_minT;
+end
+
 % define basis functions from geoSplinter
 phi_3 = @(csi) (csi >= 0 & csi < 1) .* ((2 - csi).^3 - 4 * (1 - csi).^3) / 6 + ...
                (csi >= 1 & csi < 2) .* ((2 - csi).^3) / 6;
@@ -131,7 +138,7 @@ for id = 1:size(displIN_AOI,1)
         num_sig = 10;                                 % number of significant digits
         
         % define MDL-based spline search parameters
-        max_n_spl = round(t_reg(end) / minT, 0);
+        max_n_spl = max(3, round(t_reg(end) / minT, 0));
         min_n_spl = 3;
         num_spl_candidates = max_n_spl - min_n_spl + 1; 
 

@@ -924,11 +924,32 @@ for i = 1:size(dataIN_AOI, 1)
             residuals = obs_p2{i, 5} - estimated_obs';
             SSR = sum(residuals.^2);
             s02_est = SSR / (num_obs - n_params);
-            gS_out_mat = readmatrix(fullfile('.', gS_output_path, strcat(file_out, '.mat.txt')));
-            gS_out_mat_col = mean(gS_out_mat, 2, 'omitnan');
-            idx_lnan = find(isnan(gS_out_mat_col), 1, 'last');
-            diag_Cxx{kk} = sqrt(gS_out_mat_col(idx_lnan+2:end-2));
-            diag_Cxx_full{kk} = sqrt(gS_out_mat_col(idx_lnan+1:end-1));
+            mat_file_full = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
+            fid2 = fopen(mat_file_full, 'r');
+            diag_cov_vals = zeros(n_params, 1);
+            if fid2 ~= -1
+                while ~feof(fid2)
+                    line = fgetl(fid2);
+                    if contains(line, 'Diagonal of Parameters Covariance Matrix')
+                        r = 1;
+                        % Read exactly n_params numbers
+                        while r <= n_params && ~feof(fid2)
+                            line = fgetl(fid2);
+                            if ~ischar(line) || isempty(strtrim(line))
+                                continue;
+                            end
+                            diag_cov_vals(r) = str2double(line);
+                            r = r + 1;
+                        end
+                        break;
+                    end
+                end
+                fclose(fid2);
+            else
+                warning('Cannot open file: %s', mat_file_full);
+            end
+            diag_Cxx{kk} = sqrt(diag_cov_vals);
+            diag_Cxx_full{kk} = sqrt(diag_cov_vals);
             knots_tmp{kk} = knots;
 
             switch num_spl_method
@@ -1112,11 +1133,6 @@ for i = 1:size(dataIN_AOI, 1)
         % find the tau coordinates for which the covariance function becomes 0
         idxZero = find(eCovF < 0, 1, 'first');
         
-        % extract covariance points to be used in interpolation
-        idx_in = 2;
-        idx_end_min = 15;    % ensure minimum number of points
-        idx_end = max(idx_end_min, round(size(Cecf,1)/2));
-        
         % remove the final part of empirical covariance
         if eCovF(2) < 0
             tauGrid = tauGrid_poly(1:round(size(tauGrid,1)*3/4));
@@ -1126,6 +1142,20 @@ for i = 1:size(dataIN_AOI, 1)
             tauGrid = tauGrid(1:round(size(tauGrid,1)*3/4));
             eCovF   = eCovF(1:round(size(eCovF,1)*3/4));
             Cecf    = Cecf(1:round(size(Cecf,1)*3/4));
+        end
+        
+        % extract covariance points to be used in interpolation
+        idx_in = 2;
+        idx_end_min = 15;    % ensure minimum number of points
+        
+        % determine the end index and securely bound it to the available array length
+        idx_end = max(idx_end_min, round(size(Cecf,1)/2));
+        idx_end = min(idx_end, length(tauGrid));
+        
+        % safety fallback for extremely short time series
+        idx_in = min(idx_in, length(tauGrid));
+        if idx_end < idx_in
+            idx_end = idx_in;
         end
         
         tau = tauGrid(idx_in:idx_end);
@@ -1148,38 +1178,51 @@ for i = 1:size(dataIN_AOI, 1)
             p_eCov = polyfit(tau_poly, Yo_poly, order);
             eCovF_smooth_tmp = polyval(p_eCov, tau_poly);
         
-            % compute outliers
-            if eCovF(3) > 0
-                residuals_eCovF = Yo_poly(1:l_out) - eCovF_smooth_tmp(1:l_out);
+            % compute outliers (with dynamic length safety to avoid crashes)
+            l_out_safe = min(l_out, length(Yo_poly));
+            if length(eCovF) >= 3 && eCovF(3) > 0
+                residuals_eCovF = Yo_poly(1:l_out_safe) - eCovF_smooth_tmp(1:l_out_safe);
+            elseif l_out_safe >= 2
+                residuals_eCovF = Yo_poly(2:l_out_safe) - eCovF_smooth_tmp(2:l_out_safe);
             else
-                residuals_eCovF = Yo_poly(2:l_out) - eCovF_smooth_tmp(2:l_out);
+                residuals_eCovF = Yo_poly(1:l_out_safe) - eCovF_smooth_tmp(1:l_out_safe);
             end
+            
             std_res_eCovF = std(residuals_eCovF);
             outliers_eCovF = abs(residuals_eCovF) > 1.5 * std_res_eCovF;
             sum_out = sum(outliers_eCovF);
         
             % remove outliers
-            if eCovF(3) > 0
+            if length(eCovF) >= 3 && eCovF(3) > 0
                 idx_out = find(outliers_eCovF, 1);
             else
                 idx_out = find(outliers_eCovF, 1);
-                idx_out = idx_out + 1;
+                if ~isempty(idx_out)
+                    idx_out = idx_out + 1;
+                end
             end
-            tau_poly(idx_out) = [];
-            Yo_poly(idx_out) = [];
-            Q_poly(idx_out) = [];
-            l_out = l_out - 1;
+            
+            if ~isempty(idx_out)
+                tau_poly(idx_out) = [];
+                Yo_poly(idx_out) = [];
+                Q_poly(idx_out) = [];
+                l_out = l_out - 1;
+            end
         
             % increment iteration
             it_out = it_out + 1;
         end
         
         % remove the initial point added to help the fit
-        if eCovF(3) < 0
+        if length(eCovF) >= 3 && eCovF(3) < 0
             tauGrid(2) = [];
             eCovF(2)   = [];
             Cecf(2)    = [];
+            idx_end    = idx_end - 1; % <--- Critical Fix: Update the pointer!
         end
+        
+        % forcefully ensure idx_end cannot exceed the new array bounds
+        idx_end = min(idx_end, length(tauGrid));
         
         % evaluate the smoothed covariance in all sampling distances
         eCovF_smooth = polyval(p_eCov, tauGrid(1:idx_end));
@@ -1272,7 +1315,7 @@ for i = 1:size(dataIN_AOI, 1)
             if isempty(idx_min)
                 idx_min = find(eCovF_smooth < 0, 1, 'first');
             end
-            tau_min = tau(idx_min);
+            tau_min = tauGrid(idx_min);
             f = 0.5;   % decay fraction
             c1_app(2,1) = log(1/f) / (tau_min^2);
         else
@@ -1320,7 +1363,7 @@ for i = 1:size(dataIN_AOI, 1)
                     idx_min = find(eCovF_smooth < 0, 1, 'first');
                 end
                 if ~isempty(idx_min)
-                    tau_min = tau(idx_min);
+                    tau_min = tauGrid(idx_min);
                     f = 0.5;
                     c1_app(2,1) = log(1/f) / (tau_min^2);
                 else
@@ -1367,7 +1410,7 @@ for i = 1:size(dataIN_AOI, 1)
             if isempty(idx_min)
                 idx_min = find(eCovF_smooth < 0, 1, 'first');
             end
-            tau_min = tau(idx_min);
+            tau_min = tauGrid(idx_min);
             f = 0.5;
             c2_app(2,1) = log(1/f) / (tau_min^2);
         else
@@ -1458,13 +1501,13 @@ for i = 1:size(dataIN_AOI, 1)
             if length(idx_peaks) < 2
                 idx_zeros = find(eCovF_smooth(1:end-1) .* eCovF_smooth(2:end) < 0);
                 if length(idx_zeros) >= 2
-                    half_periods = diff(tau(idx_zeros));
+                    half_periods = diff(tauGrid(idx_zeros));
                     T = 2 * mean(half_periods);
                 else
-                    T = tau(end) / 2;
+                    T = tauGrid(idx_end) / 2;
                 end
             else
-                periods = diff(tau(idx_peaks));
+                periods = diff(tauGrid(idx_peaks));
                 T = mean(periods);
             end
             if T > 0
