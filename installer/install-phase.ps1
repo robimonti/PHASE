@@ -2546,6 +2546,12 @@ function Invoke-FullSetup {
         try { $_ | Stop-Process -Force; Add-SetupLog "MATLAB chiuso (PID $($_.Id)) per evitare cache stale" } catch {}
     }
     Start-Sleep -Seconds 2
+    # Le patch .mlapp sono SOLO comodita' (auto-load dei default all'apertura
+    # dell'app). A questo punto tutta l'installazione vera (repo, binari, env
+    # var, savepath, .mat) e' gia' completata. Un fallimento qui - p.es. un
+    # anchor che non combacia perche' upstream ha cambiato lo startupFcn - NON
+    # deve abortire l'intera installazione: degradiamo a warning e proseguiamo.
+    try {
     $stampsMlapp = Join-Path $phaseDir 'PHASE_Preprocessing\PHASE_StaMPS.mlapp'
     [void](Invoke-MlappAutoLoadPatch -MlappPath $stampsMlapp `
         -MatFileRelative './input_StaMPS.mat' `
@@ -2653,12 +2659,23 @@ function Invoke-FullSetup {
             end
 "@
     $modelMlapp = Join-Path $phaseDir 'PHASE_model.mlapp'
+    # Anchor: prima riga dello startupFcn (IndexOf prende la prima delle 2
+    # occorrenze, che e' quella in startupFcn - non quella nel callback Run).
+    # NB: deve combaciare LETTERALMENTE col codice MATLAB embedded nel
+    # document.xml. Upstream usa fullfile(pwd,...) - non './MatlabFunctions/'.
     [void](Invoke-MlappAutoLoadPatch -MlappPath $modelMlapp `
-        -Anchor "addpath('./MatlabFunctions/');" `
+        -Anchor "addpath(fullfile(pwd, 'MatlabFunctions'));" `
         -InjectBlock $modelInject `
         -StatusCallback { param($m) Add-SetupLog $m })
 
-    Update-Task -Key 'patch' -Status 'done'
+        Update-Task -Key 'patch' -Status 'done'
+    } catch {
+        # Patch non riuscita (tipicamente anchor non trovato per drift upstream
+        # dei .mlapp). L'installazione resta valida: gli app si aprono comunque,
+        # l'utente caricara' i default manualmente dal tab Save/Load.
+        Add-SetupLog "WARNING: patch .mlapp non applicata ($($_.Exception.Message)) - installazione comunque valida, caricare i default manualmente."
+        Update-Task -Key 'patch' -Status 'skip' -Detail 'anchor non trovato - apri il .mlapp e usa Load manualmente'
+    }
 
     # Collegamenti + README nella cartella principale (engine\ resta nascosto
     # all'uso quotidiano). Non bloccante: se fallisce, i .mlapp restano comunque
