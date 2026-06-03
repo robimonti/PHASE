@@ -41,4 +41,21 @@ function setupPythonEnvironment()
             error('Cannot proceed without the "openpyxl" package.');
         end
     end
+
+    % Share resolved Python executable with StaMPS on Windows via
+    % %APPDATA%\PHASE\python.txt so the .bat shim can honor the same
+    % interpreter MATLAB/PHASE is using.
+    pythonPath = char(pyenv().Executable);
+    if ispc
+        appdata = getenv('APPDATA');
+        if ~isempty(appdata)
+            phase_dir = fullfile(appdata, 'PHASE');
+            if ~exist(phase_dir, 'dir'); mkdir(phase_dir); end
+            fid = fopen(fullfile(phase_dir, 'python.txt'), 'w', 'native', 'UTF-8');
+            if fid ~= -1
+                fprintf(fid, '%s', pythonPath);
+                fclose(fid);
+            end
+        end
+    end
 end

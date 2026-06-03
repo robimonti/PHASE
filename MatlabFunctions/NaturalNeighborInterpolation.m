@@ -51,6 +51,7 @@ switch projDim
 
         % Create GIF with geobasemap
         fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+        gx = geoaxes(fig);
         v_min = min(round(prctile(values(:), 5), 0), -5); 
         v_max = max(round(prctile(values(:), 95), 0), 5);        
         [lat_ps, lon_ps] = utm2deg(xyIN_AOI(:,1), xyIN_AOI(:,2), repmat(utmZone, size(xyIN_AOI, 1), 1));
@@ -69,8 +70,9 @@ switch projDim
             colorbar(gx);
             title(gx,sprintf('LOS displacement on %s (2D)', datestr(t_dateIN(t))), 'FontSize', 18);
             hold(gx, 'off');
-            frame = getframe(gcf);
-            im = frame2im(frame);
+            % R2026a-compat: getframe on invisible figures hangs; use
+            % print('-RGBImage') which goes through the print pipeline.
+            im = print(gcf, '-RGBImage');
             [imind, cm] = rgb2ind(im, 256);
             if t == 1
                 imwrite(imind, cm, fullfile(figsDir, 'NNI_displ2D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
@@ -139,6 +141,7 @@ switch projDim
 
         % 1D GIF with geobasemap
         fig = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+        gx = geoaxes(fig);
         [lat_centerline, lon_centerline] = utm2deg(grid_x, grid_y, repmat(utmZone, length(grid_x), 1));
         v_min = min(round(prctile(values(:), 5), 0), -5); 
         v_max = max(round(prctile(values(:), 95), 0), 5);
@@ -158,8 +161,9 @@ switch projDim
             colorbar(gx);
             title(gx,sprintf('LOS displacement on %s (1D)', datestr(t_dateIN(t))), 'FontSize', 18);
             hold(gx, 'off');
-            frame = getframe(gcf);
-            im = frame2im(frame);
+            % R2026a-compat: getframe on invisible figures hangs; use
+            % print('-RGBImage') which goes through the print pipeline.
+            im = print(gcf, '-RGBImage');
             [imind, cm] = rgb2ind(im, 256);
             if t == 1
                 imwrite(imind, cm, fullfile(figsDir, 'NNI_displ1D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
