@@ -532,6 +532,11 @@ switch detrend_method
         W_A = Q_ll \ A_curr; 
         N   = A_curr' * W_A;
         rhs = W_A' * y0_lsc;
+
+        % Convert N and rhs to full matrices to avoid sparse SVD crashes.
+        % Since N is only n_params x n_params, this requires almost no RAM.
+        N = full(N);
+        rhs = full(rhs);
         
         % Estimate x (with stability check)
         if cond(N) > 1e12
