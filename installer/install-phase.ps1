@@ -856,9 +856,10 @@ function Invoke-MlappAutoLoadPatch {
         }
 
         # Anchor: prima occorrenza della stringa anchor
-        $idx = $content.IndexOf($Anchor)
+                $idx = $content.IndexOf($Anchor)
         if ($idx -lt 0) {
-            throw "Anchor '$Anchor' not found in $docXml"
+            & $StatusCallback "Warning: Anchor '$Anchor' not found. Skipping patch auto-load."
+            return $false
         }
         $insertPoint = $idx + $Anchor.Length
 
