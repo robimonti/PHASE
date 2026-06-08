@@ -1,0 +1,1558 @@
+{
+    "product_count": 43,
+    "total_size_gb": 172.67,
+    "total_size_bytes": 185405193571,
+    "products": [
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250521T164718_20250521T164746_059295_075BDA_2D0B",
+            "size": 4.38,
+            "size_bytes": 4703683209,
+            "startTime": "2025-05-21",
+            "pathNumber": 73,
+            "frameNumber": 205,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            9.806145,
+                            62.373169
+                        ],
+                        [
+                            14.823922,
+                            62.824421
+                        ],
+                        [
+                            14.23251,
+                            64.487358
+                        ],
+                        [
+                            8.917633,
+                            64.022644
+                        ],
+                        [
+                            9.806145,
+                            62.373169
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250520T165405_20250520T165432_002417_00510C_9D14",
+            "size": 4.18,
+            "size_bytes": 4489789987,
+            "startTime": "2025-05-20",
+            "pathNumber": 146,
+            "frameNumber": 202,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.149412,
+                            61.542343
+                        ],
+                        [
+                            13.05063,
+                            61.989994
+                        ],
+                        [
+                            12.498296,
+                            63.603264
+                        ],
+                        [
+                            7.325592,
+                            63.1437
+                        ],
+                        [
+                            8.149412,
+                            61.542343
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250520T053815_20250520T053842_002410_0050E3_E4F9",
+            "size": 4.31,
+            "size_bytes": 4630822826,
+            "startTime": "2025-05-20",
+            "pathNumber": 139,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.12063,
+                            62.262894
+                        ],
+                        [
+                            9.107651,
+                            62.714691
+                        ],
+                        [
+                            8.577479,
+                            61.106625
+                        ],
+                        [
+                            13.336946,
+                            60.665512
+                        ],
+                        [
+                            14.12063,
+                            62.262894
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250520T053750_20250520T053817_002410_0050E3_2E38",
+            "size": 4.19,
+            "size_bytes": 4503472145,
+            "startTime": "2025-05-20",
+            "pathNumber": 139,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.927085,
+                            63.726372
+                        ],
+                        [
+                            9.642735,
+                            64.191612
+                        ],
+                        [
+                            9.077545,
+                            62.584686
+                        ],
+                        [
+                            14.079248,
+                            62.132172
+                        ],
+                        [
+                            14.927085,
+                            63.726372
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250519T170332_20250519T170359_059266_075AC7_ABF7",
+            "size": 4.13,
+            "size_bytes": 4435341433,
+            "startTime": "2025-05-19",
+            "pathNumber": 44,
+            "frameNumber": 202,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            6.127544,
+                            61.544502
+                        ],
+                        [
+                            10.995054,
+                            61.988197
+                        ],
+                        [
+                            10.44575,
+                            63.594154
+                        ],
+                        [
+                            5.309899,
+                            63.138752
+                        ],
+                        [
+                            6.127544,
+                            61.544502
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250519T054735_20250519T054802_059259_075A8A_5C17",
+            "size": 4.17,
+            "size_bytes": 4477987726,
+            "startTime": "2025-05-19",
+            "pathNumber": 37,
+            "frameNumber": 385,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.217332,
+                            62.651081
+                        ],
+                        [
+                            7.174383,
+                            63.101658
+                        ],
+                        [
+                            6.636224,
+                            61.494247
+                        ],
+                        [
+                            11.420418,
+                            61.054703
+                        ],
+                        [
+                            12.217332,
+                            62.651081
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250519T054710_20250519T054737_059259_075A8A_67C2",
+            "size": 4.0,
+            "size_bytes": 4299755636,
+            "startTime": "2025-05-19",
+            "pathNumber": 37,
+            "frameNumber": 380,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            13.040992,
+                            64.112984
+                        ],
+                        [
+                            7.719873,
+                            64.577568
+                        ],
+                        [
+                            7.145368,
+                            62.972061
+                        ],
+                        [
+                            12.177722,
+                            62.520626
+                        ],
+                        [
+                            13.040992,
+                            64.112984
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250518T171049_20250518T171116_002388_00504F_7CB0",
+            "size": 3.43,
+            "size_bytes": 3680932369,
+            "startTime": "2025-05-18",
+            "pathNumber": 117,
+            "frameNumber": 205,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            3.524028,
+                            62.504398
+                        ],
+                        [
+                            8.589132,
+                            62.960171
+                        ],
+                        [
+                            8.011809,
+                            64.571594
+                        ],
+                        [
+                            2.655102,
+                            64.102455
+                        ],
+                        [
+                            3.524028,
+                            62.504398
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250518T171024_20250518T171051_002388_00504F_6F2A",
+            "size": 3.99,
+            "size_bytes": 4286924145,
+            "startTime": "2025-05-18",
+            "pathNumber": 117,
+            "frameNumber": 200,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            4.29262,
+                            61.039089
+                        ],
+                        [
+                            9.104118,
+                            61.482193
+                        ],
+                        [
+                            8.563551,
+                            63.095783
+                        ],
+                        [
+                            3.490901,
+                            62.641483
+                        ],
+                        [
+                            4.29262,
+                            61.039089
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250518T055439_20250518T055506_002381_005025_EA19",
+            "size": 3.99,
+            "size_bytes": 4282272466,
+            "startTime": "2025-05-18",
+            "pathNumber": 110,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.125097,
+                            62.438187
+                        ],
+                        [
+                            5.068624,
+                            62.893314
+                        ],
+                        [
+                            4.533769,
+                            61.285149
+                        ],
+                        [
+                            9.332789,
+                            60.841015
+                        ],
+                        [
+                            10.125097,
+                            62.438187
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250518T055414_20250518T055441_002381_005025_C9F7",
+            "size": 3.67,
+            "size_bytes": 3936679895,
+            "startTime": "2025-05-18",
+            "pathNumber": 110,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.923747,
+                            63.903004
+                        ],
+                        [
+                            5.598924,
+                            64.370743
+                        ],
+                        [
+                            5.028837,
+                            62.763847
+                        ],
+                        [
+                            10.06686,
+                            62.309139
+                        ],
+                        [
+                            10.923747,
+                            63.903004
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250517T060354_20250517T060421_059230_075990_F335",
+            "size": 3.62,
+            "size_bytes": 3886984463,
+            "startTime": "2025-05-17",
+            "pathNumber": 8,
+            "frameNumber": 383,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.414318,
+                            63.150486
+                        ],
+                        [
+                            3.255534,
+                            63.608658
+                        ],
+                        [
+                            2.704672,
+                            62.001194
+                        ],
+                        [
+                            7.593577,
+                            61.554863
+                        ],
+                        [
+                            8.414318,
+                            63.150486
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250515T164556_20250515T164623_002344_004F21_B09B",
+            "size": 4.23,
+            "size_bytes": 4536758525,
+            "startTime": "2025-05-15",
+            "pathNumber": 73,
+            "frameNumber": 203,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.062327,
+                            61.824856
+                        ],
+                        [
+                            15.010177,
+                            62.274647
+                        ],
+                        [
+                            14.450969,
+                            63.887417
+                        ],
+                        [
+                            9.225932,
+                            63.425308
+                        ],
+                        [
+                            10.062327,
+                            61.824856
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250514T165522_20250514T165550_059193_07584E_13A7",
+            "size": 4.3,
+            "size_bytes": 4614986386,
+            "startTime": "2025-05-14",
+            "pathNumber": 146,
+            "frameNumber": 203,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.069009,
+                            61.765793
+                        ],
+                        [
+                            12.978131,
+                            62.211617
+                        ],
+                        [
+                            12.40298,
+                            63.874886
+                        ],
+                        [
+                            7.210382,
+                            63.416553
+                        ],
+                        [
+                            8.069009,
+                            61.765793
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250514T053925_20250514T053952_059186_075813_44AC",
+            "size": 4.25,
+            "size_bytes": 4559309874,
+            "startTime": "2025-05-14",
+            "pathNumber": 139,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.160865,
+                            62.429752
+                        ],
+                        [
+                            9.149804,
+                            62.87912
+                        ],
+                        [
+                            8.616711,
+                            61.271278
+                        ],
+                        [
+                            13.372766,
+                            60.832672
+                        ],
+                        [
+                            14.160865,
+                            62.429752
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250514T053900_20250514T053927_059186_075813_1DE3",
+            "size": 4.17,
+            "size_bytes": 4482211786,
+            "startTime": "2025-05-14",
+            "pathNumber": 139,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.981743,
+                            63.891907
+                        ],
+                        [
+                            9.693684,
+                            64.355446
+                        ],
+                        [
+                            9.124729,
+                            62.748882
+                        ],
+                        [
+                            14.128145,
+                            62.298199
+                        ],
+                        [
+                            14.981743,
+                            63.891907
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250513T170234_20250513T170301_002315_004E47_DF5E",
+            "size": 3.76,
+            "size_bytes": 4036033113,
+            "startTime": "2025-05-13",
+            "pathNumber": 44,
+            "frameNumber": 205,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            5.604891,
+                            62.460365
+                        ],
+                        [
+                            10.667196,
+                            62.91608
+                        ],
+                        [
+                            10.091182,
+                            64.52816
+                        ],
+                        [
+                            4.737834,
+                            64.059143
+                        ],
+                        [
+                            5.604891,
+                            62.460365
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250513T170209_20250513T170236_002315_004E47_CA95",
+            "size": 4.09,
+            "size_bytes": 4394850134,
+            "startTime": "2025-05-13",
+            "pathNumber": 44,
+            "frameNumber": 200,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            6.367005,
+                            60.995087
+                        ],
+                        [
+                            11.178207,
+                            61.438492
+                        ],
+                        [
+                            10.638715,
+                            63.052364
+                        ],
+                        [
+                            5.566783,
+                            62.597801
+                        ],
+                        [
+                            6.367005,
+                            60.995087
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250513T054627_20250513T054654_002308_004E14_04BE",
+            "size": 4.1,
+            "size_bytes": 4404893511,
+            "startTime": "2025-05-13",
+            "pathNumber": 37,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.091373,
+                            62.321434
+                        ],
+                        [
+                            7.066787,
+                            62.773712
+                        ],
+                        [
+                            6.535508,
+                            61.165558
+                        ],
+                        [
+                            11.30541,
+                            60.724033
+                        ],
+                        [
+                            12.091373,
+                            62.321434
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250513T054602_20250513T054629_002308_004E14_198F",
+            "size": 4.05,
+            "size_bytes": 4346444904,
+            "startTime": "2025-05-13",
+            "pathNumber": 37,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.910105,
+                            63.783092
+                        ],
+                        [
+                            7.608693,
+                            64.249588
+                        ],
+                        [
+                            7.042169,
+                            62.64344
+                        ],
+                        [
+                            12.059515,
+                            62.189785
+                        ],
+                        [
+                            12.910105,
+                            63.783092
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250512T171149_20250512T171216_059164_07574E_EA03",
+            "size": 3.62,
+            "size_bytes": 3887116089,
+            "startTime": "2025-05-12",
+            "pathNumber": 117,
+            "frameNumber": 203,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            3.947101,
+                            61.749401
+                        ],
+                        [
+                            8.846859,
+                            62.195183
+                        ],
+                        [
+                            8.291453,
+                            63.800949
+                        ],
+                        [
+                            3.119341,
+                            63.343128
+                        ],
+                        [
+                            3.947101,
+                            61.749401
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250512T055544_20250512T055611_059157_07570F_E1BD",
+            "size": 3.92,
+            "size_bytes": 4205564784,
+            "startTime": "2025-05-12",
+            "pathNumber": 110,
+            "frameNumber": 384,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.337655,
+                            62.929527
+                        ],
+                        [
+                            5.231184,
+                            63.384468
+                        ],
+                        [
+                            4.685863,
+                            61.777542
+                        ],
+                        [
+                            9.527557,
+                            61.334091
+                        ],
+                        [
+                            10.337655,
+                            62.929527
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250512T055519_20250512T055546_059157_07570F_699E",
+            "size": 3.72,
+            "size_bytes": 3997232604,
+            "startTime": "2025-05-12",
+            "pathNumber": 110,
+            "frameNumber": 379,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            11.181439,
+                            64.450653
+                        ],
+                        [
+                            5.790504,
+                            64.918785
+                        ],
+                        [
+                            5.186586,
+                            63.25581
+                        ],
+                        [
+                            10.271038,
+                            62.801815
+                        ],
+                        [
+                            11.181439,
+                            64.450653
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250511T060229_20250511T060256_002279_004D3D_633B",
+            "size": 3.4,
+            "size_bytes": 3650716854,
+            "startTime": "2025-05-11",
+            "pathNumber": 8,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.802816,
+                            63.79874
+                        ],
+                        [
+                            3.501262,
+                            64.265129
+                        ],
+                        [
+                            2.934043,
+                            62.658375
+                        ],
+                        [
+                            7.951246,
+                            62.204845
+                        ],
+                        [
+                            8.802816,
+                            63.79874
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250509T164719_20250509T164747_059120_0755CD_770A",
+            "size": 4.36,
+            "size_bytes": 4679450980,
+            "startTime": "2025-05-09",
+            "pathNumber": 73,
+            "frameNumber": 205,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            9.806274,
+                            62.372185
+                        ],
+                        [
+                            14.824011,
+                            62.823425
+                        ],
+                        [
+                            14.23261,
+                            64.486481
+                        ],
+                        [
+                            8.917774,
+                            64.021774
+                        ],
+                        [
+                            9.806274,
+                            62.372185
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250508T165404_20250508T165432_002242_004C35_874A",
+            "size": 4.13,
+            "size_bytes": 4430289197,
+            "startTime": "2025-05-08",
+            "pathNumber": 146,
+            "frameNumber": 202,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.149289,
+                            61.542301
+                        ],
+                        [
+                            13.050494,
+                            61.989941
+                        ],
+                        [
+                            12.498176,
+                            63.60321
+                        ],
+                        [
+                            7.325483,
+                            63.143661
+                        ],
+                        [
+                            8.149289,
+                            61.542301
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250508T053814_20250508T053841_002235_004BF1_1F23",
+            "size": 4.25,
+            "size_bytes": 4568595053,
+            "startTime": "2025-05-08",
+            "pathNumber": 139,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.12047,
+                            62.262882
+                        ],
+                        [
+                            9.107444,
+                            62.714687
+                        ],
+                        [
+                            8.577312,
+                            61.106743
+                        ],
+                        [
+                            13.336846,
+                            60.665623
+                        ],
+                        [
+                            14.12047,
+                            62.262882
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250508T053749_20250508T053816_002235_004BF1_B4D0",
+            "size": 4.14,
+            "size_bytes": 4444863407,
+            "startTime": "2025-05-08",
+            "pathNumber": 139,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.926938,
+                            63.726357
+                        ],
+                        [
+                            9.642535,
+                            64.191605
+                        ],
+                        [
+                            9.077387,
+                            62.584801
+                        ],
+                        [
+                            14.079165,
+                            62.132278
+                        ],
+                        [
+                            14.926938,
+                            63.726357
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250507T170332_20250507T170359_059091_0754BF_9535",
+            "size": 4.07,
+            "size_bytes": 4369015199,
+            "startTime": "2025-05-07",
+            "pathNumber": 44,
+            "frameNumber": 202,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            6.126912,
+                            61.543728
+                        ],
+                        [
+                            10.994437,
+                            61.98745
+                        ],
+                        [
+                            10.445168,
+                            63.593281
+                        ],
+                        [
+                            5.309337,
+                            63.137848
+                        ],
+                        [
+                            6.126912,
+                            61.543728
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250507T054735_20250507T054802_059084_07547C_8B62",
+            "size": 4.16,
+            "size_bytes": 4466513279,
+            "startTime": "2025-05-07",
+            "pathNumber": 37,
+            "frameNumber": 385,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.217798,
+                            62.651066
+                        ],
+                        [
+                            7.174841,
+                            63.101673
+                        ],
+                        [
+                            6.636593,
+                            61.494144
+                        ],
+                        [
+                            11.420774,
+                            61.054573
+                        ],
+                        [
+                            12.217798,
+                            62.651066
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250507T054710_20250507T054737_059084_07547C_1E3B",
+            "size": 3.89,
+            "size_bytes": 4173655331,
+            "startTime": "2025-05-07",
+            "pathNumber": 37,
+            "frameNumber": 380,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            13.041703,
+                            64.113205
+                        ],
+                        [
+                            7.720503,
+                            64.57782
+                        ],
+                        [
+                            7.145894,
+                            62.972198
+                        ],
+                        [
+                            12.178299,
+                            62.520729
+                        ],
+                        [
+                            13.041703,
+                            64.113205
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250506T171032_20250506T171059_002213_004B36_735F",
+            "size": 3.52,
+            "size_bytes": 3781519694,
+            "startTime": "2025-05-06",
+            "pathNumber": 117,
+            "frameNumber": 202,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            4.16364,
+                            61.59906
+                        ],
+                        [
+                            8.901955,
+                            62.029121
+                        ],
+                        [
+                            8.349848,
+                            63.635742
+                        ],
+                        [
+                            3.34966,
+                            63.194347
+                        ],
+                        [
+                            4.16364,
+                            61.59906
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250506T055438_20250506T055505_002206_004AF5_ACE1",
+            "size": 3.95,
+            "size_bytes": 4236824256,
+            "startTime": "2025-05-06",
+            "pathNumber": 110,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            9.955782,
+                            62.455791
+                        ],
+                        [
+                            5.075559,
+                            62.891994
+                        ],
+                        [
+                            4.540738,
+                            61.285061
+                        ],
+                        [
+                            9.172543,
+                            60.859261
+                        ],
+                        [
+                            9.955782,
+                            62.455791
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250506T055414_20250506T055441_002206_004AF5_3277",
+            "size": 3.6,
+            "size_bytes": 3861583453,
+            "startTime": "2025-05-06",
+            "pathNumber": 110,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.745535,
+                            63.921253
+                        ],
+                        [
+                            5.606233,
+                            64.369415
+                        ],
+                        [
+                            5.03612,
+                            62.76363
+                        ],
+                        [
+                            9.89863,
+                            62.32782
+                        ],
+                        [
+                            10.745535,
+                            63.921253
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250505T060354_20250505T060421_059055_07535A_7FC1",
+            "size": 3.87,
+            "size_bytes": 4155769535,
+            "startTime": "2025-05-05",
+            "pathNumber": 8,
+            "frameNumber": 383,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.415093,
+                            63.148998
+                        ],
+                        [
+                            3.256726,
+                            63.607235
+                        ],
+                        [
+                            2.706037,
+                            62.000629
+                        ],
+                        [
+                            7.594696,
+                            61.554234
+                        ],
+                        [
+                            8.415093,
+                            63.148998
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250503T164555_20250503T164622_002169_0049BB_58F4",
+            "size": 4.17,
+            "size_bytes": 4482806542,
+            "startTime": "2025-05-03",
+            "pathNumber": 73,
+            "frameNumber": 203,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            10.06119,
+                            61.824718
+                        ],
+                        [
+                            15.009046,
+                            62.274559
+                        ],
+                        [
+                            14.449768,
+                            63.887321
+                        ],
+                        [
+                            9.224729,
+                            63.425163
+                        ],
+                        [
+                            10.06119,
+                            61.824718
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250502T165522_20250502T165550_059018_0751E3_6799",
+            "size": 4.35,
+            "size_bytes": 4673521225,
+            "startTime": "2025-05-02",
+            "pathNumber": 146,
+            "frameNumber": 203,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            8.066156,
+                            61.765774
+                        ],
+                        [
+                            12.975295,
+                            62.21175
+                        ],
+                        [
+                            12.399963,
+                            63.874882
+                        ],
+                        [
+                            7.207387,
+                            63.416393
+                        ],
+                        [
+                            8.066156,
+                            61.765774
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250502T053926_20250502T053953_059011_07519F_97A1",
+            "size": 4.27,
+            "size_bytes": 4582203338,
+            "startTime": "2025-05-02",
+            "pathNumber": 139,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.16369,
+                            62.429546
+                        ],
+                        [
+                            9.152882,
+                            62.879028
+                        ],
+                        [
+                            8.619545,
+                            61.271069
+                        ],
+                        [
+                            13.375342,
+                            60.832359
+                        ],
+                        [
+                            14.16369,
+                            62.429546
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1A_IW_SLC__1SDV_20250502T053901_20250502T053928_059011_07519F_39F9",
+            "size": 4.23,
+            "size_bytes": 4538388060,
+            "startTime": "2025-05-02",
+            "pathNumber": 139,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            14.984588,
+                            63.891575
+                        ],
+                        [
+                            9.696864,
+                            64.355225
+                        ],
+                        [
+                            9.127649,
+                            62.748547
+                        ],
+                        [
+                            14.13073,
+                            62.29776
+                        ],
+                        [
+                            14.984588,
+                            63.891575
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250501T170233_20250501T170301_002140_0048B9_23DA",
+            "size": 3.76,
+            "size_bytes": 4034995246,
+            "startTime": "2025-05-01",
+            "pathNumber": 44,
+            "frameNumber": 205,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            5.603606,
+                            62.460182
+                        ],
+                        [
+                            10.665945,
+                            62.915962
+                        ],
+                        [
+                            10.089664,
+                            64.528526
+                        ],
+                        [
+                            4.736192,
+                            64.059433
+                        ],
+                        [
+                            5.603606,
+                            62.460182
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250501T170209_20250501T170236_002140_0048B9_DFD5",
+            "size": 4.11,
+            "size_bytes": 4411098914,
+            "startTime": "2025-05-01",
+            "pathNumber": 44,
+            "frameNumber": 200,
+            "flightDirection": "ASCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            6.365731,
+                            60.995033
+                        ],
+                        [
+                            11.176988,
+                            61.438499
+                        ],
+                        [
+                            10.6375,
+                            63.052124
+                        ],
+                        [
+                            5.565557,
+                            62.597496
+                        ],
+                        [
+                            6.365731,
+                            60.995033
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250501T054627_20250501T054654_002133_00487B_2111",
+            "size": 4.16,
+            "size_bytes": 4465637143,
+            "startTime": "2025-05-01",
+            "pathNumber": 37,
+            "frameNumber": 386,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.092523,
+                            62.321259
+                        ],
+                        [
+                            7.067903,
+                            62.773594
+                        ],
+                        [
+                            6.536635,
+                            61.165691
+                        ],
+                        [
+                            11.306609,
+                            60.724113
+                        ],
+                        [
+                            12.092523,
+                            62.321259
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "sceneName": "S1C_IW_SLC__1SDV_20250501T054602_20250501T054629_002133_00487B_2CF6",
+            "size": 4.02,
+            "size_bytes": 4317698855,
+            "startTime": "2025-05-01",
+            "pathNumber": 37,
+            "frameNumber": 381,
+            "flightDirection": "DESCENDING",
+            "footprint": {
+                "coordinates": [
+                    [
+                        [
+                            12.911879,
+                            63.783878
+                        ],
+                        [
+                            7.610243,
+                            64.250443
+                        ],
+                        [
+                            7.043288,
+                            62.643322
+                        ],
+                        [
+                            12.060674,
+                            62.18961
+                        ],
+                        [
+                            12.911879,
+                            63.783878
+                        ]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        }
+    ],
+    "best_path": 146,
+    "best_frame": 203,
+    "best_direction": "ASCENDING"
+}

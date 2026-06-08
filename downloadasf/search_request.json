@@ -1,0 +1,45 @@
+{
+  "repository": "ASF",
+  "dataset": "SENTINEL-1",
+  "processingLevel": [
+    "SLC"
+  ],
+  "beamMode": [
+    "IW"
+  ],
+  "polarization": [],
+  "flightDirection": [],
+  "subtype": [],
+  "startDate": "2025-05-01",
+  "endDate": "2025-05-21",
+  "pathStart": [],
+  "pathEnd": [],
+  "frameStart": [],
+  "frameEnd": [],
+  "groupID": [],
+  "sampling": {
+    "rate": [],
+    "unit": []
+  },
+  "aoi": {
+    "type": "rectangle",
+    "corners": [
+      [
+        7.3960604046966738,
+        62.613142472794863
+      ],
+      [
+        9.8816391093044054,
+        62.613142472794863
+      ],
+      [
+        9.8816391093044054,
+        62.9380230035851
+      ],
+      [
+        7.3960604046966738,
+        62.9380230035851
+      ]
+    ]
+  }
+}
