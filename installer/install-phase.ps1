@@ -458,10 +458,18 @@ function Install-PythonPackages {
         [Parameter(Mandatory)] [string]$PythonExe,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
-    & $StatusCallback 'pip install openpyxl...'
-    $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--upgrade', 'openpyxl' -Wait -PassThru -NoNewWindow
-    if ($proc.ExitCode -ne 0) {
-        throw "pip install openpyxl fallito con exit code $($proc.ExitCode)"
+    # Pacchetti Python richiesti da PHASE:
+    #   openpyxl    -> export/lettura Excel
+    #   requests    -> download HTTP
+    #   asf_search  -> ricerca e download dati SAR da ASF (Sentinel-1)
+    #   shapely     -> geometrie / footprint AOI
+    $packages = @('openpyxl', 'requests', 'asf_search', 'shapely')
+    foreach ($pkg in $packages) {
+        & $StatusCallback "pip install $pkg..."
+        $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--upgrade', $pkg -Wait -PassThru -NoNewWindow
+        if ($proc.ExitCode -ne 0) {
+            throw "pip install $pkg fallito con exit code $($proc.ExitCode)"
+        }
     }
 }
 
@@ -1451,7 +1459,7 @@ function Invoke-StampsBinariesDownload {
             <!-- Page 4: Python -->
             <StackPanel x:Name="Page4_Python" Visibility="Collapsed">
                 <TextBlock Text="Python" FontSize="28" FontWeight="Light" Margin="0,0,0,10"/>
-                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl library. The installer can download and install it automatically."
+                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl, requests, asf_search and shapely libraries. The installer can download and install everything automatically."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,20"/>
 
                 <TextBlock x:Name="PythonStatus" Text="" FontWeight="SemiBold" Margin="0,0,0,12"/>

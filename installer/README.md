@@ -112,7 +112,8 @@ install-phase.ps1
    lancia l'installer (semi-interattivo, l'utente clicca Avanti×3).
 4. **Python** — auto-detect via `py -3.X` (X=11..20) escludendo `\WindowsApps\`.
    Se assente: download da python.org + silent install per-user (`/quiet
-   InstallAllUsers=0 PrependPath=1`) con progress bar. Poi `pip install openpyxl`.
+   InstallAllUsers=0 PrependPath=1`) con progress bar. Poi
+   `pip install openpyxl requests asf_search shapely`.
 5. **Cartella destinazione** — default `%USERPROFILE%\Desktop\PHASE`.
    Validazione: scrivibile, no OneDrive (warning, non blocco), no caratteri
    non-ASCII.
