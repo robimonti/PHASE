@@ -16,7 +16,7 @@ else
     
     % Set the provided Python environment
     try
-        pyenv('Version', pythonPath);
+        pyenv('Version', pythonPath, 'ExecutionMode', 'OutOfProcess');
         fprintf('Successfully configured Python environment: %s\n', pythonPath);
     catch ME
         error('Failed to configure Python environment: %s\n', ME.message);
