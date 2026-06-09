@@ -561,15 +561,19 @@ function Invoke-GitClone {
         #   3. fetch origin <Branch>
         #   4. checkout -B <Branch> FETCH_HEAD       (anche su storia divergente
         #                                             - bypassa il ff-only)
+        # NB: Start-Process -ArgumentList unisce gli argomenti con spazi SENZA
+        # quotarli: i path con spazi (es. "D:\Baldurs Gate 3\PHASE") vanno
+        # quotati a mano o git li riceve spezzati (usage error, exit 129).
+        $destQuoted = '"{0}"' -f $Destination
         & $StatusCallback "Repo already present at $Destination - updating to origin/$Branch..."
-        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $Destination, 'remote', 'set-url', 'origin', $Repo) -Wait -PassThru -NoNewWindow
-        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $Destination, 'reset', '--hard', 'HEAD') -Wait -PassThru -NoNewWindow
-        $pFetch = Start-Process -FilePath $GitExe -ArgumentList @('-C', $Destination, 'fetch', 'origin', $Branch) -Wait -PassThru -NoNewWindow
+        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'remote', 'set-url', 'origin', $Repo) -Wait -PassThru -NoNewWindow
+        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'reset', '--hard', 'HEAD') -Wait -PassThru -NoNewWindow
+        $pFetch = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'fetch', 'origin', $Branch) -Wait -PassThru -NoNewWindow
         if ($pFetch.ExitCode -ne 0) {
             & $StatusCallback "git fetch fallito (exit $($pFetch.ExitCode)) - mantengo lo stato attuale"
             return
         }
-        $pCheckout = Start-Process -FilePath $GitExe -ArgumentList @('-C', $Destination, 'checkout', '-B', $Branch, 'FETCH_HEAD') -Wait -PassThru -NoNewWindow
+        $pCheckout = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'checkout', '-B', $Branch, 'FETCH_HEAD') -Wait -PassThru -NoNewWindow
         if ($pCheckout.ExitCode -eq 0) {
             & $StatusCallback "Repo allineato al branch $Branch (HEAD da remote)"
         } else {
@@ -582,8 +586,9 @@ function Invoke-GitClone {
     }
 
     & $StatusCallback "git clone $Repo (branch $Branch)..."
+    # Destination quotata: -ArgumentList non quota gli argomenti con spazi.
     $proc = Start-Process -FilePath $GitExe `
-        -ArgumentList 'clone', '--branch', $Branch, '--single-branch', $Repo, $Destination `
+        -ArgumentList 'clone', '--branch', $Branch, '--single-branch', $Repo, ('"{0}"' -f $Destination) `
         -Wait -PassThru -NoNewWindow
     if ($proc.ExitCode -ne 0) {
         throw "git clone $Repo fallito con exit code $($proc.ExitCode)"
