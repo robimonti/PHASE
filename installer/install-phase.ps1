@@ -458,10 +458,18 @@ function Install-PythonPackages {
         [Parameter(Mandatory)] [string]$PythonExe,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
-    & $StatusCallback 'pip install openpyxl...'
-    $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--upgrade', 'openpyxl' -Wait -PassThru -NoNewWindow
-    if ($proc.ExitCode -ne 0) {
-        throw "pip install openpyxl fallito con exit code $($proc.ExitCode)"
+    # Pacchetti Python richiesti da PHASE:
+    #   openpyxl    -> export/lettura Excel
+    #   requests    -> download HTTP
+    #   asf_search  -> ricerca e download dati SAR da ASF (Sentinel-1)
+    #   shapely     -> geometrie / footprint AOI
+    $packages = @('openpyxl', 'requests', 'asf_search', 'shapely')
+    foreach ($pkg in $packages) {
+        & $StatusCallback "pip install $pkg..."
+        $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--upgrade', $pkg -Wait -PassThru -NoNewWindow
+        if ($proc.ExitCode -ne 0) {
+            throw "pip install $pkg fallito con exit code $($proc.ExitCode)"
+        }
     }
 }
 
@@ -812,7 +820,10 @@ function Invoke-MlappAutoLoadPatch {
     param(
         [Parameter(Mandatory)] [string]$MlappPath,
         [string]$MatFileRelative,
-        [string]$Anchor = 'cd(currentFolder);',
+        # Lista di anchor candidate: si usa la prima trovata nel document.xml.
+        # Piu' varianti = robusto al drift dello startupFcn tra fork/versioni
+        # diverse dei .mlapp (e' gia' successo: fullfile(pwd,...) vs './...').
+        [string[]]$Anchor = @('cd(currentFolder);'),
         [string]$InjectBlock,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
@@ -847,13 +858,20 @@ function Invoke-MlappAutoLoadPatch {
             return $true
         }
 
-        # Anchor: prima occorrenza della stringa anchor
-        $idx = $content.IndexOf($Anchor)
+        # Anchor: prima candidata che compare nel document.xml (IndexOf =
+        # prima occorrenza). Se nessuna combacia NON e' fatale: la patch e'
+        # solo una comodita', si salta e si prosegue con gli altri .mlapp.
+        $matchedAnchor = $null
+        $idx = -1
+        foreach ($candidate in $Anchor) {
+            $idx = $content.IndexOf($candidate)
+            if ($idx -ge 0) { $matchedAnchor = $candidate; break }
+        }
         if ($idx -lt 0) {
-            & $StatusCallback "Warning: Anchor '$Anchor' non trovata. Salto la patch auto-load."
+            & $StatusCallback "WARNING: nessuna anchor trovata in $([System.IO.Path]::GetFileName($MlappPath)) (provate: $($Anchor -join ' | ')). Patch auto-load saltata, app comunque utilizzabile."
             return $false
         }
-        $insertPoint = $idx + $Anchor.Length
+        $insertPoint = $idx + $matchedAnchor.Length
 
         # InjectBlock: o quello passato dal chiamante, o il default auto-load
         # standard che chiama LoadButton se il .mat esiste.
@@ -1452,7 +1470,7 @@ function Invoke-StampsBinariesDownload {
             <!-- Page 4: Python -->
             <StackPanel x:Name="Page4_Python" Visibility="Collapsed">
                 <TextBlock Text="Python" FontSize="28" FontWeight="Light" Margin="0,0,0,10"/>
-                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl library. The installer can download and install it automatically."
+                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl, requests, asf_search and shapely libraries. The installer can download and install everything automatically."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,20"/>
 
                 <TextBlock x:Name="PythonStatus" Text="" FontWeight="SemiBold" Margin="0,0,0,12"/>
@@ -2547,6 +2565,12 @@ function Invoke-FullSetup {
         try { $_ | Stop-Process -Force; Add-SetupLog "MATLAB chiuso (PID $($_.Id)) per evitare cache stale" } catch {}
     }
     Start-Sleep -Seconds 2
+    # Le patch .mlapp sono SOLO comodita' (auto-load dei default all'apertura
+    # dell'app). A questo punto tutta l'installazione vera (repo, binari, env
+    # var, savepath, .mat) e' gia' completata. Un fallimento qui - p.es. un
+    # anchor che non combacia perche' upstream ha cambiato lo startupFcn - NON
+    # deve abortire l'intera installazione: degradiamo a warning e proseguiamo.
+    try {
     $stampsMlapp = Join-Path $phaseDir 'PHASE_Preprocessing\PHASE_StaMPS.mlapp'
     [void](Invoke-MlappAutoLoadPatch -MlappPath $stampsMlapp `
         -MatFileRelative './input_StaMPS.mat' `
@@ -2654,12 +2678,24 @@ function Invoke-FullSetup {
             end
 "@
     $modelMlapp = Join-Path $phaseDir 'PHASE_model.mlapp'
+    # Anchor: prima riga dello startupFcn (IndexOf prende la prima delle 2
+    # occorrenze, che e' quella in startupFcn - non quella nel callback Run).
+    # NB: deve combaciare LETTERALMENTE col codice MATLAB embedded nel
+    # document.xml. Le revisioni dei .mlapp in giro usano due forme diverse
+    # della addpath, quindi le proviamo entrambe.
     [void](Invoke-MlappAutoLoadPatch -MlappPath $modelMlapp `
-        -Anchor "addpath(fullfile(pwd, 'MatlabFunctions'));" `
+        -Anchor @("addpath(fullfile(pwd, 'MatlabFunctions'));", "addpath('./MatlabFunctions/');") `
         -InjectBlock $modelInject `
         -StatusCallback { param($m) Add-SetupLog $m })
 
-    Update-Task -Key 'patch' -Status 'done'
+        Update-Task -Key 'patch' -Status 'done'
+    } catch {
+        # Patch non riuscita (tipicamente anchor non trovato per drift upstream
+        # dei .mlapp). L'installazione resta valida: gli app si aprono comunque,
+        # l'utente caricara' i default manualmente dal tab Save/Load.
+        Add-SetupLog "WARNING: patch .mlapp non applicata ($($_.Exception.Message)) - installazione comunque valida, caricare i default manualmente."
+        Update-Task -Key 'patch' -Status 'skip' -Detail 'anchor non trovato - apri il .mlapp e usa Load manualmente'
+    }
 
     # Collegamenti + README nella cartella principale (engine\ resta nascosto
     # all'uso quotidiano). Non bloccante: se fallisce, i .mlapp restano comunque
