@@ -1050,10 +1050,15 @@ for r = rows_to_test
         phi_44 = @(csi_x, csi_y) phi_4(csi_x) .* phi_4(csi_y);
 
         % Initialize full design matrix
-        A_spline = zeros(length(x_coords_sort), n_params);
+        n_points_spl = length(x_coords_sort);
+        max_nnz = n_points_spl * 16; % 4x4 spline support
+        I_idx = zeros(max_nnz, 1);
+        J_idx = zeros(max_nnz, 1);
+        V_val = zeros(max_nnz, 1);
+        count_nnz = 0;
         
         % Compute design matrix
-        for n = 1:length(x_coords_sort)
+        for n = 1:n_points_spl
             x = x_coords_sort(n);
             y = y_coords_sort(n);
             
@@ -1111,14 +1116,21 @@ for r = rows_to_test
                     for h = -1:2
                         if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && ...
                             i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
-                            % Column index (column-major, matching order(i_x, i_y) = i_y + i_x * yNum)
+                            
                             col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
-                            A_spline(n, col) = alpha(k + 2, h + 2);
+                            
+                            count_nnz = count_nnz + 1;
+                            I_idx(count_nnz) = n;
+                            J_idx(count_nnz) = col;
+                            V_val(count_nnz) = alpha(k + 2, h + 2);
                         end
                     end
                 end
             end
         end
+
+        % Create the spare matrix
+        A_spline = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_points_spl, n_params);
 
         % Compute the normal matrix
         N_spline = A_spline' * A_spline;
@@ -1543,10 +1555,15 @@ n_params_spl = (num_row + 2) * (num_col + 2);
 deltaX = knots_x(2) - knots_x(1);
 deltaY = knots_y(1) - knots_y(2);
 
-    A_spline_obs = zeros(length(x_coords_sort), n_params_spl);
+    n_points_obs = length(x_coords_sort);
+    max_nnz = n_points_obs * 16;
+    I_idx = zeros(max_nnz, 1);
+    J_idx = zeros(max_nnz, 1);
+    V_val = zeros(max_nnz, 1);
+    count_nnz = 0;
         
     % Compute design matrix
-    for n = 1:length(x_coords_sort)
+    for n = 1:n_points_obs
         x = x_coords_sort(n);
         y = y_coords_sort(n);
         
@@ -1604,26 +1621,41 @@ deltaY = knots_y(1) - knots_y(2);
                 for h = -1:2
                     if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && ...
                         i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
-                        % Column index (column-major, matching order(i_x, i_y) = i_y + i_x * yNum)
                         col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
-                        A_spline_obs(n, col) = alpha(k + 2, h + 2);
+                        count_nnz = count_nnz + 1;
+                        I_idx(count_nnz) = n;
+                        J_idx(count_nnz) = col;
+                        V_val(count_nnz) = alpha(k + 2, h + 2);
                     end
                 end
             end
         end
     end
 
+A_spline_obs = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_points_obs, n_params_spl);
+
 % Compute Spline Parameter Covariance
 N_spline = A_spline_obs' * A_spline_obs;
-lambda_mat = lambda_spl * eye(size(N_spline));   % regularization if used
-inv_N_spline = inv(N_spline + lambda_mat);
+lambda_mat = lambda_spl * speye(size(N_spline, 1));
+
+try
+    inv_N_spline = full(inv(N_spline + lambda_mat));
+catch
+    inv_N_spline = full(pinv(full(N_spline + lambda_mat)));
+end
 
 % 5.3.2) Build A_spline_est (prediction Grid)
 x_est_vec = xy_est(:,1);
 y_est_vec = xy_est(:,2);
-A_spline_est = zeros(length(x_est_vec), n_params_spl);
 
-    for n = 1:length(x_est_vec)
+n_points_est = length(x_est_vec);
+max_nnz = n_points_est * 16;
+I_idx = zeros(max_nnz, 1);
+J_idx = zeros(max_nnz, 1);
+V_val = zeros(max_nnz, 1);
+count_nnz = 0;
+
+    for n = 1:n_points_est
         x = x_est_vec(n);
         y = y_est_vec(n);
         
@@ -1657,12 +1689,17 @@ A_spline_est = zeros(length(x_est_vec), n_params_spl);
                 for h = -1:2
                     if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
                         col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
-                        A_spline_est(n, col) = alpha(k + 2, h + 2);
+                        count_nnz = count_nnz + 1;
+                        I_idx(count_nnz) = n;
+                        J_idx(count_nnz) = col;
+                        V_val(count_nnz) = alpha(k + 2, h + 2);
                     end
                 end
             end
         end
     end
+
+A_spline_est = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_points_est, n_params_spl);
 
 % Propagate spline variance
 % var = s0^2 * diag(A * inv(N) * A')

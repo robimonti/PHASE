@@ -1012,7 +1012,11 @@ for cc = 1:num_candidates
     knots_t = min(t_relIN) + (0:num_t) * deltaT;
     
     % 4.5.3) Build design matrix A
-    A = sparse(n_obs, n_params);
+    max_nnz = n_obs * 64; % max 64 non zero elements per row (4x4x4)
+    I_idx = zeros(max_nnz, 1);
+    J_idx = zeros(max_nnz, 1);
+    V_val = zeros(max_nnz, 1);
+    count_nnz = 0;
     
     % Pre-compute inverse deltas for speed
     inv_dX = 1/deltaX;
@@ -1137,31 +1141,32 @@ for cc = 1:num_candidates
         alpha(4,3,4) = phi_434(2-csi_x, 1-csi_y, 2-csi_t);
         alpha(4,4,4) = phi_444(2-csi_x, 2-csi_y, 2-csi_t);
 
-        % Fill Matrix
+        % Fill Matrix in triplets
         for k = -1:2
             for h = -1:2
                 for l = -1:2
-                    % Indices relative to control points (0-based internal logic)
-                    abs_ix = i_x + k + 1; % Shift +1 because B-splines usually -1..2
+                    abs_ix = i_x + k + 1; 
                     abs_iy = i_y + h + 1;
                     abs_it = i_t + l + 1;
 
-                    % Check bounds
-                    % valid range: 1 to n_ctrl
                     if (abs_ix >= 1 && abs_ix <= n_ctrl_x && ...
                         abs_iy >= 1 && abs_iy <= n_ctrl_y && ...
                         abs_it >= 1 && abs_it <= n_ctrl_t)
                         
-                        % Linear Index: (y, x, t) order
-                        % col = y + (x-1)*Ny + (t-1)*Ny*Nx
                         col = abs_iy + (abs_ix - 1) * n_ctrl_y + (abs_it - 1) * n_ctrl_y * n_ctrl_x;
                         
-                        A(n, col) = alpha(k + 2, h + 2, l + 2);
+                        count_nnz = count_nnz + 1;
+                        I_idx(count_nnz) = n;
+                        J_idx(count_nnz) = col;
+                        V_val(count_nnz) = alpha(k + 2, h + 2, l + 2);
                     end
                 end
             end
         end
     end
+
+    % Build the sparse matrix
+    A = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_obs, n_params);
 
     % Regularization parameter
     switch lambda_method
@@ -1178,10 +1183,10 @@ for cc = 1:num_candidates
     end
 
     % Solve least squares with regularization
-    N = A' * A + lambda * eye(n_params);
+    N = A' * A + lambda * speye(n_params);
     rhs = A' * obs;
-    if cond(N) > 1e10
-        coef = pinv(N) * rhs;
+    if condest(N) > 1e10
+        coef = pinv(full(N)) * rhs;
     else
         coef = N \ rhs;
     end
@@ -1668,7 +1673,13 @@ var_poly_grid = sum((A_poly_pred_red * C_xx_poly) .* A_poly_pred_red, 2);
 % 5.2.1) Rebuild the design matrix (A_obs) for the best model
 % Needed to form the normal matrix (N) and get the covariance (C_cc)
 n_obs_var = length(x_coords); 
-A_obs_opt = sparse(n_obs_var, n_params);
+
+% Triplets for A_obs_opt
+max_nnz = n_obs_var * 64;
+I_idx = zeros(max_nnz, 1);
+J_idx = zeros(max_nnz, 1);
+V_val = zeros(max_nnz, 1);
+count_nnz = 0;
 
 % Pre-compute inverse deltas
 inv_dX = 1/deltaX;
@@ -1703,7 +1714,7 @@ for n = 1:n_obs_var
     by = bspline_basis(i_y, csi_y);
     bt = bspline_basis(i_t, csi_t);
     
-    % Fill Row
+    % Fill Row a Triplette
     for l = -1:2
         idx_t = i_t + l + 1;
         for h = -1:2
@@ -1715,12 +1726,19 @@ for n = 1:n_obs_var
                     idx_t >= 1 && idx_t <= n_ctrl_t)
                     
                     col = idx_y + (idx_x - 1) * n_ctrl_y + (idx_t - 1) * n_ctrl_y * n_ctrl_x;
-                    A_obs_opt(n, col) = bx(k+2) * by(h+2) * bt(l+2);
+                    
+                    count_nnz = count_nnz + 1;
+                    I_idx(count_nnz) = n;
+                    J_idx(count_nnz) = col;
+                    V_val(count_nnz) = bx(k+2) * by(h+2) * bt(l+2);
                 end
             end
         end
     end
 end
+
+% Creation of the final A_obs_opt matrix
+A_obs_opt = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_obs_var, n_params);
 
 % 5.2.2) Compute covariance matrix of coefficients (C_cc)
 N_total = A_obs_opt' * A_obs_opt + lambda_spl * speye(n_params);
