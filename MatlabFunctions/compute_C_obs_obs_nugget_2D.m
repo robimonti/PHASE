@@ -28,35 +28,44 @@ t_vec = xy_obs(:, 1);
 x_vec = xy_obs(:, 2);
 y_vec = xy_obs(:, 3);
 
-% 2. Calculate Distance Matrices (Vectorized)
+% Pre-allocation
+C_obs_obs = zeros(n_obs, n_obs, 'single');
 
-% Temporal Distance (Tau_t = |t_i - t_j|)
-Tau_t = abs(t_vec - t_vec');
+% 2. Calculate Distance Matrices (Chunking)
+blockSize = 2000; 
 
-% Spatial Euclidean Distance (Tau_s = sqrt((x_i-x_j)^2 + (y_i-y_j)^2))
-Diff_X = x_vec - x_vec';
-Diff_Y = y_vec - y_vec';
-Tau_s  = sqrt(Diff_X.^2 + Diff_Y.^2);
-
-% 3. Evaluate Covariance Functions
-% Temporal Component
-Ct_mat = mCovF1(c1_t, Tau_t);
-
-% Spatial Component
-Cs_mat = mCovF2(c1_s, Tau_s);
-
-% 4. Combine (Separable Model)
-% C(t,s) = C(t) * C(s) / Variance_Time 
-% (Standard separable assumption: C_space * C_time normalized)
-if c1_t(1) ~= 0
-    C_obs_obs = (Ct_mat .* Cs_mat) ./ c1_t(1);
-else
-    warning('Temporal variance is zero. Returning zero covariance.');
-    C_obs_obs = zeros(n_obs);
+for i = 1:blockSize:n_obs
+    idx_end = min(i + blockSize - 1, n_obs);
+    row_idx = i:idx_end;
+    
+    % Vectors limited to current block
+    t_block = t_vec(row_idx);
+    x_block = x_vec(row_idx);
+    y_block = y_vec(row_idx);
+    
+    % Asymmetric block matrices (blockSize x n_obs)
+    Tau_t_block = abs(t_block - t_vec');
+    Diff_X_block = x_block - x_vec';
+    Diff_Y_block = y_block - y_vec';
+    Tau_s_block  = sqrt(Diff_X_block.^2 + Diff_Y_block.^2);
+    
+    % Block covariance
+    Ct_mat_block = mCovF1(c1_t, Tau_t_block);
+    Cs_mat_block = mCovF2(c1_s, Tau_s_block);
+    
+    % Insert data in pre-allocated matrix
+    if c1_t(1) ~= 0
+        C_obs_obs(row_idx, :) = single((Ct_mat_block .* Cs_mat_block) ./ c1_t(1));
+    else
+        C_obs_obs(row_idx, :) = 0;
+    end
 end
 
-% 5. Construct Noise Matrix (Diagonal)
-% Create a vector of noise variances
+if c1_t(1) == 0
+    warning('Temporal variance is zero. Returning zero covariance.');
+end
+    
+% 5. Construct Noise Matrix
 diag_noise = repmat(A_noise, n_obs, 1);
 
 % Reduce noise for master epoch (constraint enforcement)
@@ -67,10 +76,12 @@ if any(idx_master)
 end
 
 % Create diagonal matrix
-Cvv_obs = diag(diag_noise);
+Cvv_obs = spdiags(diag_noise, 0, n_obs, n_obs);
 
 % 6. Final Sum
-C_obs_obs_fin = C_obs_obs + Cvv_obs;
+C_obs_obs_fin = C_obs_obs;
+idx_diag = 1:(n_obs+1):(n_obs^2);
+C_obs_obs_fin(idx_diag) = C_obs_obs_fin(idx_diag) + diag_noise';
 
 % 7. Eigenvalue check (Optional Debugging)
 % if n_obs <= 2000
