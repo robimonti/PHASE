@@ -12,18 +12,18 @@
 - COSMO-SkyMed (from Agenzia Spaziale Italiana - automatically supports both CSK and CSG generations)
 
 ## Required Software
-- SNAP (version 9.x is mandatory)
-- MATLAB
+- SNAP (version 13.x is recommended)
+- MATLAB (version 2026a is recommended)
 - StaMPS
-- Python 3.x with `openpyxl` (for geospatial module report generation)
+- Python 3.x with `requests`, `asf_search`, `shapely` (for the download module), and `openpyxl` (for geospatial module report generation)
 
 ## Required OS
-- *Linux*: supported end-to-end, including StaMPS, for the complete PSI pipeline.
-- *Windows*: supported end-to-end for the SNAP-based workflow (preprocessing,
+- *Linux*: supported end-to-end for the complete PSI pipeline.
+- *Windows*: supported end-to-end for the complete PSI pipeline (preprocessing,
   StaMPS, and geospatial analysis) via the Windows-native StaMPS fork
   [`pyccino/StaMPS`](https://github.com/pyccino/StaMPS). PHASE auto-discovers
   the StaMPS Windows install through `StaMPS_CONFIG.ps1` and shares the Python
-  interpreter with StaMPS via `%APPDATA%\PHASE\python.txt`.
+  interpreter with StaMPS via `%APPDATA%\PHASE\python.txt` (thanks to Samuel and Matteo).
 - *macOS*: supports preprocessing and geospatial analysis modules.
 
 ## Installation and Setup
@@ -33,8 +33,10 @@
 > Before using PHASE, please carefully read the entire manual!
 
 ### Preliminary Steps
+0. **Windows Installer** <br>
+   Download the PHASE installer for Windows from the installer folder, execute it and follow the on-screen instructioon to automatically get everything configured and    set up. This should let you skip steps 3, 4, 5. SNAP must be still manually downloaded, while python can be downloaded by the installer, if missing.
 1. **Install SNAP Software** <br>
-   Download and install [SNAP 9.x](https://step.esa.int/main/download/snap-download/) from the European Space Agency website. <br> <br>
+   Download and install [SNAP 13.x](https://step.esa.int/main/download/snap-download/) from the European Space Agency website. <br> <br>
    Verify that the following mandatory SNAP plugin module is installed:
    - Sentinel-1 Toolbox <br>
    *(Note: Previous versions required multiple toolboxes like Optical or SMOS, but these are no longer needed).*<br>
@@ -55,13 +57,13 @@
 3. **Install xterm (only Linux Users):** <br>
    Install xterm by running `sudo apt-get install xterm` in the terminal.
 
-5. **Install StaMPS:** <br>
+4. **Install StaMPS (only Linux Users):** <br>
    Install [StaMPS](https://homepages.see.leeds.ac.uk/~earahoo/stamps/) from the official GitHub repository.
    ```
    git clone https://github.com/dbekaert/StaMPS/releases/tag/v4.1-beta
    ```
 
-6. **Install PHASE suite**
+5. **Install PHASE suite**
    - Download the latest release of the PHASE suite repository.
    - Move or extract the downloaded folder into your desired project directory.
    - Execute the PHASE_Preprocessing.mlapp MATLAB application.
@@ -74,7 +76,7 @@
 ## Module 1: InSAR PSI Processing
 
 1.	**Automated SAR Images Download:** <br>
-Retrieve Sentinel-1 images via the generated Python script from the Alaska SAR Facility. For COSMO-SkyMed, use the **Images** tab in the Cosmo-SkyMed panel to import your `.h5` files (they are copied into the `slaves` directory automatically).
+Retrieve Sentinel-1 images via the integrated module through the Alaska SAR Facility APIs (thanks to Magnus and Johny). For COSMO-SkyMed, use the **Images** tab in the Cosmo-SkyMed panel to import your `.h5` files (they are copied into the `slaves` directory automatically).
 2.	**Interactive AOI & Automated Master Selection:** <br>
 Define your precise Area of Interest (AOI) by drawing a bounding box directly on the GUI's geographic map interface. Let PHASE automatically query the Open-Meteo historical weather API to select the optimal, driest master image for your stack.
 3.	**Master & Slave Pre-Processing:** <br>
@@ -91,7 +93,7 @@ The geospatial module enhances PHASE by providing advanced interpolation and mod
 - **Temporal Modeling**: Independently interpolates each time series using cubic splines for outlier removal, trend, and periodic component modeling, followed by least-squares collocation for residuals. Optional nearest-neighbor interpolation extends results spatially for visualization.
 - **Deterministic Spatio-Temporal Modeling**: Creates a continuous displacement field using temporal cubic splines for data cleaning and multi-dimensional splines for spatial interpolation, with per-epoch GIF visualizations.
 - **Stochastic Spatio-Temporal Modeling**: Combines deterministic cubic spline-based cleaning with Least Squares Collocation for deformation modeling, incorporating covariance modeling for robust uncertainty estimates.
-- **Stability Analysis**: Evaluates PS stability via a thresholding procedure based on average velocity and cumulative displacement, assigning risk levels using standardized statistical criteria and exponential/linear risk scaling.
+- **Alerts Analysis**: Evaluates PS stability via a thresholding procedure based on average velocity and cumulative displacement, assigning alert levels using standardized statistical criteria and exponential/linear alert scaling.
 
 The module generates a comprehensive Excel report across multiple sheets:
 
@@ -99,13 +101,13 @@ The module generates a comprehensive Excel report across multiple sheets:
 - **Raw Displacement Sheet**: Presents adjusted raw displacement time series with coordinates and a figure of average scene displacement with velocity annotation.
 - **Modeled Displacement Sheet**: Details modeled displacements with average velocity and a geoscatter plot of velocity across the AOI.
 - **Uncertainty Sheet**: Provides uncertainty estimates with a geoscatter plot of time-averaged uncertainty.
-- **Alerts Sheet**: Reports stability analysis with velocity, cumulative displacement, and global risk percentages.
+- **Alerts Sheet**: Reports stability analysis with velocity, cumulative displacement, and global alert percentages.
 - **Interpolation Sheet (Optional)**: Includes extrapolated time series at user-specified coordinates with individual displacement plots.
 
 A shapefile and .mat file are generated in WGS84 (EPSG:4326) coordinates, including PS data, velocities, uncertainties, and risks for GIS compatibility.
 
 ## Possible Errors and Solutions
-The procedure has been tested on SNAP 9.x and 13.x, Python 2.7, Python 3.11, Python 3.13, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a/2026a. <br>
+The procedure has been tested on SNAP 9.x and 13.x, Python 3.11, Python 3.13, Ubuntu 20.04, Windows 10, macOS Sequoia (15.1), and MATLAB 2025a/2026a. <br>
 > [!TIP]
 > Refer to the manual for solutions to common errors encountered during the StaMPS processing.
 
@@ -179,16 +181,17 @@ After the TRAIN Windows port, verify your install with these three checks.
    - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
+- *June 2026*: Added the integrated download module for Sentinel-1. Completed the StaMPS porting to Windows; improved the StaMPS data export; created an installer for PHASE on Windows.
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.
 - *March 2026*: Introduced Module 2 for geospatial PSI data analysis with deterministic and stochastic modeling.
 - *September 2024*: Added *macOS* compatibility to the preprocessing application and improved master error handling.
-<img width="2100" height="1181" alt="GitHubUpdates" src="https://github.com/user-attachments/assets/376d8baf-72b6-42d1-a08c-9d50f764bb28" />
+<img width="2100" height="1181" alt="GitHubUpdates" src="https://github.com/user-attachments/assets/f1fc37a6-67be-4770-a7d5-2a9b919ca4a3" />
+
 
 ## Planned updates
 - Improve border constraints based on user selection.
 - Introduce the handling of jumps in the displacement models.
 - Introduce the possibility for a NRT processing.
-- Native integration of Alaska Vertex API for direct Sentinel-1 image downloads.
 
 ## Acknowledgments
 Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps[^1] tool, and Prof. Andy Hooper for the StaMPS[^2] development. <br>
