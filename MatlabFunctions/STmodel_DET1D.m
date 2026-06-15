@@ -1553,84 +1553,71 @@ var_poly_grid = sum((A_poly_est_red * C_xx_poly) .* A_poly_est_red, 2);
 % Parameters from best fit
 n_params_spl = (num_row + 2) * (num_col + 2);
 deltaX = knots_x(2) - knots_x(1);
-deltaY = knots_y(1) - knots_y(2);
+deltaY = knots_y(1) - knots_y(2); % Ensure positive difference
 
-    n_points_obs = length(x_coords_sort);
-    max_nnz = n_points_obs * 16;
-    I_idx = zeros(max_nnz, 1);
-    J_idx = zeros(max_nnz, 1);
-    V_val = zeros(max_nnz, 1);
-    count_nnz = 0;
-        
-    % Compute design matrix
-    for n = 1:n_points_obs
-        x = x_coords_sort(n);
-        y = y_coords_sort(n);
-        
-        % Find knot interval for x: knots_x(i_x) <= x < knots_x(i_x+1)
-        i_x = find(x >= knots_x(1:end-1) & x < knots_x(2:end), 1);
-        if isempty(i_x)
-            if x <= knots_x(1)
-                i_x = 1;
-            elseif x >= knots_x(end)
-                i_x = length(knots_x) - 1;
-            end
-        else
-            i_x = i_x - 1; 
+n_points_obs = length(x_coords_sort);
+max_nnz = n_points_obs * 16;
+I_idx = zeros(max_nnz, 1);
+J_idx = zeros(max_nnz, 1);
+V_val = zeros(max_nnz, 1);
+count_nnz = 0;
+    
+% Compute design matrix
+for n = 1:n_points_obs
+    x = x_coords_sort(n);
+    y = y_coords_sort(n);
+    
+    % Find knot interval for x
+    i_x = find(x >= knots_x(1:end-1) & x < knots_x(2:end), 1);
+    if isempty(i_x)
+        if x < knots_x(1)
+            i_x = 0;
+        elseif x >= knots_x(end)
+            i_x = length(knots_x) - 2;
         end
-        
-        % Find knot interval for y: knots_y(i_y) >= y > knots_y(i_y+1) (decreasing)
-        i_y = find(y <= knots_y(1:end-1) & y > knots_y(2:end), 1);
-        if isempty(i_y)
-            if y >= knots_y(1)
-                i_y = 1;
-            elseif y <= knots_y(end)
-                i_y = length(knots_y) - 1;
-            end
-        else
-            i_y = i_y - 1; 
+    else
+        i_x = i_x - 1; 
+    end
+    
+    % Find knot interval for y (decreasing)
+    i_y = find(y <= knots_y(1:end-1) & y > knots_y(2:end), 1);
+    if isempty(i_y)
+        if y > knots_y(1)
+            i_y = 0;
+        elseif y <= knots_y(end)
+            i_y = length(knots_y) - 2;
         end
+    else
+        i_y = i_y - 1; 
+    end
+    
+    % Check valid indices
+    if (i_x >= -2 && i_x <= length(knots_x) - 1 && i_y >= -2 && i_y <= length(knots_y) - 1)
+        % Compute local coordinates (FIXED)
+        csi_x = (x - knots_x(i_x + 1)) / deltaX;
+        csi_y = (knots_y(i_y + 1) - y) / deltaY;
         
-        % Check valid indices (mimicking C++: i_x >= -2 && i_x <= xNum && i_y >= -2 && i_y <= yNum)
-        if (i_x >= -2 && i_x <= length(knots_x) && i_y >= -2 && i_y <= length(knots_y))
-            % Compute local coordinates
-            csi_x = (x - knots_x(i_x + 1)) / deltaX;
-            csi_y = (y - knots_y(i_y + 1)) / deltaY;
-            
-            % Compute alpha coefficients (4x4)
-            alpha = zeros(4, 4);
-            alpha(1,1) = phi_44(1 + csi_x, 1 + csi_y);
-            alpha(1,2) = phi_43(1 + csi_x, csi_y);
-            alpha(1,3) = phi_43(1 + csi_x, 1 - csi_y);
-            alpha(1,4) = phi_44(1 + csi_x, 2 - csi_y);
-            alpha(2,1) = phi_34(csi_x, 1 + csi_y);
-            alpha(2,2) = phi_33(csi_x, csi_y);
-            alpha(2,3) = phi_33(csi_x, 1 - csi_y);
-            alpha(2,4) = phi_34(csi_x, 2 - csi_y);
-            alpha(3,1) = phi_34(1 - csi_x, 1 + csi_y);
-            alpha(3,2) = phi_33(1 - csi_x, csi_y);
-            alpha(3,3) = phi_33(1 - csi_x, 1 - csi_y);
-            alpha(3,4) = phi_34(1 - csi_x, 2 - csi_y);
-            alpha(4,1) = phi_44(2 - csi_x, 1 + csi_y);
-            alpha(4,2) = phi_43(2 - csi_x, csi_y);
-            alpha(4,3) = phi_43(2 - csi_x, 1 - csi_y);
-            alpha(4,4) = phi_44(2 - csi_x, 2 - csi_y);
-            
-            % Assign to design matrix
-            for k = -1:2
-                for h = -1:2
-                    if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && ...
-                        i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
-                        col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
-                        count_nnz = count_nnz + 1;
-                        I_idx(count_nnz) = n;
-                        J_idx(count_nnz) = col;
-                        V_val(count_nnz) = alpha(k + 2, h + 2);
-                    end
+        % Compute alpha coefficients (4x4)
+        alpha = zeros(4, 4);
+        alpha(1,1) = phi_44(1 + csi_x, 1 + csi_y); alpha(1,2) = phi_43(1 + csi_x, csi_y); alpha(1,3) = phi_43(1 + csi_x, 1 - csi_y); alpha(1,4) = phi_44(1 + csi_x, 2 - csi_y);
+        alpha(2,1) = phi_34(csi_x, 1 + csi_y);     alpha(2,2) = phi_33(csi_x, csi_y);     alpha(2,3) = phi_33(csi_x, 1 - csi_y);     alpha(2,4) = phi_34(csi_x, 2 - csi_y);
+        alpha(3,1) = phi_34(1 - csi_x, 1 + csi_y); alpha(3,2) = phi_33(1 - csi_x, csi_y); alpha(3,3) = phi_33(1 - csi_x, 1 - csi_y); alpha(3,4) = phi_34(1 - csi_x, 2 - csi_y);
+        alpha(4,1) = phi_44(2 - csi_x, 1 + csi_y); alpha(4,2) = phi_43(2 - csi_x, csi_y); alpha(4,3) = phi_43(2 - csi_x, 1 - csi_y); alpha(4,4) = phi_44(2 - csi_x, 2 - csi_y);
+        
+        % Assign to design matrix
+        for k = -1:2
+            for h = -1:2
+                if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
+                    col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
+                    count_nnz = count_nnz + 1;
+                    I_idx(count_nnz) = n;
+                    J_idx(count_nnz) = col;
+                    V_val(count_nnz) = alpha(k + 2, h + 2);
                 end
             end
         end
     end
+end
 
 A_spline_obs = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_points_obs, n_params_spl);
 
@@ -1655,54 +1642,62 @@ J_idx = zeros(max_nnz, 1);
 V_val = zeros(max_nnz, 1);
 count_nnz = 0;
 
-    for n = 1:n_points_est
-        x = x_est_vec(n);
-        y = y_est_vec(n);
-        
-        % Find knot interval for x
-        i_x = find(x >= knots_x(1:end-1) & x < knots_x(2:end), 1);
-        if isempty(i_x)
-            if x <= knots_x(1), i_x = 1; elseif x >= knots_x(end), i_x = length(knots_x) - 1; end
-        else
-            i_x = i_x - 1; 
+for n = 1:n_points_est
+    x = x_est_vec(n);
+    y = y_est_vec(n);
+    
+    % Find knot interval for x
+    i_x = find(x >= knots_x(1:end-1) & x < knots_x(2:end), 1);
+    if isempty(i_x)
+        if x < knots_x(1)
+            i_x = 0;
+        elseif x >= knots_x(end)
+            i_x = length(knots_x) - 2;
         end
-        
-        % Find knot interval for y
-        i_y = find(y <= knots_y(1:end-1) & y > knots_y(2:end), 1);
-        if isempty(i_y)
-            if y >= knots_y(1), i_y = 1; elseif y <= knots_y(end), i_y = length(knots_y) - 1; end
-        else
-            i_y = i_y - 1; 
+    else
+        i_x = i_x - 1; 
+    end
+    
+    % Find knot interval for y
+    i_y = find(y <= knots_y(1:end-1) & y > knots_y(2:end), 1);
+    if isempty(i_y)
+        if y > knots_y(1)
+            i_y = 0;
+        elseif y <= knots_y(end)
+            i_y = length(knots_y) - 2;
         end
+    else
+        i_y = i_y - 1; 
+    end
+    
+    if (i_x >= -2 && i_x <= length(knots_x) - 1 && i_y >= -2 && i_y <= length(knots_y) - 1)
+        % Compute local coordinates (FIXED)
+        csi_x = (x - knots_x(i_x + 1)) / deltaX;
+        csi_y = (knots_y(i_y + 1) - y) / deltaY;
         
-        if (i_x >= -2 && i_x <= length(knots_x) && i_y >= -2 && i_y <= length(knots_y))
-            csi_x = (x - knots_x(i_x + 1)) / deltaX;
-            csi_y = (y - knots_y(i_y + 1)) / deltaY;
-            
-            alpha = zeros(4, 4);
-            alpha(1,1) = phi_44(1 + csi_x, 1 + csi_y); alpha(1,2) = phi_43(1 + csi_x, csi_y); alpha(1,3) = phi_43(1 + csi_x, 1 - csi_y); alpha(1,4) = phi_44(1 + csi_x, 2 - csi_y);
-            alpha(2,1) = phi_34(csi_x, 1 + csi_y);     alpha(2,2) = phi_33(csi_x, csi_y);     alpha(2,3) = phi_33(csi_x, 1 - csi_y);     alpha(2,4) = phi_34(csi_x, 2 - csi_y);
-            alpha(3,1) = phi_34(1 - csi_x, 1 + csi_y); alpha(3,2) = phi_33(1 - csi_x, csi_y); alpha(3,3) = phi_33(1 - csi_x, 1 - csi_y); alpha(3,4) = phi_34(1 - csi_x, 2 - csi_y);
-            alpha(4,1) = phi_44(2 - csi_x, 1 + csi_y); alpha(4,2) = phi_43(2 - csi_x, csi_y); alpha(4,3) = phi_43(2 - csi_x, 1 - csi_y); alpha(4,4) = phi_44(2 - csi_x, 2 - csi_y);
-            
-            for k = -1:2
-                for h = -1:2
-                    if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
-                        col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
-                        count_nnz = count_nnz + 1;
-                        I_idx(count_nnz) = n;
-                        J_idx(count_nnz) = col;
-                        V_val(count_nnz) = alpha(k + 2, h + 2);
-                    end
+        alpha = zeros(4, 4);
+        alpha(1,1) = phi_44(1 + csi_x, 1 + csi_y); alpha(1,2) = phi_43(1 + csi_x, csi_y); alpha(1,3) = phi_43(1 + csi_x, 1 - csi_y); alpha(1,4) = phi_44(1 + csi_x, 2 - csi_y);
+        alpha(2,1) = phi_34(csi_x, 1 + csi_y);     alpha(2,2) = phi_33(csi_x, csi_y);     alpha(2,3) = phi_33(csi_x, 1 - csi_y);     alpha(2,4) = phi_34(csi_x, 2 - csi_y);
+        alpha(3,1) = phi_34(1 - csi_x, 1 + csi_y); alpha(3,2) = phi_33(1 - csi_x, csi_y); alpha(3,3) = phi_33(1 - csi_x, 1 - csi_y); alpha(3,4) = phi_34(1 - csi_x, 2 - csi_y);
+        alpha(4,1) = phi_44(2 - csi_x, 1 + csi_y); alpha(4,2) = phi_43(2 - csi_x, csi_y); alpha(4,3) = phi_43(2 - csi_x, 1 - csi_y); alpha(4,4) = phi_44(2 - csi_x, 2 - csi_y);
+        
+        for k = -1:2
+            for h = -1:2
+                if (i_x + k >= 0 && i_x + k <= length(knots_x) - 1 && i_y + h >= 0 && i_y + h <= length(knots_y) - 1)
+                    col = (i_y + h) + (i_x + k) * length(knots_y) + 1;
+                    count_nnz = count_nnz + 1;
+                    I_idx(count_nnz) = n;
+                    J_idx(count_nnz) = col;
+                    V_val(count_nnz) = alpha(k + 2, h + 2);
                 end
             end
         end
     end
+end
 
 A_spline_est = sparse(I_idx(1:count_nnz), J_idx(1:count_nnz), V_val(1:count_nnz), n_points_est, n_params_spl);
 
 % Propagate spline variance
-% var = s0^2 * diag(A * inv(N) * A')
 var_spline_grid = s02_spl * sum((A_spline_est * inv_N_spline) .* A_spline_est, 2);
 
 
