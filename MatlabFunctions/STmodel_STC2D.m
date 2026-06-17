@@ -458,7 +458,13 @@ while iter < 2
         end
         Q_ll = spdiags(variances, 0, length(y0_lsc), length(y0_lsc));
     else
-        Q_ll = C_obs_obs_m;  % <- already contains both signal and noise 
+        % Safety check: If covariance fit failed in iter 1, prevent NaN propagation
+        if any(isnan(C_obs_obs_m(:)))
+            warning('C_obs_obs_m contains NaNs due to poor model fit. Reverting to initial variances.');
+            Q_ll = spdiags(variances, 0, length(y0_lsc), length(y0_lsc));
+        else
+            Q_ll = C_obs_obs_m;  % <- already contains both signal and noise 
+        end
     end
 
 
@@ -757,6 +763,11 @@ while iter < 2
 
 
     % 3.6) Convergence check
+    if iter == 1
+        % Dynamically match the size of x_means (handles flat vs tilted planes)
+        spatialMeans_lsc_itPrec = Inf(size(x_means));
+    end
+
     delta_conv = max(abs(x_means - spatialMeans_lsc_itPrec));
     fprintf('Max change in spatial means: %.4f mm\n', delta_conv);
     spatialMeans_lsc_itPrec = x_means;
@@ -790,7 +801,11 @@ while iter < 2
         
         % 3.7.1a) Aggregate variance (lag 0)
         Var_Global_T = sum(cat(1, var_T_cells{:}), 1);   % [SumSq, TotalCount]
-        Variance_T = Var_Global_T(1) / Var_Global_T(2);
+        if numel(Var_Global_T) < 2 || Var_Global_T(2) == 0
+            Variance_T = 1e-3; % Safe fallback
+        else
+            Variance_T = Var_Global_T(1) / Var_Global_T(2);
+        end
         
         % 3.7.1b) Aggregate covariance (lag > 0)
         Global_T = zeros(max_lag_time, 3);
@@ -872,7 +887,11 @@ while iter < 2
             case 'residualAtm'
                 Var_Global_S = sum(cat(1, var_S_cells{:}), 1);
         end
-        Variance_S = Var_Global_S(1) / Var_Global_S(2);
+        if numel(Var_Global_S) < 2 || Var_Global_S(2) == 0
+            Variance_S = 1e-3; % Safe fallback
+        else
+            Variance_S = Var_Global_S(1) / Var_Global_S(2);
+        end
         
         % 3.7.2b) Aggregate covariance (lag > 0)
         Global_S = sum(cat(3, accum_S_cells{:}), 3);
@@ -1505,7 +1524,35 @@ A_obs     = A_obs(:, mask_params);
 % 5.3) Cholesky decomposition method - batched
 fprintf('\n2. Solving system for variances in %d batches...\n', num_batches);
 
-L = chol(C_obs_obs, 'lower'); 
+% Attempt standard Cholesky decomposition
+[L, p] = chol(C_obs_obs, 'lower');
+
+% If p > 0, the matrix is not Positive Definite (likely due to perfectly overlapping dataset points)
+if p > 0
+    warning('Covariance matrix is not positive definite due to clustered dataset points. Applying numerical stabilization...');
+    
+    % Dynamically add "jitter" to the diagonal until it successfully decomposes
+    jitter = 1e-6 * max(diag(C_obs_obs));
+    max_attempts = 10;
+    success = false;
+    
+    for attempt = 1:max_attempts
+        % Add the jitter factor to the diagonal
+        C_obs_obs(1:size(C_obs_obs,1)+1:end) = C_obs_obs(1:size(C_obs_obs,1)+1:end) + jitter;
+        
+        [L, p] = chol(C_obs_obs, 'lower');
+        if p == 0
+            success = true;
+            fprintf('Stabilization successful after %d attempts (jitter added: %.2e).\n', attempt, jitter);
+            break;
+        end
+        jitter = jitter * 10; % Increase jitter magnitude for next attempt
+    end
+    
+    if ~success
+        error('Failed to stabilize covariance matrix. Check dataset for excessive duplicates or zero-variance signals.');
+    end
+end 
 
 % Precompute trend weight term
 Z = L \ A_obs;

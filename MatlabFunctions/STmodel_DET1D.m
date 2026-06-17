@@ -1384,7 +1384,6 @@ spl_est = spl_est_full(:, 3);
 
 % Reshape to a grid
 spl_est_grid = reshape(spl_est, length(t_full), [])';
-figure; imagesc(spl_est_grid)
 
 % 4.9) Restore the removed polynomial surface
 t_est = xy_est(:, 2);
@@ -1914,13 +1913,14 @@ for t = 1:length(t_full)
 
 end
 
-close(h);
-close(gif_fig);
+delete(h);
+delete(gif_fig);
 
 
 
 % 7.2) Heatmap
-figure('Visible', 'off', 'Position', [0, 0, 1200, 800]);
+gif_fig = figure('Visible', 'off', 'Position', [0, 0, 1200, 800]);
+set(0, 'CurrentFigure', gif_fig);
 imagesc(dates_full, s_full, final_signal_out, 'AlphaData', ~isnan(final_signal_out));
 colormap(jet);
 ylim([min(s_full), max(s_full)])
@@ -1934,7 +1934,7 @@ title(c, '[mm]', 'FontSize', 15);
 set(gca, 'FontSize', 15)
 filename = strcat(figsDir, filesep, 'STdet_displ1D.png');
 print(gcf, filename, '-dpng', '-r300')
-close
+delete(gif_fig)
 
 disp('GIF creation completed.');
 
