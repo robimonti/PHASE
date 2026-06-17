@@ -1,7 +1,7 @@
-function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out] = ...
+function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out, displEXTR] = ...
     STmodel_STC1D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, centerline_data, figsDir, minMonths, ...
     gS_input_path, gS_output_path, gS_job_path, detectedOS, dtCov_STC1D, dsCov_STC1D, utmZone, xyIN_AOI, step_t, ...
-    detrend_method, use_inclined_means, poly_degree, tCovModel_STC1D, sCovModel_STC1D, markerSize_STC1D)
+    detrend_method, use_inclined_means, poly_degree, tCovModel_STC1D, sCovModel_STC1D, markerSize_STC1D, xy_EXTR)
 
 % STmodel_STC1D Performs spatio-temporal stochastic modelling for displacement data
 %
@@ -31,6 +31,7 @@ function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signa
 %   tCovModel_STC2D       - temporal covariance model
 %   sCovModel_STC2D       - spatial covariance model
 %   markerSize_STC2D      - marker size for the GIF plot
+%   xy_EXTR               - vector of query coordinates
 %
 % Output:
 %   lonlatIN_AOI_STC1D    - lon/lat coordinates of estimated centerline points
@@ -39,6 +40,7 @@ function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signa
 %   final_signal_orig     - modelled signal in observation coordinates
 %   final_signal_out      - modelled signal in query coordinates
 %   final_std_out         - uncertainty
+%   displEXTR             - displacement at query coordinates
 %
 %
 % !! WARNING: This function can be computationally intensive on your RAM,
@@ -47,9 +49,10 @@ function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signa
 
 
 % validate inputs
-if nargin < 22
-    error('STC 1D: All input arguments are required.');
+if nargin < 23
+    xy_EXTR = [];
 end
+displEXTR = [];
 % validate centerline inputs
 if isempty(centerline_data) || isempty(centerline_data.xy_centerline) || isempty(centerline_data.s) || isempty(centerline_data.projected_distances)
     error('STC 1D: centerline_data or its fields are empty for 1D interpolation.');
@@ -1258,6 +1261,75 @@ end
 % 4.8.3) Final summation and reshape
 final_signal_orig_col = signal_stoch_full + signal_det_full;
 final_signal_orig = reshape(final_signal_orig_col, nt, np)';
+
+
+% 4.9) Prediction on query points (Extrapolation)
+if exist('xy_EXTR', 'var') && ~isempty(xy_EXTR)
+    disp('Evaluating 1D Stochastic model natively at query points...');
+    nEXTR = size(xy_EXTR, 1);
+
+    % Project xy_EXTR onto the centerline to get s_EXTR
+    s_EXTR = zeros(nEXTR, 1);
+    for i = 1:nEXTR
+        distances = sqrt((centerline_data.xy_centerline(:,1) - xy_EXTR(i,1)).^2 + ...
+            (centerline_data.xy_centerline(:,2) - xy_EXTR(i,2)).^2);
+        [~, min_idx] = min(distances);
+        s_EXTR(i) = centerline_data.s(min_idx);
+    end
+
+    % Create prediction grid (matching the time-major layout of Step 4.2)
+    grid_t_extr = repmat(t_full', length(s_EXTR), 1);
+    grid_s_extr = repmat(s_EXTR, 1, length(t_full));
+    grid_t_extr_col = reshape(grid_t_extr, [], 1);
+    grid_s_extr_col = reshape(grid_s_extr, [], 1);
+    xy_extr = [grid_t_extr_col, grid_s_extr_col];
+
+    n_extr_total = size(xy_extr, 1);
+    coll_extr = zeros(n_extr_total, 1);
+
+    % 4.9.1) Evaluate Stochastic Component
+    % Use the same dynamic batch size computed in Step 4.4 to protect RAM
+    for idx = 1:batch_size:n_extr_total
+        idx_end = min(idx + batch_size - 1, n_extr_total);
+
+        t_extr_batch = xy_extr(idx:idx_end, 1);
+        s_extr_batch = xy_extr(idx:idx_end, 2);
+
+        tau_t_batch = abs(t_extr_batch - t_obs);
+        tau_s_batch = abs(s_extr_batch - s_obs);
+
+        Ct_batch = mCovF1(c1_t, tau_t_batch);
+        Cs_signal_batch = mCovF2(c1_s, tau_s_batch);
+
+        C_extr_obs_batch = (Ct_batch .* Cs_signal_batch) ./ c1_t(1);
+        coll_extr(idx:idx_end) = C_extr_obs_batch * weights;
+    end
+
+    % 4.9.2) Evaluate Deterministic Polynomial Component
+    if strcmp(detrend_method, 'cleanObs')
+        t_extr_n = grid_t_extr_col - t0;
+        s_extr_n = grid_s_extr_col - s0;
+
+        A_poly_extr = ones(length(t_extr_n), 1);
+        if poly_degree >= 1, A_poly_extr = [A_poly_extr, s_extr_n, t_extr_n]; end
+        if poly_degree >= 2, A_poly_extr = [A_poly_extr, s_extr_n.^2, t_extr_n.^2, s_extr_n.*t_extr_n]; end
+        if poly_degree >= 3, A_poly_extr = [A_poly_extr, s_extr_n.^3, t_extr_n.^3, s_extr_n.^2.*t_extr_n, t_extr_n.^2.*s_extr_n]; end
+
+        poly_extr = A_poly_extr * x_poly_coeffs;
+    else
+        poly_extr = zeros(n_extr_total, 1);
+    end
+
+    % 4.9.3) Total Signal
+    final_extr_col = coll_extr + poly_extr;
+
+    % Reshape back to [nEXTR x n_times] 
+    displEXTR_mat = reshape(final_extr_col, nEXTR, length(t_full));
+
+    % Apply reference shift (zero at first epoch)
+    displEXTR = displEXTR_mat - displEXTR_mat(:,1);
+    disp('Query points evaluated successfully.');
+end
 
 disp('Collocation prediction completed.');
 

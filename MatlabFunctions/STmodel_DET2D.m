@@ -1,8 +1,8 @@
-function [lonlatIN_AOI_DET2D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out] = ...
+function [lonlatIN_AOI_DET2D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out, displEXTR] = ...
     STmodel_DET2D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, x_grid, y_grid, figsDir, minMonths, ...
     gS_input_path, gS_output_path, gS_job_path, detectedOS, varNoise_method, varNoise_manual, num_spl_method, ...
     spline_method, num_spl_row_manual, num_spl_col_manual, num_spl_time_manual, lambda_method, lambda_manual, ...
-    utmZone, xyIN_AOI, xyAOI, step_t, detrend_method, use_inclined_means, poly_degree, markerSize_DET2D)
+    utmZone, xyIN_AOI, xyAOI, step_t, detrend_method, use_inclined_means, poly_degree, markerSize_DET2D, xy_EXTR)
 
 % STmodel_DET1D Performs spatio-temporal deterministic modelling for displacement data
 %
@@ -36,6 +36,7 @@ function [lonlatIN_AOI_DET2D, dates_full, t_full, final_signal_orig, final_signa
 %   use_inclined_means    - flag for using flat or inclines plane for residual atmospheric removal
 %   poly_degree           - maximum polynomial degree
 %   markerSize_DET2D      - marker size for the GIF plot
+%   xy_EXTR               - vector of query coordinates
 % 
 %
 % Output:
@@ -45,7 +46,13 @@ function [lonlatIN_AOI_DET2D, dates_full, t_full, final_signal_orig, final_signa
 %   final_signal_orig     - modelled signal in observation coordinates
 %   final_signal_out      - modelled signal in query coordinates
 %   final_std_out         - uncertainty
+%   displEXTR             - displacement at query coordinates
 
+
+if nargin < 30
+    xy_EXTR = [];
+end
+displEXTR = [];
 
 disp('--- 2D Deterministic-based modelling started... ---');
 
@@ -1586,6 +1593,101 @@ signal_poly_full = A_poly_target * x_poly_coeffs;
 % 4.12.3) Final summation and reshape
 final_signal_orig_col = signal_spl_full + signal_poly_full;
 final_signal_orig = reshape(final_signal_orig_col, nt, np)';
+
+
+% 4.13) Prediction on query points (Extrapolation)
+if exist('xy_EXTR', 'var') && ~isempty(xy_EXTR)
+    disp('Evaluating 2D model natively at query points...');
+    nEXTR = size(xy_EXTR, 1);
+
+    % Initialize matrix [nEXTR x n_times]
+    displEXTR_mat = zeros(nEXTR, nt_full);
+
+    % Pre-compute inverse deltas for speed
+    inv_dX = 1/deltaX;
+    inv_dY = 1/deltaY;
+    inv_dT = 1/deltaT;
+
+    % 4.13.1) Evaluate Spline Component
+    for ti = 1:nt_full
+        curr_t = t_full(ti);
+
+        i_t = floor((curr_t - knots_t(1)) * inv_dT); 
+        if i_t >= num_t, i_t = num_t - 1; end; if i_t < 0, i_t = 0; end
+        csi_t = (curr_t - knots_t(i_t + 1)) * inv_dT;
+        B_t = bspline_basis(i_t, csi_t);
+
+        for pi = 1:nEXTR
+            curr_x = xy_EXTR(pi, 1);
+            curr_y = xy_EXTR(pi, 2);
+
+            i_x = floor((curr_x - knots_x(1)) * inv_dX); 
+            if i_x >= num_x, i_x = num_x - 1; end; if i_x < 0, i_x = 0; end
+            csi_x = (curr_x - knots_x(i_x + 1)) * inv_dX;
+            B_x = bspline_basis(i_x, csi_x);
+
+            i_y = floor((curr_y - knots_y(1)) * inv_dY); 
+            if i_y >= num_y, i_y = num_y - 1; end; if i_y < 0, i_y = 0; end
+            csi_y = (curr_y - knots_y(i_y + 1)) * inv_dY;
+            B_y = bspline_basis(i_y, csi_y);
+
+            val = 0;
+            for l = -1:2 
+                idx_t = i_t + l + 1;
+                for h = -1:2 
+                    idx_y = i_y + h + 1;
+                    for k = -1:2 
+                        idx_x = i_x + k + 1;
+
+                        if (idx_x >= 1 && idx_x <= n_ctrl_x && ...
+                                idx_y >= 1 && idx_y <= n_ctrl_y && ...
+                                idx_t >= 1 && idx_t <= n_ctrl_t)
+
+                            coef_idx = idx_y + (idx_x - 1) * n_ctrl_y + (idx_t - 1) * n_ctrl_y * n_ctrl_x;
+                            val = val + coef_spl(coef_idx) * B_x(k+2) * B_y(h+2) * B_t(l+2);
+                        end
+                    end
+                end
+            end
+            displEXTR_mat(pi, ti) = val;
+        end
+    end
+
+    % 4.13.2) Evaluate Polynomial Component
+    x_extr_n = xy_EXTR(:,1) - x0;
+    y_extr_n = xy_EXTR(:,2) - y0;
+    poly_extr_mat = zeros(nEXTR, nt_full);
+
+    for ti = 1:nt_full
+        t_curr_n = t_full(ti) - t0;
+        t_vec = repmat(t_curr_n, nEXTR, 1);
+
+        A_slice = ones(nEXTR, 1);
+        if poly_degree >= 1
+            A_slice = [A_slice, x_extr_n, y_extr_n, t_vec]; 
+        end
+        if poly_degree >= 2
+            A_slice = [A_slice, x_extr_n.^2, y_extr_n.^2, t_vec.^2, ...
+                x_extr_n.*y_extr_n, x_extr_n.*t_vec, y_extr_n.*t_vec]; 
+        end
+        if poly_degree >= 3
+            A_slice = [A_slice, x_extr_n.^3, y_extr_n.^3, t_vec.^3, ...
+                x_extr_n.^2.*y_extr_n, x_extr_n.^2.*t_vec, ...
+                y_extr_n.^2.*x_extr_n, y_extr_n.^2.*t_vec, ...
+                t_vec.^2.*x_extr_n, t_vec.^2.*y_extr_n, ...
+                x_extr_n.*y_extr_n.*t_vec]; 
+        end
+
+        poly_extr_mat(:, ti) = A_slice * x_poly_coeffs;
+    end
+
+    % 4.13.3) Total Extrapolation Signal
+    displEXTR_mat = displEXTR_mat + poly_extr_mat;
+
+    % Apply reference shift (zero at first epoch)
+    displEXTR = displEXTR_mat - displEXTR_mat(:,1);
+    disp('Query points evaluated successfully.');
+end
 
 disp('Splines interpolation completed.');
 

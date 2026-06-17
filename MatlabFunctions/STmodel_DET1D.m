@@ -1,8 +1,8 @@
-function [lonlatIN_AOI_DET1D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out] = ...
+function [lonlatIN_AOI_DET1D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out, displEXTR] = ...
     STmodel_DET1D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, centerline_data, figsDir, minMonths, ...
     gS_input_path, gS_output_path, gS_job_path, gS_synth_path, detectedOS, varNoise_method, varNoise_manual, num_spl_method, ...
     spline_method, num_spl_row_manual, num_spl_col_manual, lambda_method, lambda_manual, utmZone, xyIN_AOI, step_t, ...
-    detrend_method, use_inclined_means, poly_degree, markerSize_DET1D)
+    detrend_method, use_inclined_means, poly_degree, markerSize_DET1D, xy_EXTR)
 
 % STmodel_DET1D Performs spatio-temporal deterministic modelling for displacement data
 %
@@ -37,6 +37,7 @@ function [lonlatIN_AOI_DET1D, dates_full, t_full, final_signal_orig, final_signa
 %   use_inclined_means    - flag for using flat or inclines plane for residual atmospheric removal
 %   poly_degree           - maximum polynomial degree
 %   markerSize_STC2D      - marker size for the GIF plot
+%   xy_EXTR               - vector of query coordinates
 % 
 %
 % Output:
@@ -46,6 +47,12 @@ function [lonlatIN_AOI_DET1D, dates_full, t_full, final_signal_orig, final_signa
 %   final_signal_orig     - modelled signal in observation coordinates
 %   final_signal_out      - modelled signal in query coordinates
 %   final_std_out         - uncertainty
+%   displEXTR             - displacement at query coordinates
+
+if nargin < 28
+    xy_EXTR = [];
+end
+displEXTR = [];
 
 % validate centerline inputs
 if isempty(centerline_data) || isempty(centerline_data.xy_centerline) || isempty(centerline_data.s) || isempty(centerline_data.projected_distances)
@@ -1491,6 +1498,75 @@ signal_poly_full = A_poly_target * x_poly_coeffs;
 % 4.12.3) Final summation and reshape
 final_signal_orig_col = signal_spl_full + signal_poly_full;
 final_signal_orig = reshape(final_signal_orig_col, nt, np)';
+
+
+% 4.13) Prediction on query points (Extrapolation)
+if exist('xy_EXTR', 'var') && ~isempty(xy_EXTR)
+    disp('Evaluating model natively at query points...');
+    nEXTR = size(xy_EXTR, 1);
+
+    % Project xy_EXTR onto the centerline to get s_EXTR
+    s_EXTR = zeros(nEXTR, 1);
+    for i = 1:nEXTR
+        distances = sqrt((centerline_data.xy_centerline(:,1) - xy_EXTR(i,1)).^2 + ...
+            (centerline_data.xy_centerline(:,2) - xy_EXTR(i,2)).^2);
+        [~, min_idx] = min(distances);
+        s_EXTR(i) = centerline_data.s(min_idx);
+    end
+
+    % Create S and T grids for extrapolation
+    [T_extr, S_extr] = ndgrid(t_full, s_EXTR);
+    grid_t_extr_col = T_extr(:);
+    grid_s_extr_col = S_extr(:);
+
+    xy_extr_target = [grid_s_extr_col, grid_t_extr_col];
+    gS_est_extr = 'st_obs_extr';
+    writematrix(xy_extr_target, fullfile(gS_input_path, [gS_est_extr, '.txt']), 'Delimiter', 'space');
+
+    file_syn_extr = sprintf('%s_bic_est_extr', gS_filename);
+    jobFile_synthesis(data_dim, type_spl, file_spl, [gS_est_extr, '.txt'], file_syn_extr, ...
+        gS_input_path, gS_output_path, gS_job_path, gS_synth_path);
+
+    % Run geoSplinter_synthesis
+    gS_job_file_extr = fullfile('.', gS_job_path, [file_syn_extr, '.job']);
+    if isunix
+        job_exec_extr = sprintf('%s < %s', gS_exec, gS_job_file_extr);
+    else
+        temp_bat = [tempname() '.bat'];
+        fid = fopen(temp_bat, 'w');
+        fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file_extr);
+        fclose(fid);
+        job_exec_extr = ['"' temp_bat '"'];
+    end
+    status = system(job_exec_extr);
+    if status ~= 0
+        error('Error executing geoSplinter_synthesis for Extrapolation Grid');
+    end
+
+    spl_extr_full = readmatrix(fullfile(gS_synth_path, file_syn_extr));
+    signal_spl_extr = spl_extr_full(:, 3);
+
+    % Polynomial component
+    t_extr_n = grid_t_extr_col - t0;
+    s_extr_n = grid_s_extr_col - s0;
+
+    A_poly_extr = ones(length(t_extr_n), 1);
+    if poly_degree >= 1, A_poly_extr = [A_poly_extr, s_extr_n, t_extr_n]; end
+    if poly_degree >= 2, A_poly_extr = [A_poly_extr, s_extr_n.^2, t_extr_n.^2, s_extr_n.*t_extr_n]; end
+    if poly_degree >= 3, A_poly_extr = [A_poly_extr, s_extr_n.^3, t_extr_n.^3, s_extr_n.^2.*t_extr_n, t_extr_n.^2.*s_extr_n]; end
+
+    signal_poly_extr = A_poly_extr * x_poly_coeffs;
+
+    % Total signal
+    final_signal_extr_col = signal_spl_extr + signal_poly_extr;
+
+    % Reshape to [nEXTR, length(t_full)]
+    displEXTR_mat = reshape(final_signal_extr_col, length(t_full), nEXTR)';
+
+    % Apply the initial reference shift (zero at first epoch)
+    displEXTR = displEXTR_mat - displEXTR_mat(:,1);
+    disp('Query points evaluated successfully.');
+end
 
 disp('Splines interpolation completed.');
 
