@@ -181,7 +181,7 @@ After the TRAIN Windows port, verify your install with these three checks.
    - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
-- *June 2026*: Added the integrated download module for Sentinel-1. Completed the StaMPS porting to Windows; improved the StaMPS data export; created an installer for PHASE on Windows.
+- *June 2026*: Added the integrated download module for Sentinel-1. Completed the StaMPS porting to Windows; improved the StaMPS data export; created an installer for PHASE on Windows. Introduced the possibility to update the stack with newly available products abd update the pre-processing without re-starting from zero.
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.
 - *March 2026*: Introduced Module 2 for geospatial PSI data analysis with deterministic and stochastic modeling.
 - *September 2024*: Added *macOS* compatibility to the preprocessing application and improved master error handling.
@@ -191,7 +191,7 @@ After the TRAIN Windows port, verify your install with these three checks.
 ## Planned updates
 - Improve border constraints based on user selection.
 - Introduce the handling of jumps in the displacement models.
-- Introduce the possibility for a NRT processing.
+- Add support for additional constellations.
 
 ## Acknowledgments
 Special thanks to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the snap2stamps[^1] tool, and Prof. Andy Hooper for the StaMPS[^2] development. <br>
