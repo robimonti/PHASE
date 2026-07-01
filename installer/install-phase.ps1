@@ -641,8 +641,41 @@ function Invoke-MatlabSavePath {
         $trainM = $TrainRoot.Replace('\','/')
         $mLines += "    addpath(genpath('$trainM/matlab'));"
     }
+    # Robust savepath. MATLAB's savepath() does NOT throw when it cannot write
+    # pathdef.m (typical when MATLAB lives under Program Files and the user is
+    # not admin); it just returns non-zero. The old code ignored that status and
+    # printed SAVEPATH_OK anyway, so the installer reported success while the
+    # path silently vanished on the next launch - which disabled TRAIN and forced
+    # subtr_tropo to 'n'. Capture the status and, on failure, persist the paths
+    # via a startup.m in userpath (needs no admin) so StaMPS + TRAIN load at
+    # every MATLAB start.
     $mLines += @(
-        "    savepath;"
+        "    sp_status = savepath;"
+        "    if sp_status ~= 0"
+        "        up = userpath;"
+        "        if isempty(up)"
+        "            up = fullfile(char(java.lang.System.getProperty('user.home')), 'Documents', 'MATLAB');"
+        "        end"
+        "        if exist(up, 'dir') == 0"
+        "            mkdir(up);"
+        "        end"
+        "        startup_file = fullfile(up, 'startup.m');"
+        "        fid_su = fopen(startup_file, 'a');"
+        "        if fid_su ~= -1"
+        "            fprintf(fid_su, '\n%% --- Added by PHASE installer (savepath could not write pathdef.m) ---\n');"
+        "            fprintf(fid_su, 'addpath(genpath(''$stampsM/matlab''));\n');"
+        "            fprintf(fid_su, 'addpath(genpath(''$stampsM/matlab_compat''));\n');"
+    )
+    if ($TrainRoot) {
+        $mLines += "            fprintf(fid_su, 'addpath(genpath(''$trainM/matlab''));\n');"
+    }
+    $mLines += @(
+        "            fclose(fid_su);"
+        "            fprintf('PHASE_INSTALLER_SAVEPATH_FALLBACK: %s\n', startup_file);"
+        "        else"
+        "            fprintf('PHASE_INSTALLER_SAVEPATH_FALLBACK_ERR: cannot open %s\n', startup_file);"
+        "        end"
+        "    end"
     )
 
     # Step 2: scrittura input_StaMPS.mat precompilato (60+ var con i default
@@ -769,6 +802,17 @@ function Invoke-MatlabSavePath {
         )
     }
 
+    # Verify the TRAIN entry points actually resolve in-session (catches an
+    # incomplete/broken TRAIN clone even when the path itself was saved).
+    if ($TrainRoot) {
+        $mLines += @(
+            "    train_ok = ~isempty(which('aps_linear')) && ~isempty(which('aps_weather_model')) && ~isempty(which('setparm_aps'));"
+            "    if ~train_ok"
+            "        fprintf('PHASE_INSTALLER_TRAIN_INCOMPLETE\n');"
+            "    end"
+        )
+    }
+
     $mLines += @(
         "    fprintf('PHASE_INSTALLER_SAVEPATH_OK\n');"
         "catch err"
@@ -805,8 +849,23 @@ function Invoke-MatlabSavePath {
 
     $combined = $stdout + "`n" + $stderr
     $success = ($combined -match 'PHASE_INSTALLER_SAVEPATH_OK')
+    # Distinguish HOW the path was persisted so we never report a false "OK":
+    #   FALLBACK_ERR => neither pathdef.m nor startup.m could be written (NOT persisted)
+    #   FALLBACK:    => pathdef.m not writable; persisted via userpath startup.m instead
+    #   neither      => savepath wrote pathdef.m normally (permanent)
+    if ($combined -match 'PHASE_INSTALLER_SAVEPATH_FALLBACK_ERR') {
+        $persist = 'NOT_PERSISTED'
+    } elseif ($combined -match 'PHASE_INSTALLER_SAVEPATH_FALLBACK:') {
+        $persist = 'FALLBACK_STARTUP'
+    } elseif ($success) {
+        $persist = 'PERSISTED'
+    } else {
+        $persist = 'UNKNOWN'
+    }
     return @{
         Success = $success
+        Persist = $persist
+        TrainIncomplete = ($combined -match 'PHASE_INSTALLER_TRAIN_INCOMPLETE')
         Output  = $combined.Trim()
         ExitCode = $exitCode
     }
@@ -2538,10 +2597,31 @@ function Invoke-FullSetup {
         -PythonExe $Script:State.PythonExe -SnapGpt $Script:State.SnapGpt `
         -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'matlab' -Detail $m }
     if ($savepathResult.Success) {
-        Update-Task -Key 'matlab' -Status 'done'
-        Add-SetupLog "[OK] MATLAB savepath OK (StaMPS + TRAIN added permanently)"
+        switch ($savepathResult.Persist) {
+            'FALLBACK_STARTUP' {
+                Update-Task -Key 'matlab' -Status 'done'
+                Add-SetupLog "[OK] MATLAB path persisted via userpath startup.m (pathdef.m not writable - no admin needed). StaMPS + TRAIN load at every MATLAB start."
+            }
+            'NOT_PERSISTED' {
+                Update-Task -Key 'matlab' -Status 'skip' -Detail 'path NOT persisted - run addpath/savepath manually'
+                Add-SetupLog "[!] MATLAB could not persist the path: pathdef.m is not writable AND the userpath startup.m fallback could not be written."
+                Add-SetupLog ""
+                Add-SetupLog "Open MATLAB and run these commands manually (as admin if savepath still returns nonzero):"
+                Add-SetupLog "    addpath(genpath('$($stampsDir.Replace('\','/'))/matlab')); savepath"
+                if ($trainDir) {
+                    Add-SetupLog "    addpath(genpath('$($trainDir.Replace('\','/'))/matlab')); savepath"
+                }
+            }
+            default {
+                Update-Task -Key 'matlab' -Status 'done'
+                Add-SetupLog "[OK] MATLAB path saved permanently (pathdef.m) - StaMPS + TRAIN"
+            }
+        }
         Add-SetupLog "[OK] input_StaMPS.mat pre-populated (installation_folder + project_path)"
         Add-SetupLog "[OK] input_preprocessing.mat pre-populated (python + gptbin_path)"
+        if ($savepathResult.TrainIncomplete) {
+            Add-SetupLog "[!] TRAIN entry points (aps_linear / aps_weather_model / setparm_aps) do not resolve after addpath - the TRAIN clone may be incomplete; a_gacos / a_linear will stay disabled until fixed."
+        }
     } else {
         Update-Task -Key 'matlab' -Status 'skip' -Detail "exit $($savepathResult.ExitCode) - run addpath/savepath manually"
         Add-SetupLog "[!] MATLAB savepath not confirmed (exit code $($savepathResult.ExitCode))."
