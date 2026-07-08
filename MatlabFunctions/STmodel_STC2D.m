@@ -994,7 +994,9 @@ data_final_clean = dataRawCleanT_sorted ...
     - full_poly_grid ...
     - spatialMeans_grid;
 
-delete(gcp('nocreate'));
+if exist('gcp', 'file')
+    delete(gcp('nocreate'));
+end
 
 
 % --- Plot covariances ---
