@@ -925,7 +925,7 @@ while iter < 2
             [c_opt_t, mCovF1] = fit_exp_auto(x_data_t, y_data_t, w_data_t);
         case 'gaussian'
             [c_opt_t, mCovF1] = fit_gaussian_auto(x_data_t, y_data_t, w_data_t);
-        case 'gaussian_cos'
+        case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_t, mCovF1] = fit_gaussian_cosine_auto(x_data_t, y_data_t, w_data_t);
     end
     c1_t = c_opt_t;
@@ -951,7 +951,7 @@ while iter < 2
             [c_opt_s, mCovF2] = fit_exp_auto(x_data_s, y_data_s, w_data_s);
         case 'gaussian'
             [c_opt_s, mCovF2] = fit_gaussian_auto(x_data_s, y_data_s, w_data_s);
-        case 'gaussian_cos'
+        case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_s, mCovF2] = fit_gaussian_cosine_auto(x_data_s, y_data_s, w_data_s);
     end
     c1_s = c_opt_s;
