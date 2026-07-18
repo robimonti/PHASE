@@ -16,6 +16,8 @@ def test_stale_app_designer_save_did_not_return(phase_root: Path):
 
 def test_train_and_subtr_tropo_must_both_request_correction(phase_root: Path):
     xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    assert "tropo_correction_enabled = (train_flag == 0) && ..." in xml
     assert (
-        "if train_flag == 0 && strcmpi(strtrim(subtr_tropo), 'y')" in xml
+        "train_requested = (train_flag == 0) && "
+        "strcmpi(strtrim(subtr_tropo), 'y');" in xml
     )

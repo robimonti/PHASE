@@ -29,7 +29,7 @@ FRESH_NEW = """\
                                 setparm_aps('lambda', lambda, 1);
                                 setparm_aps('heading', heading, 1);
                                 % TRAIN derives its InSAR output path from pwd.  Force the
-                                % processing root so tca&lt;psver&gt;.mat cannot be written elsewhere.
+                                % processing root so tca<psver>.mat cannot be written elsewhere.
                                 cd(cd_fullpath);
                                 aps_weather_model('gacos', 3, 3);
                                 cd(cd_fullpath);
@@ -37,7 +37,7 @@ FRESH_NEW = """\
                             end
 
                             % begin TRAIN/TCA handoff guard
-                            % ps_calc_scla (StaMPS step 7) loads ./tca&lt;psver&gt; as soon as
+                            % ps_calc_scla (StaMPS step 7) loads ./tca<psver> as soon as
                             % subtr_tropo='y'.  Validate TRAIN's output here so a missing or
                             % incompatible correction never reaches that opaque load() call.
                             psver_tca = load(fullfile(cd_fullpath, 'psver.mat'), 'psver');
@@ -80,7 +80,7 @@ RESUME_OLD = """\
 RESUME_NEW = """\
                         else
                             % begin resumed TRAIN/TCA handoff guard
-                            % A run resumed at step 7 used to assume that tca&lt;psver&gt;.mat was
+                            % A run resumed at step 7 used to assume that tca<psver>.mat was
                             % already present.  Rebuild a missing/incompatible GACOS correction
                             % from the staged .ztd maps before entering StaMPS.
                             cd(cd_fullpath);
@@ -97,7 +97,7 @@ RESUME_NEW = """\
                                 tca_vars = who('-file', tca_path);
                             end
 
-                            if (exist(tca_path, 'file') ~= 2 || ~ismember(tca_field, tca_vars)) &amp;&amp; ...
+                            if (exist(tca_path, 'file') ~= 2 || ~ismember(tca_field, tca_vars)) && ...
                                     contains(tropo_method, 'a_gacos')
                                 gacosFolder = fullfile(cd_fullpath, 'GACOS');
                                 gacosZtd = dir(fullfile(gacosFolder, '**', '*.ztd'));
@@ -142,8 +142,20 @@ RESUME_NEW = """\
 def patch(xml: str) -> str:
     marker = "% begin TRAIN/TCA handoff guard"
     if marker in xml:
-        print("PHASE_StaMPS.mlapp already contains the TRAIN/TCA handoff guard.")
-        return xml
+        # MATLAB source is held inside CDATA, so entity text is not decoded.
+        # Repair an early migration draft that escaped operators/comments as
+        # though they were ordinary XML text.
+        repaired = xml.replace("tca&lt;psver&gt;.mat", "tca<psver>.mat")
+        repaired = repaired.replace("tca&lt;psver&gt;", "tca<psver>")
+        repaired = repaired.replace(
+            "(exist(tca_path, 'file') ~= 2 || ~ismember(tca_field, tca_vars)) &amp;&amp; ...",
+            "(exist(tca_path, 'file') ~= 2 || ~ismember(tca_field, tca_vars)) && ...",
+        )
+        if repaired != xml:
+            print("Repaired CDATA entities in the TRAIN/TCA handoff guard.")
+        else:
+            print("PHASE_StaMPS.mlapp already contains the TRAIN/TCA handoff guard.")
+        return repaired
 
     if xml.count(FRESH_OLD) != 1:
         raise RuntimeError("Fresh GACOS-to-step-7 anchor was not found exactly once")
