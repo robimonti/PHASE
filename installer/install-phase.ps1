@@ -10,8 +10,8 @@
 #   6. Clona PHASE, StaMPS, TRAIN sotto <dest>\engine\ (motore nascosto).
 #   7. Scarica i binari nativi StaMPS precompilati (stamps-win64-binaries.zip).
 #   8. Configura tutto: MATLAB_EXE, %APPDATA%\PHASE\python.txt, savepath MATLAB.
-#   9. Crea nella root <dest> i collegamenti .lnk ai 3 .mlapp + un README,
-#      così l'utente avvia l'app senza entrare in engine\.
+#   9. Crea nella root <dest> i collegamenti ai moduli globali + un README;
+#      PHASE StaMPS viene invece aperto dalla cartella dataset ASC_/DES_.
 #
 # Usage (sorgente):
 #   powershell -ExecutionPolicy Bypass -File install-phase.ps1
@@ -1631,7 +1631,7 @@ function Invoke-StampsBinariesDownload {
             <!-- Page 7: Finish -->
             <StackPanel x:Name="Page7_Finish" Visibility="Collapsed">
                 <TextBlock Text="Installation complete" FontSize="28" FontWeight="Light" Foreground="#2DBA6E" Margin="0,0,0,10"/>
-                <TextBlock x:Name="FinishSubtitle" Text="PHASE is ready. Open the folder and double-click one of the three .mlapp files."
+                <TextBlock x:Name="FinishSubtitle" Text="PHASE is ready. Start with PHASE Preprocessing; module 2 opens from its generated dataset folder."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,22"/>
 
                 <Border Style="{StaticResource Card}">
@@ -1640,7 +1640,7 @@ function Invoke-StampsBinariesDownload {
                         <TextBlock x:Name="FinishPath" Text="" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="12" Margin="0,0,0,18" Foreground="#0F1430"/>
                         <TextBlock Text="Available MATLAB apps" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,8"/>
                         <TextBlock Text="·  PHASE_Preprocessing.mlapp  —  module 1 (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE_Preprocessing\PHASE_StaMPS.mlapp  —  module 2 (PSI StaMPS)" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  Module 2 (PHASE StaMPS) opens from the ASC_/DES_ dataset folder after preprocessing" Margin="0,3" Foreground="#4A5168"/>
                         <TextBlock Text="·  PHASE_model.mlapp  —  module 3 (geospatial analysis)" Margin="0,3" Foreground="#4A5168"/>
                     </StackPanel>
                 </Border>
@@ -2405,11 +2405,9 @@ function Set-SetupProgress {
 })
 
 # -----------------------------------------------------------------------------
-# Create in the install root the .lnk shortcuts to the three .mlapp apps + a
-# README, so the user launches the app from the main folder without browsing
-# into engine\. The shortcuts point at the .mlapp files inside engine\PHASE\
-# and set WorkingDirectory to the .mlapp folder (same cwd as a direct double
-# click, so the relative .mat auto-load keeps working).
+# Create root shortcuts for the two global apps plus a README. PHASE StaMPS is
+# intentionally excluded because its working directory must be a generated
+# ASC_/DES_ dataset folder; preprocessing copies and opens it there.
 # -----------------------------------------------------------------------------
 function New-PhaseLauncherShortcuts {
     param(
@@ -2420,9 +2418,18 @@ function New-PhaseLauncherShortcuts {
 
     $apps = @(
         @{ Name = 'PHASE Preprocessing'; Target = (Join-Path $PhaseDir 'PHASE_Preprocessing.mlapp') }
-        @{ Name = 'PHASE StaMPS';        Target = (Join-Path $PhaseDir 'PHASE_Preprocessing\PHASE_StaMPS.mlapp') }
         @{ Name = 'PHASE model';         Target = (Join-Path $PhaseDir 'PHASE_model.mlapp') }
     )
+
+    # PHASE StaMPS is dataset-scoped: preprocessing copies the current app and
+    # input_StaMPS.mat into ASC_*/DES_* and opens it there. A global shortcut
+    # starts it in PHASE_Preprocessing, causing relative StaMPS products to be
+    # written to the wrong directory. Remove shortcuts left by older installers.
+    $obsoleteStaMPSShortcut = Join-Path $InstallDir 'PHASE StaMPS.lnk'
+    if (Test-Path -LiteralPath $obsoleteStaMPSShortcut) {
+        Remove-Item -LiteralPath $obsoleteStaMPSShortcut -Force
+        & $StatusCallback "Removed obsolete global PHASE StaMPS shortcut (module 2 is dataset-scoped)"
+    }
 
     $wsh = New-Object -ComObject WScript.Shell
     try {
@@ -2451,8 +2458,15 @@ PHASE - InSAR PSI suite
 To START the application, double-click one of these shortcuts:
 
   - "PHASE Preprocessing.lnk"  ->  SNAP data preparation (module 1)
-  - "PHASE StaMPS.lnk"         ->  StaMPS processing + export (module 2)
   - "PHASE model.lnk"          ->  modelling (module 3)
+
+PHASE StaMPS (module 2)
+-----------------------
+  Module 1 creates an ASC_<dates> or DES_<dates> processing folder, copies the
+  current PHASE_StaMPS.mlapp + input_StaMPS.mat into it, and offers to open it.
+  To resume a dataset later, open PHASE_StaMPS.mlapp inside that ASC_/DES_
+  folder. Do not launch module 2 from engine\PHASE_Preprocessing: StaMPS uses
+  relative paths and would write processing products into the wrong folder.
 
 DATA INPUT
 ----------
@@ -2558,10 +2572,11 @@ function Invoke-FullSetup {
     $binOk = Invoke-StampsBinariesDownload -StampsRoot $stampsDir -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'stamps-bin' -Detail $m }
     if ($binOk) {
         Update-Task -Key 'stamps-bin' -Status 'done'
-        Add-SetupLog "[OK] 7 StaMPS binaries ready in $stampsDir\bin"
+        Add-SetupLog "[OK] 9 mandatory StaMPS binaries ready (including triangle.exe and snaphu.exe)"
     } else {
         Update-Task -Key 'stamps-bin' -Status 'error' -Detail 'download failed - mt_prep_snap will not work'
-        Add-SetupLog "[!] StaMPS binaries download failed - mt_prep_snap will not work."
+        Add-SetupLog "[FATAL] StaMPS binaries download failed - step 6 cannot run without snaphu.exe."
+        throw "The mandatory StaMPS Windows binaries could not be installed. PHASE cannot complete installation because step 6 requires snaphu.exe. Check network/antivirus access to the pyccino/StaMPS release and retry."
     }
 
     # Task 6: GMT
@@ -2797,8 +2812,8 @@ function Invoke-FullSetup {
     Add-SetupLog "=== Installation complete ==="
     Add-SetupLog "Launch the app from the shortcuts in $($appDir):"
     Add-SetupLog "  PHASE Preprocessing.lnk"
-    Add-SetupLog "  PHASE StaMPS.lnk"
     Add-SetupLog "  PHASE model.lnk"
+    Add-SetupLog "PHASE StaMPS is opened by preprocessing from the generated ASC_/DES_ dataset folder."
     Add-SetupLog "(the actual files live in $phaseDir - no need to open them by hand)"
 }
 

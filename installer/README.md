@@ -2,7 +2,7 @@
 
 Wizard end-to-end (GUI WPF) che installa PHASE e tutte le sue dipendenze su
 Windows: MATLAB detection, SNAP install, Python 3.11+ silent install, clone di
-PHASE/StaMPS/TRAIN, build di Triangle/snaphu, configurazione `MATLAB_EXE` +
+PHASE/StaMPS/TRAIN, download verificato dei binari Triangle/snaphu, configurazione `MATLAB_EXE` +
 `python.txt` + `savepath`.
 
 ## File
@@ -91,7 +91,7 @@ install-phase.ps1
 │   ├─ Invoke-SnapInstaller Lancia esa-snap_sentinel_windows-13.0.0.exe (semi-interattivo)
 │   ├─ Invoke-GitClone      git clone con branch e callback
 │   ├─ Invoke-MatlabSavePath matlab.exe -batch addpath+savepath
-│   ├─ Invoke-StampsInstall  Lancia StaMPS\install-windows.ps1
+│   ├─ Invoke-StampsBinariesDownload scarica i 9 eseguibili Windows obbligatori
 │   ├─ Set-MatlabEnvVar     setx MATLAB_EXE user scope
 │   ├─ Set-PhasePythonConfig %APPDATA%\PHASE\python.txt
 │   └─ Write-ProjectConfTemplate project.conf.template con GPTBIN_PATH
@@ -117,11 +117,17 @@ install-phase.ps1
 5. **Cartella destinazione** — default `%USERPROFILE%\Desktop\PHASE`.
    Validazione: scrivibile, no OneDrive (warning, non blocco), no caratteri
    non-ASCII.
-6. **Installazione** — clone PHASE + StaMPS + TRAIN, esegue
-   `StaMPS\install-windows.ps1`, scrive `MATLAB_EXE` env var, scrive
+6. **Installazione** — clone PHASE + StaMPS + TRAIN, scarica e verifica i nove
+   eseguibili StaMPS Windows (incluso `snaphu.exe`; un fallimento interrompe
+   l'installazione), scrive `MATLAB_EXE` env var, scrive
    `%APPDATA%\PHASE\python.txt`, scrive `project.conf.template`, lancia
    `matlab.exe -batch` per addpath+savepath. Log live in console scrollabile.
 7. **Fine** — riepilogo + bottoni "Apri cartella PHASE" e "Apri log".
+
+Il modulo PHASE StaMPS non ha un collegamento globale: usa percorsi relativi al
+dataset. Il preprocessing crea la cartella `ASC_<date>`/`DES_<date>`, vi copia
+la versione corrente di `PHASE_StaMPS.mlapp` e `input_StaMPS.mat` e propone di
+aprirla. Per riprendere un'elaborazione si riapre quella copia nel dataset.
 
 ## Path configurati automaticamente
 
