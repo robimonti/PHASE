@@ -4,6 +4,13 @@
 
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interactive map interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
+> **Developer preview:** the text-based, web-interface successor to
+> `PHASE_StaMPS.mlapp` is documented in
+> [`PHASE_Preprocessing/PHASE_StaMPS_beta.md`](PHASE_Preprocessing/PHASE_StaMPS_beta.md).
+> The stable app
+> remains the production default until Windows/MATLAB acceptance testing is
+> complete.
+
 ![Logo](https://github.com/user-attachments/assets/5bf0b784-c5e6-4e6c-8df5-2da8808263d3)
 
 ## SAR Satellites compatibility

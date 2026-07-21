@@ -1,0 +1,332 @@
+classdef App < handle
+    %APP Controller for the HTML/CSS/JavaScript PHASE StaMPS beta.
+
+    properties (SetAccess = private)
+        UIFigure
+        HTML
+        WorkDir
+        LauncherDir
+        Config
+        SavedConfig
+        AutoDetectedFields = {}
+        Logs = {}
+        Status = 'idle'
+        StatusDetail = 'Ready'
+        IsDirty = false
+        IsRunning = false
+        PickerFigure = []
+    end
+
+    methods
+        function obj = App(workDir, launcherDir)
+            obj.WorkDir = char(java.io.File(workDir).getCanonicalPath());
+            obj.LauncherDir = launcherDir;
+
+            [loaded, info] = phase_stamps_beta.loadConfig(obj.WorkDir);
+            obj.SavedConfig = loaded;
+            [detected, fields, messages] = ...
+                phase_stamps_beta.autoDetectConfig(loaded, obj.WorkDir);
+            obj.Config = detected;
+            obj.AutoDetectedFields = fields;
+            obj.IsDirty = ~phase_stamps_beta.configsEqual( ...
+                obj.Config, obj.SavedConfig) || ~info.exists;
+
+            obj.UIFigure = uifigure('Name', 'PHASE · StaMPS Beta', ...
+                'Color', [0.025 0.039 0.075], ...
+                'Position', centeredPosition(1440, 900));
+            % Keep the controller alive when the launcher is called without
+            % an output argument. The figure releases this reference on close.
+            obj.UIFigure.UserData = obj;
+            obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
+            grid = uigridlayout(obj.UIFigure, [1 1]);
+            grid.Padding = [0 0 0 0];
+            uiPath = fullfile(launcherDir, 'phase_stamps_beta_ui', 'index.html');
+            obj.HTML = uihtml(grid, 'HTMLSource', uiPath);
+            obj.HTML.Layout.Row = 1;
+            obj.HTML.Layout.Column = 1;
+            obj.HTML.HTMLEventReceivedFcn = @(~,event) obj.onHtmlEvent(event);
+
+            for k = 1:numel(messages)
+                obj.appendLog(messages{k});
+            end
+            if ~isempty(info.migratedFields)
+                obj.appendLog(['Legacy input migrated in memory: ' ...
+                    strjoin(info.migratedFields, ', ') '. Press Save to persist.']);
+                obj.IsDirty = true;
+            end
+            obj.StatusDetail = ternary(obj.IsDirty, ...
+                'Review detected values and save before starting', ...
+                'Configuration loaded');
+            drawnow;
+            obj.sendState();
+        end
+
+        function appendLog(obj, message)
+            message = char(string(message));
+            timestamp = char(datetime('now', 'Format', 'HH:mm:ss'));
+            entry = struct('time', timestamp, 'message', message);
+            obj.Logs{end+1} = entry;
+            fprintf('[PHASE beta %s] %s\n', timestamp, message);
+            if ~isempty(obj.HTML) && isvalid(obj.HTML)
+                try
+                    sendEventToHTMLSource(obj.HTML, 'PhaseLog', entry);
+                    drawnow limitrate
+                catch
+                end
+            end
+        end
+
+        function openTsPicker(obj)
+            try
+                obj.PickerFigure = phase_stamps_beta.openTsPicker( ...
+                    obj.WorkDir, obj.Config, obj.UIFigure);
+                obj.appendLog('TS Points picker opened.');
+            catch ME
+                obj.showError('TS picker unavailable', ME.message);
+                obj.appendLog(['TS picker failed: ' ME.message]);
+            end
+        end
+
+        function delete(obj)
+            try
+                if ~isempty(obj.PickerFigure) && isvalid(obj.PickerFigure)
+                    delete(obj.PickerFigure);
+                end
+            catch
+            end
+            try
+                if ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
+                    obj.UIFigure.CloseRequestFcn = [];
+                    obj.UIFigure.UserData = [];
+                    delete(obj.UIFigure);
+                end
+            catch
+            end
+        end
+    end
+
+    methods (Access = private)
+        function onHtmlEvent(obj, event)
+            try
+                name = char(string(event.HTMLEventName));
+                payload = event.HTMLEventData;
+            catch ME
+                obj.appendLog(['Malformed HTML event: ' ME.message]);
+                return
+            end
+
+            try
+                switch lower(name)
+                    case 'ready'
+                        obj.sendState();
+                    case 'load'
+                        obj.loadFromDisk();
+                    case 'save'
+                        obj.saveFromPayload(payload);
+                    case 'start'
+                        obj.startFromPayload(payload);
+                    case 'browse'
+                        obj.browseFromPayload(payload);
+                    case 'opentspicker'
+                        obj.updateFromPayload(payload);
+                        obj.openTsPicker();
+                    case 'openworkdir'
+                        openFolder(obj.WorkDir);
+                    case 'openerrorlog'
+                        errorLog = fullfile(obj.WorkDir, 'PHASE_StaMPS_error.log');
+                        if exist(errorLog, 'file') == 2
+                            openFile(errorLog);
+                        else
+                            obj.showError('Error log not found', ...
+                                'No PHASE_StaMPS_error.log exists in this processing folder.');
+                        end
+                    otherwise
+                        obj.appendLog(['Unknown interface event: ' name]);
+                end
+            catch ME
+                obj.IsRunning = false;
+                obj.Status = 'error';
+                obj.StatusDetail = ME.message;
+                obj.appendLog(['Interface action failed [' ME.identifier ']: ' ME.message]);
+                obj.showError('PHASE StaMPS Beta', ME.message);
+                obj.sendState();
+            end
+        end
+
+        function loadFromDisk(obj)
+            if obj.IsRunning, return; end
+            [loaded, info] = phase_stamps_beta.loadConfig(obj.WorkDir);
+            [detected, fields, messages] = ...
+                phase_stamps_beta.autoDetectConfig(loaded, obj.WorkDir);
+            obj.SavedConfig = loaded;
+            obj.Config = detected;
+            obj.AutoDetectedFields = fields;
+            obj.IsDirty = ~phase_stamps_beta.configsEqual(loaded, detected) || ...
+                ~isempty(info.migratedFields);
+            obj.Status = 'idle';
+            obj.StatusDetail = ternary(obj.IsDirty, ...
+                'Loaded; detected or migrated values require Save', ...
+                'Configuration loaded from input_StaMPS.mat');
+            obj.appendLog(['Loaded configuration: ' info.path]);
+            for k = 1:numel(messages), obj.appendLog(messages{k}); end
+            obj.sendState();
+        end
+
+        function saveFromPayload(obj, payload)
+            if obj.IsRunning, return; end
+            candidate = obj.configFromPayload(payload);
+            [errors, warnings] = phase_stamps_beta.validateConfig(candidate, false);
+            if ~isempty(errors)
+                error('PHASE_StaMPS_beta:invalidConfiguration', '%s', strjoin(errors, newline));
+            end
+            phase_stamps_beta.saveConfig(obj.WorkDir, candidate);
+            obj.Config = candidate;
+            obj.SavedConfig = candidate;
+            obj.IsDirty = false;
+            obj.Status = 'saved';
+            obj.StatusDetail = 'Configuration saved and ready to start';
+            obj.appendLog(['Saved configuration: ' fullfile(obj.WorkDir, 'input_StaMPS.mat')]);
+            for k = 1:numel(warnings), obj.appendLog(['Warning: ' warnings{k}]); end
+            obj.sendState();
+        end
+
+        function startFromPayload(obj, payload)
+            if obj.IsRunning, return; end
+            candidate = obj.configFromPayload(payload);
+            [errors, warnings] = phase_stamps_beta.validateConfig(candidate, true);
+            if ~isempty(errors)
+                error('PHASE_StaMPS_beta:invalidConfiguration', '%s', strjoin(errors, newline));
+            end
+            if isempty(obj.SavedConfig) || ...
+                    ~phase_stamps_beta.configsEqual(candidate, obj.SavedConfig)
+                error('PHASE_StaMPS_beta:unsavedConfiguration', ...
+                    ['The visible configuration differs from input_StaMPS.mat. ' ...
+                     'Press Save before Start.']);
+            end
+
+            obj.Config = candidate;
+            obj.IsRunning = true;
+            obj.Status = 'running';
+            obj.StatusDetail = sprintf('Running StaMPS steps %s to %s', ...
+                candidate.stamps_first_step, candidate.stamps_last_step);
+            obj.Logs = {};
+            obj.sendState();
+            for k = 1:numel(warnings), obj.appendLog(['Warning: ' warnings{k}]); end
+            obj.appendLog(sprintf('Starting StaMPS steps %s -> %s in %s', ...
+                candidate.stamps_first_step, candidate.stamps_last_step, obj.WorkDir));
+            drawnow;
+
+            adapter = phase_stamps_beta.LegacyAppAdapter(obj, candidate);
+            try
+                result = phase_stamps_beta.runProcessing(adapter);
+            catch ME
+                result = struct('ok', false, 'message', ME.message, ...
+                    'identifier', ME.identifier);
+                obj.appendLog(['Processing engine failed before its internal error handler [' ...
+                    ME.identifier ']: ' ME.message]);
+            end
+            obj.IsRunning = false;
+            if result.ok
+                obj.Status = 'success';
+                obj.StatusDetail = 'StaMPS processing completed';
+            else
+                obj.Status = 'error';
+                obj.StatusDetail = result.message;
+            end
+            obj.sendState();
+        end
+
+        function browseFromPayload(obj, payload)
+            if obj.IsRunning, return; end
+            obj.updateFromPayload(payload);
+            if ~isstruct(payload) || ~isfield(payload, 'field')
+                error('PHASE_StaMPS_beta:missingBrowseField', 'Browse action has no target field.');
+            end
+            fieldName = char(string(payload.field));
+            if ~any(strcmp(fieldName, {'installation_folder','project_path'}))
+                error('PHASE_StaMPS_beta:invalidBrowseField', 'Unsupported path field: %s', fieldName);
+            end
+            startFolder = obj.WorkDir;
+            if isfield(obj.Config, fieldName) && isfolder(obj.Config.(fieldName))
+                startFolder = obj.Config.(fieldName);
+            end
+            selected = uigetdir(startFolder, ['Select ' strrep(fieldName, '_', ' ')]);
+            if ~isequal(selected, 0)
+                obj.Config.(fieldName) = selected;
+                obj.IsDirty = true;
+                obj.Status = 'idle';
+                obj.StatusDetail = 'Unsaved changes';
+                obj.sendState();
+            end
+        end
+
+        function updateFromPayload(obj, payload)
+            obj.Config = obj.configFromPayload(payload);
+            obj.IsDirty = isempty(obj.SavedConfig) || ...
+                ~phase_stamps_beta.configsEqual(obj.Config, obj.SavedConfig);
+        end
+
+        function cfg = configFromPayload(obj, payload)
+            if ~isstruct(payload) || ~isfield(payload, 'config')
+                error('PHASE_StaMPS_beta:missingConfig', 'The interface did not send a configuration.');
+            end
+            cfg = phase_stamps_beta.uiToConfig(payload.config, obj.Config);
+        end
+
+        function sendState(obj)
+            if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
+            state = struct();
+            state.kind = 'state';
+            state.version = '0.1.0-beta';
+            state.workDir = obj.WorkDir;
+            state.configPath = fullfile(obj.WorkDir, 'input_StaMPS.mat');
+            state.schema = phase_stamps_beta.schema();
+            state.config = phase_stamps_beta.configToUi(obj.Config);
+            state.detectedFields = obj.AutoDetectedFields;
+            state.dirty = obj.IsDirty;
+            state.running = obj.IsRunning;
+            state.status = obj.Status;
+            state.statusDetail = obj.StatusDetail;
+            state.logs = obj.Logs;
+            obj.HTML.Data = state;
+            drawnow limitrate
+        end
+
+        function showError(obj, titleText, message)
+            try
+                uialert(obj.UIFigure, char(string(message)), titleText);
+            catch
+                warning('%s: %s', titleText, char(string(message)));
+            end
+        end
+    end
+end
+
+function pos = centeredPosition(width, height)
+screen = get(groot, 'ScreenSize');
+width = min(width, max(1000, screen(3) - 80));
+height = min(height, max(700, screen(4) - 120));
+pos = [max(20, (screen(3)-width)/2), max(40, (screen(4)-height)/2), width, height];
+end
+
+function out = ternary(condition, yesValue, noValue)
+if condition, out = yesValue; else, out = noValue; end
+end
+
+function openFolder(pathValue)
+if ispc
+    winopen(pathValue);
+else
+    desktop = java.awt.Desktop.getDesktop();
+    desktop.open(java.io.File(pathValue));
+end
+end
+
+function openFile(pathValue)
+if ispc
+    winopen(pathValue);
+else
+    desktop = java.awt.Desktop.getDesktop();
+    desktop.open(java.io.File(pathValue));
+end
+end

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHASE · StaMPS Beta</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="eyebrow">Persistent Scatterer Processing</div>
+          <div class="brand">PHASE <span>StaMPS Beta</span></div>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="path-label">Processing folder</div>
+        <button id="workdir" class="path-button" type="button" title="Open processing folder">Connecting to MATLAB…</button>
+      </div>
+      <div class="topbar-actions">
+        <button id="load-button" class="button ghost" type="button">Load</button>
+        <button id="save-button" class="button secondary" type="button">Save</button>
+        <button id="start-button" class="button primary" type="button">
+          <span class="play-icon">▶</span><span>Start processing</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="status-card">
+        <div class="status-row">
+          <span id="status-dot" class="status-dot idle"></span>
+          <div>
+            <div id="status-title" class="status-title">Initialising</div>
+            <div id="status-detail" class="status-detail">Waiting for MATLAB</div>
+          </div>
+        </div>
+        <div class="range-track"><div id="range-progress" class="range-progress"></div></div>
+        <div id="range-label" class="range-label">StaMPS steps —</div>
+      </div>
+
+      <nav id="navigation" class="navigation" aria-label="Processing sections"></nav>
+
+      <div class="sidebar-footer">
+        <label class="advanced-toggle">
+          <input id="advanced-toggle" type="checkbox">
+          <span>Show advanced controls</span>
+        </label>
+        <div id="version" class="version">Beta</div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div id="dirty-banner" class="banner warning hidden">
+        <div><strong>Unsaved changes</strong><span>Save the visible configuration before Start.</span></div>
+        <button id="banner-save" type="button">Save now</button>
+      </div>
+      <div id="error-banner" class="banner error hidden"></div>
+
+      <section id="form-page" class="page active">
+        <div class="page-heading">
+          <div>
+            <div id="section-kicker" class="eyebrow">Configuration</div>
+            <h1 id="section-title">Project</h1>
+            <p id="section-subtitle">Paths, preparation and output identity</p>
+          </div>
+          <div id="section-meta" class="section-meta"></div>
+        </div>
+        <div id="form-grid" class="form-grid"></div>
+        <div class="page-controls">
+          <button id="previous-section" class="button ghost" type="button">← Previous</button>
+          <button id="next-section" class="button secondary" type="button">Next →</button>
+        </div>
+      </section>
+
+      <section id="run-page" class="page">
+        <div class="page-heading run-heading">
+          <div>
+            <div class="eyebrow">Execution and diagnostics</div>
+            <h1>Run monitor</h1>
+            <p>Live messages from PHASE, StaMPS, TRAIN and native tools.</p>
+          </div>
+          <div class="monitor-actions">
+            <button id="open-error-log" class="button ghost" type="button">Open error log</button>
+            <button id="clear-log" class="button ghost" type="button">Clear view</button>
+          </div>
+        </div>
+        <div class="run-summary">
+          <div class="summary-block"><span>First step</span><strong id="summary-first">—</strong></div>
+          <div class="summary-arrow">→</div>
+          <div class="summary-block"><span>Last step</span><strong id="summary-last">—</strong></div>
+          <div class="summary-divider"></div>
+          <div class="summary-block wide"><span>Atmospheric correction</span><strong id="summary-tropo">—</strong></div>
+          <div class="summary-block wide"><span>Output</span><strong id="summary-output">—</strong></div>
+        </div>
+        <div class="console-wrap">
+          <div class="console-bar">
+            <span class="console-lights"><i></i><i></i><i></i></span>
+            <span>PHASE_StaMPS_beta</span>
+            <span id="log-count">0 messages</span>
+          </div>
+          <div id="console" class="console" role="log" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="ts-page" class="page">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">Interactive export</div>
+            <h1>TS Points</h1>
+            <p>Inspect persistent scatterers and export selected point histories.</p>
+          </div>
+        </div>
+        <div class="feature-panel">
+          <div class="feature-visual" aria-hidden="true">
+            <span class="orbit"></span><span class="point p1"></span><span class="point p2"></span>
+            <span class="point p3"></span><span class="point p4"></span>
+          </div>
+          <div class="feature-content">
+            <div class="tag">Existing StaMPS tool</div>
+            <h2>Open the time-series picker</h2>
+            <p>The picker opens in a dedicated MATLAB window and uses the products in this processing folder. If needed, PHASE generates <code>ps_plot_ts_v-do.mat</code> first.</p>
+            <button id="open-ts-picker" class="button primary" type="button">Open TS picker</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+  <div id="blocking-overlay" class="blocking-overlay hidden">
+    <div class="spinner"></div><strong>MATLAB is processing</strong><span>The interface remains connected to the live log.</span>
+  </div>
+</body>
+</html>
