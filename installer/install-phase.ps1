@@ -699,6 +699,10 @@ function Invoke-MatlabSavePath {
             "    master_date = '20200305';"
             "    export_name = 'filename';"
             "    time_span = 0;"
+            # Independent StaMPS temporal-window defaults from ps_parms_default.m.
+            "    weed_time_win = 730;"
+            "    unwrap_time_win = 730;"
+            "    scn_time_win = 365;"
             "    year_0 = 2019;"
             "    month_0 = 7;"
             "    day_0 = 9;"
@@ -759,7 +763,7 @@ function Invoke-MatlabSavePath {
             "    ref_centre_lonlat_w = [0.0 0.0];"
             "    ref_radius_w = 0;"
             "    ph_output = 'unwrapped';"
-            "    save('$matFile', 'stamps_preparation', 'installation_folder', 'project_path', 'amplitude_threshold', 'master_date', 'export_name', 'time_span', 'year_0', 'month_0', 'day_0', 'utc_time', 'train_flag', 'stamps_first_step', 'stamps_last_step', 'n_cores', 'heading', 'lambda', 'max_topo_err', 'filter_grid_size', 'filter_weighting', 'gamma_max_iterations', 'gamma_change_convergence', 'gamma_stdev_reject', 'quick_est_gamma_flag', 'small_baseline_flag', 'clap_win', 'clap_alpha', 'clap_beta', 'clap_low_pass_wavelength', 'select_method', 'percent_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', 'weed_max_noise', 'merge_resample_size', 'merge_standard_dev', 'unwrap_grid_size', 'unwrap_gold_n_win', 'unwrap_method', 'unwrap_gold_alpha', 'unwrap_alpha', 'unwrap_spatial_cost_func_flag', 'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', 'subtr_tropo', 'tropo_method', 'select_reest_gamma_flag', 'drop_ifg_index', 'scla_deramp', 'scla_method', 'scla_drop_index', 'scn_wavelength', 'scn_kriging_flag', 'ref_centre_lonlat', 'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output', '-mat');"
+            "    save('$matFile', 'stamps_preparation', 'installation_folder', 'project_path', 'amplitude_threshold', 'master_date', 'export_name', 'time_span', 'weed_time_win', 'unwrap_time_win', 'scn_time_win', 'year_0', 'month_0', 'day_0', 'utc_time', 'train_flag', 'stamps_first_step', 'stamps_last_step', 'n_cores', 'heading', 'lambda', 'max_topo_err', 'filter_grid_size', 'filter_weighting', 'gamma_max_iterations', 'gamma_change_convergence', 'gamma_stdev_reject', 'quick_est_gamma_flag', 'small_baseline_flag', 'clap_win', 'clap_alpha', 'clap_beta', 'clap_low_pass_wavelength', 'select_method', 'percent_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', 'weed_max_noise', 'merge_resample_size', 'merge_standard_dev', 'unwrap_grid_size', 'unwrap_gold_n_win', 'unwrap_method', 'unwrap_gold_alpha', 'unwrap_alpha', 'unwrap_spatial_cost_func_flag', 'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', 'subtr_tropo', 'tropo_method', 'select_reest_gamma_flag', 'drop_ifg_index', 'scla_deramp', 'scla_method', 'scla_drop_index', 'scn_wavelength', 'scn_kriging_flag', 'ref_centre_lonlat', 'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output', '-mat');"
         )
     }
 

@@ -30,10 +30,14 @@ subtr_tropo = '';
 tropo_method = '';
 stamps_first_step = '';
 stamps_last_step = '';
+weed_time_win = NaN;
+unwrap_time_win = NaN;
+scn_time_win = NaN;
 input_file = fullfile(pwd, 'input_StaMPS.mat');
 if exist(input_file, 'file') == 2
     input_cfg = load(input_file, 'installation_folder', 'train_flag', ...
-        'subtr_tropo', 'tropo_method', 'stamps_first_step', 'stamps_last_step');
+        'subtr_tropo', 'tropo_method', 'stamps_first_step', 'stamps_last_step', ...
+        'weed_time_win', 'unwrap_time_win', 'scn_time_win');
     if isfield(input_cfg, 'installation_folder')
         installation_folder = input_cfg.installation_folder;
     end
@@ -42,6 +46,9 @@ if exist(input_file, 'file') == 2
     if isfield(input_cfg, 'tropo_method'), tropo_method = input_cfg.tropo_method; end
     if isfield(input_cfg, 'stamps_first_step'), stamps_first_step = input_cfg.stamps_first_step; end
     if isfield(input_cfg, 'stamps_last_step'), stamps_last_step = input_cfg.stamps_last_step; end
+    if isfield(input_cfg, 'weed_time_win'), weed_time_win = input_cfg.weed_time_win; end
+    if isfield(input_cfg, 'unwrap_time_win'), unwrap_time_win = input_cfg.unwrap_time_win; end
+    if isfield(input_cfg, 'scn_time_win'), scn_time_win = input_cfg.scn_time_win; end
 end
 fprintf('Configured StaMPS root: %s\n', installation_folder);
 fprintf('Configured root exists: %d\n', ~isempty(installation_folder) && isfolder(installation_folder));
@@ -50,6 +57,8 @@ fprintf('Saved subtr_tropo: %s\n', char(string(subtr_tropo)));
 fprintf('Saved tropo_method: %s\n', char(string(tropo_method)));
 fprintf('Saved StaMPS steps: %s -> %s\n', ...
     char(string(stamps_first_step)), char(string(stamps_last_step)));
+fprintf('Saved time windows (weed/unwrap/scn days): %g / %g / %g\n', ...
+    weed_time_win, unwrap_time_win, scn_time_win);
 
 expected_snaphu = '';
 if ~isempty(installation_folder)

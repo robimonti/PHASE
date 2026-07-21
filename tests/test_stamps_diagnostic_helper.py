@@ -7,6 +7,7 @@ def test_diagnostic_captures_step6_runtime_evidence(phase_root):
     assert "Saved subtr_tropo:" in source
     assert "Saved tropo_method:" in source
     assert "Saved TRAIN enabled:" in source
+    assert "Saved time windows (weed/unwrap/scn days):" in source
     assert "external', 'snaphu', 'bin', 'snaphu.exe" in source
     assert "which('ps_unwrap', '-all')" in source
     assert "which('uw_stat_costs', '-all')" in source
