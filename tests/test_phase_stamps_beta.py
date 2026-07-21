@@ -101,6 +101,13 @@ def test_beta_ui_uses_local_assets_and_matlab_events(phase_root):
     css = _text(ui / "styles.css")
     assert '<link rel="stylesheet" href="styles.css">' in html
     assert '<script src="app.js"></script>' in html
+    for logo in ("PHASE_logo.png", "PHASE_mod1b.png"):
+        assert (ui / "assets" / logo).is_file()
+        assert f'assets/{logo}' in html
+    for phase_colour in ("rgb(53, 101, 207)", "rgb(203, 46, 108)", "rgb(69, 70, 70)"):
+        assert phase_colour in css
+    assert '"SF Pro Display"' in css
+    assert "color-scheme: light" in css
     assert "http://" not in html + js + css
     assert "https://" not in html + js + css
     for event in ("Ready", "Load", "Save", "Start", "Browse", "OpenTsPicker"):
