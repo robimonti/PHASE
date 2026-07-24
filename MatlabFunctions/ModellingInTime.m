@@ -514,7 +514,7 @@ for i = 1:size(dataIN_AOI, 1)
 
         % -- 2) Fourier spectrum for outliers
         % compute the mode for uniform sampling
-        mode_obs = mode(diff(obs_p1{i, 2}));
+        mode_obs = min(diff(obs_p1{i, 2}));
     
         % compute the regularized time vector
         t_reg = min(obs_p1{i, 2}) : mode_obs : max(max(obs_p1{i, 2}), mode_obs * ceil(max(obs_p1{i, 2})/mode_obs));

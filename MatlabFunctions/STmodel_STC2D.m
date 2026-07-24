@@ -1006,7 +1006,8 @@ ax1 = subplot(1,2,1);
 scatter(lag_t, eCovF_mean_t, 30, 'k', 'filled')
 hold on; plot(lag_t1, mCovF1(c1_t, lag_t1), 'm', 'LineWidth', 2)
 plot([1, 1], [mCovF1(c1_t, 0), eCovF_mean_t(1)], 'r--', 'LineWidth', 2)
-xlim([0 round(lag_t(end)/2)]); grid on;
+%xlim([0 round(lag_t(end)/2)]); 
+grid on;
 legend('empirical', 'signal', 'noise')
 xlabel('Lags [days]'); ylabel('Covariance [mm^2]')
 set(gca, 'FontSize', 15)
@@ -1015,7 +1016,8 @@ ax2 = subplot(1,2,2);
 scatter(lag_s, eCovF_mean_s, 30, 'k', 'filled', 'DisplayName', 'empirical')
 hold on; plot(lag_s1, mCovF2(c1_s, lag_s1), 'm', 'LineWidth', 2, 'DisplayName', 'signal')
 plot([0.5, 0.5], [mCovF2(c1_s, 0), eCovF_mean_s(1)], 'r--', 'LineWidth', 2, 'DisplayName', 'noise');
-xlim([0 round(lag_s(end)/2)]); grid on;
+%xlim([0 round(lag_s(end)/2)]); 
+grid on;
 xlabel('Lags [m]'); ylabel('Covariance [mm^2]'); legend show
 set(gca, 'FontSize', 15)
 
