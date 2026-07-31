@@ -58,3 +58,13 @@ def test_beta_installer_cleans_legacy_runtime_and_hides_engine(phase_root):
     assert "function Assert-PhaseStandaloneRuntime" in source
     assert "Assert-PhaseStandaloneRuntime -PhaseDir $phaseDir" in source
     assert "Nothing was cleaned" in source
+
+
+def test_installer_compiler_resolves_defaults_after_parameter_binding(phase_root):
+    compiler = (phase_root / "installer" / "compile-to-exe.ps1").read_text(encoding="utf-8")
+
+    param_block = compiler[compiler.index("param(") : compiler.index(")\n\n$ErrorActionPreference")]
+    assert "Join-Path $PSScriptRoot" not in param_block
+    assert "$scriptPath = $MyInvocation.MyCommand.Path" in compiler
+    assert "$Source = Join-Path $scriptDir 'install-phase.ps1'" in compiler
+    assert "$Output = Join-Path $scriptDir 'install-phase-beta.exe'" in compiler

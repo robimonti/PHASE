@@ -19,13 +19,31 @@
 
 [CmdletBinding()]
 param(
-    [string]$Source = (Join-Path $PSScriptRoot 'install-phase.ps1'),
-    [string]$Output = (Join-Path $PSScriptRoot 'install-phase-beta.exe'),
+    [string]$Source,
+    [string]$Output,
     [string]$IconFile,
     [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Windows PowerShell can evaluate parameter default expressions before
+# $PSScriptRoot has been populated. Resolve defaults only after param() so the
+# script works consistently from -File, relative paths and older PS5 hosts.
+$scriptPath = $MyInvocation.MyCommand.Path
+$scriptDir = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $PSScriptRoot
+} elseif (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+    Split-Path -Parent $scriptPath
+} else {
+    (Get-Location).Path
+}
+if ([string]::IsNullOrWhiteSpace($Source)) {
+    $Source = Join-Path $scriptDir 'install-phase.ps1'
+}
+if ([string]::IsNullOrWhiteSpace($Output)) {
+    $Output = Join-Path $scriptDir 'install-phase-beta.exe'
+}
 
 if (-not (Test-Path $Source)) {
     throw "Source non trovato: $Source"
