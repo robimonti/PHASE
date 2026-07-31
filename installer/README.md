@@ -128,12 +128,12 @@ install-phase.ps1
    `.mlapp` e i file di sviluppo. Log live in console scrollabile.
 7. **Fine** — riepilogo + bottoni "Apri cartella PHASE" e "Apri log".
 
-La cartella visibile `PHASE` contiene solo i collegamenti a
-`PHASE_Preprocessing_beta.m` e `PHASE_Model_beta.m` e il README. Il motore
-standalone è nella sottocartella nascosta `engine`. Il modulo PHASE StaMPS non
-ha un collegamento globale: usa percorsi relativi al dataset e viene aperto dal
-preprocessing con la cartella `ASC_<date>`/`DES_<date>` esplicitamente
-selezionata. Nessuna delle tre beta carica un `.mlapp` a runtime; tutte usano
+La cartella visibile `PHASE` contiene i collegamenti a PHASE Preprocessing,
+PHASE StaMPS e PHASE Model, oltre al README. Il collegamento StaMPS chiede
+esplicitamente la cartella dataset `ASC_*`/`DSC_*` prima di aprire l'app. Il motore
+standalone è nella sottocartella nascosta `engine`; StaMPS non viene quindi mai
+avviato accidentalmente nella root e può anche essere aperto automaticamente
+dal preprocessing. Nessuna delle tre beta carica un `.mlapp` a runtime; tutte usano
 lo stesso shell HTML chiaro mentre i motori MATLAB testuali restano nascosti.
 
 ## Path configurati automaticamente

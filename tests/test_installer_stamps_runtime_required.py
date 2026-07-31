@@ -17,17 +17,20 @@ def test_missing_stamps_native_binaries_are_fatal(phase_root):
     assert 'throw "The mandatory StaMPS Windows binaries could not be installed.' in block
 
 
-def test_installer_does_not_advertise_invalid_global_stamps_shortcut(phase_root):
+def test_installer_creates_dataset_safe_stamps_shortcut(phase_root):
     source = _installer(phase_root)
 
     apps_start = source.index("$apps = @(")
     apps_end = source.index("foreach ($a in $apps)", apps_start)
     apps = source[apps_start:apps_end]
 
-    assert "@{ Name = 'PHASE StaMPS'" not in apps
-    assert "Removed obsolete global PHASE StaMPS shortcut" in apps
+    assert "@{ Name = 'PHASE StaMPS'" in apps
+    assert "DatasetScoped = $true" in apps
+    assert "datasetDir = uigetdir" in source
+    assert "$($a.Function)(datasetDir)" in source
+    assert "if ~isequal(datasetDir,0)" in source
     assert "No legacy MLAPP is copied" in source
-    assert "PHASE StaMPS is opened by preprocessing" in source
+    assert '"PHASE StaMPS.lnk"' in source
 
 
 def test_beta_installer_clones_branch_and_launches_standalone_m_files(phase_root):

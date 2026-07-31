@@ -113,7 +113,8 @@ explicit value.
 `installer\install-phase.ps1` is the beta installer source. It clones
 `codex/phase-stamps-beta`, validates that the complete standalone runtime is
 present, removes legacy/development files from the installed engine, creates
-the two visible MATLAB launch shortcuts and hides the engine folder.
+the three visible MATLAB launch shortcuts and hides the engine folder. The
+StaMPS shortcut asks for an explicit `ASC_*`/`DSC_*` dataset folder.
 
 Do not use the old `installer\install-phase.exe` from another checkout: an
 updated EXE must be compiled on Windows after the tested beta branch has been

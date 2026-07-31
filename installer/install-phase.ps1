@@ -2411,9 +2411,10 @@ function Set-SetupProgress {
 })
 
 # -----------------------------------------------------------------------------
-# Create root shortcuts for the two global standalone launchers plus a README.
+# Create root shortcuts for all three standalone launchers plus a README.
 # The shortcut starts MATLAB and executes the .m launcher immediately; a plain
-# .m file association would only open the MATLAB editor.
+# .m file association would only open the MATLAB editor. StaMPS remains
+# dataset-scoped: its shortcut asks for ASC_*/DSC_* and passes it explicitly.
 # -----------------------------------------------------------------------------
 function New-PhaseLauncherShortcuts {
     param(
@@ -2425,16 +2426,9 @@ function New-PhaseLauncherShortcuts {
 
     $apps = @(
         @{ Name = 'PHASE Preprocessing'; Launcher = 'PHASE_Preprocessing_beta.m'; Function = 'PHASE_Preprocessing_beta' }
+        @{ Name = 'PHASE StaMPS'; Launcher = 'PHASE_Preprocessing\PHASE_StaMPS_beta.m'; Function = 'PHASE_StaMPS_beta'; DatasetScoped = $true }
         @{ Name = 'PHASE Model';         Launcher = 'PHASE_Model_beta.m'; Function = 'PHASE_Model_beta' }
     )
-
-    # PHASE StaMPS remains dataset-scoped and is opened automatically by
-    # preprocessing with the explicit ASC_/DES_ work folder.
-    $obsoleteStaMPSShortcut = Join-Path $InstallDir 'PHASE StaMPS.lnk'
-    if (Test-Path -LiteralPath $obsoleteStaMPSShortcut) {
-        Remove-Item -LiteralPath $obsoleteStaMPSShortcut -Force
-        & $StatusCallback "Removed obsolete global PHASE StaMPS shortcut (module 1B is dataset-scoped)"
-    }
 
     $wsh = New-Object -ComObject WScript.Shell
     try {
@@ -2448,7 +2442,12 @@ function New-PhaseLauncherShortcuts {
             $lnkPath = Join-Path $InstallDir ($a.Name + '.lnk')
             $sc = $wsh.CreateShortcut($lnkPath)
             $sc.TargetPath = $MatlabExe
-            $sc.Arguments = "-r `"try, cd('$phaseM'); addpath(genpath('$phaseM')); $($a.Function); catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end`""
+            if ($a.DatasetScoped) {
+                $launchCommand = "datasetDir = uigetdir('$phaseM','Select the ASC_* or DSC_* StaMPS dataset folder'); if ~isequal(datasetDir,0), $($a.Function)(datasetDir); end"
+            } else {
+                $launchCommand = "$($a.Function)"
+            }
+            $sc.Arguments = "-r `"try, cd('$phaseM'); addpath(genpath('$phaseM')); $launchCommand; catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end`""
             $sc.WorkingDirectory = $PhaseDir
             $sc.Description = "Launch $($a.Name)"
             $sc.IconLocation = "$MatlabExe,0"
@@ -2467,6 +2466,7 @@ PHASE - InSAR PSI suite
 To START the application, double-click one of these shortcuts:
 
   - "PHASE Preprocessing.lnk"  ->  SNAP data preparation (module 1)
+  - "PHASE StaMPS.lnk"         ->  select and process an ASC_*/DSC_* dataset
   - "PHASE Model.lnk"          ->  geospatial modelling
 
 PHASE StaMPS (module 1B)
@@ -2925,8 +2925,9 @@ function Invoke-FullSetup {
     Add-SetupLog "=== Installation complete ==="
     Add-SetupLog "Launch the app from the shortcuts in $($appDir):"
     Add-SetupLog "  PHASE Preprocessing.lnk"
+    Add-SetupLog "  PHASE StaMPS.lnk"
     Add-SetupLog "  PHASE Model.lnk"
-    Add-SetupLog "PHASE StaMPS is opened by preprocessing from the generated ASC_/DES_ dataset folder."
+    Add-SetupLog "PHASE StaMPS can be opened by preprocessing or from its shortcut by selecting ASC_/DSC_."
     Add-SetupLog "(the actual files live in $phaseDir - no need to open them by hand)"
     Set-PhaseEngineHidden -EngineDir $engineDir
 }
