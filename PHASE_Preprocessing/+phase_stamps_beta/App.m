@@ -261,6 +261,38 @@ classdef App < handle
             end
             clear diaryCleanup
             obj.sendState();
+            if result.ok
+                obj.offerModelLaunch();
+            end
+        end
+
+        function offerModelLaunch(obj)
+            try
+                choice = uiconfirm(obj.UIFigure, ...
+                    ['StaMPS processing completed successfully. ' ...
+                     'Do you want to open PHASE Model now?'], ...
+                    'StaMPS completed', ...
+                    'Options', {'Open PHASE Model','Not now'}, ...
+                    'DefaultOption', 1, 'CancelOption', 2, 'Icon', 'success');
+                if ~strcmp(choice, 'Open PHASE Model')
+                    obj.appendLog('PHASE Model launch postponed.');
+                    return
+                end
+
+                projectRoot = fileparts(obj.LauncherDir);
+                modelLauncher = fullfile(projectRoot, 'PHASE_Model_beta.m');
+                if ~isfile(modelLauncher)
+                    error('PHASE_StaMPS_beta:modelLauncherMissing', ...
+                        'PHASE Model launcher was not found: %s', modelLauncher);
+                end
+                addpath(projectRoot);
+                obj.appendLog('Opening PHASE Model…');
+                PHASE_Model_beta();
+            catch ME
+                obj.appendLog(['PHASE Model could not be opened [' ...
+                    ME.identifier ']: ' ME.message]);
+                obj.showError('PHASE Model unavailable', ME.message);
+            end
         end
 
         function browseFromPayload(obj, payload)

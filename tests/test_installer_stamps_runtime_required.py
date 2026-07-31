@@ -45,7 +45,7 @@ def test_beta_installer_clones_branch_and_launches_standalone_m_files(phase_root
     assert "Open $($a.Name) in MATLAB App Designer" not in source
 
 
-def test_beta_installer_cleans_legacy_runtime_and_hides_engine(phase_root):
+def test_beta_installer_cleans_legacy_runtime_and_keeps_engine_editable(phase_root):
     source = _installer(phase_root)
 
     assert "function Remove-PhaseLegacyRuntimeFiles" in source
@@ -55,9 +55,12 @@ def test_beta_installer_cleans_legacy_runtime_and_hides_engine(phase_root):
     assert "'srtm_precache.py', 'snap_dim_version_check.py'" in source
     assert "$_.Name -notin $runtimeTools" in source
     assert "Retained SNAP runtime helpers in tools." in source
-    assert "function Set-PhaseEngineHidden" in source
-    assert "[System.IO.FileAttributes]::Hidden" in source
-    assert "Set-PhaseEngineHidden -EngineDir $engineDir" in source
+    assert "function Set-PhaseEngineHidden" not in source
+    assert "Set-PhaseEngineHidden -EngineDir $engineDir" not in source
+    assert "function Set-PhaseEngineVisible" in source
+    assert "-band (-bnot [System.IO.FileAttributes]::Hidden)" in source
+    assert "Set-PhaseEngineVisible -EngineDir $engineDir" in source
+    assert "editable MATLAB sources live in the visible folder" in source
     assert "function Assert-PhaseStandaloneRuntime" in source
     assert "Assert-PhaseStandaloneRuntime -PhaseDir $phaseDir" in source
     assert "Nothing was cleaned" in source

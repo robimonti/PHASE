@@ -518,6 +518,23 @@ classdef App < handle
                     copyfile(assets{k,1},assets{k,2});
                 end
             end
+
+            % uihtml on Windows does not reliably allow a page to load a
+            % script through "../" from a sibling directory. Keep the shared
+            % map implementation authoritative, but stage a local copy beside
+            % the Model page before the HTML component is constructed.
+            mapSource = fullfile(obj.RootDir,'PHASE_Preprocessing', ...
+                'phase_preprocessing_beta_ui','map.js');
+            mapTarget = fullfile(obj.RootDir,'phase_model_beta_ui','map.js');
+            if ~isfile(mapSource)
+                error('PHASE_Model_beta:mapRuntimeMissing', ...
+                    'The shared PHASE map runtime is missing: %s', mapSource);
+            end
+            [copied,message] = copyfile(mapSource,mapTarget,'f');
+            if ~copied
+                error('PHASE_Model_beta:mapRuntimeCopyFailed', ...
+                    'Could not prepare the local Model map runtime: %s', message);
+            end
         end
 
         function hideEngine(obj)

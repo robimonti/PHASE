@@ -154,6 +154,25 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         "progress is mirrored live in the PHASE Run monitor as ",
         1,
     )
+
+    # Keep the scientifically meaningful PS time-series export (including
+    # TRAIN-corrected PS when selected), but do not publish the atmospheric
+    # delay itself as a separate PHASE product. The legacy atmospheric export
+    # was never part of the validated Model input contract.
+    atmosphere_start = (
+        "        %% ------------------ EXPORT ATMOSPHERIC CORRECTION "
+        "-----------------------"
+    )
+    atmosphere_end = "        %% ----------------------------------------------------"
+    if callback.count(atmosphere_start) != 1 or callback.count(atmosphere_end) != 1:
+        raise RuntimeError("Could not locate the stable atmospheric export block")
+    start_index = callback.index(atmosphere_start)
+    end_index = callback.index(atmosphere_end, start_index)
+    callback = (
+        callback[:start_index]
+        + "        %% Atmospheric delay export intentionally omitted.\n\n"
+        + callback[end_index:]
+    )
     success_anchor = """\
         % Display a message when the script is done
         updateOutput(app, 'StaMPS processing completed.');

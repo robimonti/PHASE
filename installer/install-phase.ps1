@@ -7,7 +7,7 @@
 #   3. Verifica SNAP   (auto-detect + override + lancio installer bundled).
 #   4. Verifica/installa Python 3.11+ (silent install da python.org se assente).
 #   5. Sceglie cartella destinazione (default: Desktop\PHASE).
-#   6. Clona PHASE, StaMPS, TRAIN sotto <dest>\engine\ (motore nascosto).
+#   6. Clona PHASE, StaMPS, TRAIN sotto <dest>\engine\ (sorgenti visibili).
 #   7. Scarica i binari nativi StaMPS precompilati (stamps-win64-binaries.zip).
 #   8. Configura tutto: MATLAB_EXE, %APPDATA%\PHASE\python.txt, savepath MATLAB.
 #   9. Crea nella root <dest> i collegamenti ai moduli globali + un README;
@@ -2471,7 +2471,7 @@ To START the application, double-click one of these shortcuts:
 
 PHASE StaMPS (module 1B)
 ------------------------
-  Module 1 creates an ASC_<dates> or DES_<dates> processing folder and opens
+  Module 1 creates an ASC_<dates> or DSC_<dates> processing folder and opens
   PHASE StaMPS Beta with that folder explicitly. No legacy MLAPP is copied.
   To resume later, launch PHASE_StaMPS_beta from MATLAB and pass the dataset
   folder, or reopen it from PHASE Preprocessing.
@@ -2491,9 +2491,9 @@ GACOS atmospheric correction (optional)
   Select "Binary grid" as the file type, download the .tar.gz archives
   into the GACOS folder, then press Continue.
 
-Do NOT move, rename or delete the "engine" folder: it holds PHASE's
-code, native binaries and configuration. Moving it or deleting its
-contents will prevent the application from starting.
+The "engine" folder is intentionally visible: it contains the editable
+MATLAB sources, native binaries and configuration. You may inspect and
+modify the sources, but do not move, rename or delete the folder itself.
 "@
     Set-Content -Path $readme -Value $readmeText -Encoding UTF8
     & $StatusCallback "[OK] README: $readme"
@@ -2588,11 +2588,11 @@ function Assert-PhaseStandaloneRuntime {
     }
 }
 
-function Set-PhaseEngineHidden {
+function Set-PhaseEngineVisible {
     param([Parameter(Mandatory)] [string]$EngineDir)
     if (-not (Test-Path -LiteralPath $EngineDir)) { return }
     $item = Get-Item -LiteralPath $EngineDir -Force
-    $item.Attributes = $item.Attributes -bor [System.IO.FileAttributes]::Hidden
+    $item.Attributes = $item.Attributes -band (-bnot [System.IO.FileAttributes]::Hidden)
 }
 
 # -----------------------------------------------------------------------------
@@ -2920,6 +2920,9 @@ function Invoke-FullSetup {
         Add-SetupLog "[!] Could not create root shortcuts/README: $($_.Exception.Message)"
     }
 
+    Set-PhaseEngineVisible -EngineDir $engineDir
+    Add-SetupLog "[OK] Editable engine folder is visible: $engineDir"
+
     Set-SetupProgress 100 'all done'
     Add-SetupLog ""
     Add-SetupLog "=== Installation complete ==="
@@ -2928,8 +2931,7 @@ function Invoke-FullSetup {
     Add-SetupLog "  PHASE StaMPS.lnk"
     Add-SetupLog "  PHASE Model.lnk"
     Add-SetupLog "PHASE StaMPS can be opened by preprocessing or from its shortcut by selecting ASC_/DSC_."
-    Add-SetupLog "(the actual files live in $phaseDir - no need to open them by hand)"
-    Set-PhaseEngineHidden -EngineDir $engineDir
+    Add-SetupLog "The editable MATLAB sources live in the visible folder: $phaseDir"
 }
 
 # -----------------------------------------------------------------------------

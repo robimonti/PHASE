@@ -987,41 +987,7 @@ end % source all the softwares and prepare the data
 
 
 
-        %% ------------------ EXPORT ATMOSPHERIC CORRECTION -----------------------
-
-        if stamps_last_step > 6 && tropo_correction_enabled && contains(ph_output, 'unwrapped')
-
-            updateOutput(app, '----------------------- STEP 4: Atmosphere time series export started -----------------------');
-
-            atm_method_name = tropo_method;
-            atm_method_name(1:2) = [];
-            load('tca2.mat', strcat('ph_tropo_', atm_method_name));
-            load('ps2.mat', 'lonlat');
-            load('PS_index.mat', 'ind');
-            atm_ph = eval(strcat('ph_tropo_', atm_method_name));
-
-            lonlat_AOI = lonlat(ind,:);
-            atm_ph_AOI = atm_ph(ind,:);
-
-            % PHASE TO DISPLACEMENT CONVERSION OF THE ATMOSPHERIC DELAY
-            atm_mm_AOI = atm_ph_AOI .* (1000 * lambda / (-4 * pi));  % mm in LOS direction
-
-            save(strcat('Atmosphere_', atm_method_name, '_AOI_PS.mat'), 'lonlat_AOI', 'atm_mm_AOI');
-
-            % TABLE CREATION AND EXPORT
-            infos_points_tropo = table(point, lon, lat);
-            writetable(infos_points_tropo, strcat(cd_fullpath, '/EXPORT/', export_name, '_ATMOSPHERE.xlsx'), 'Range', 'A2:C500000');
-
-            table_p2_tropo = [time_days; atm_mm_AOI]; % export second part of the table
-            atm_delay = table(table_p2_tropo);
-            writetable(atm_delay, strcat(cd_fullpath, '/EXPORT/', export_name, '_ATMOSPHERE.xlsx'), 'Range', 'D1');
-
-            displ_table_atm_all = readtable(strcat('./EXPORT/', export_name, '_ATMOSPHERE.xlsx'));
-            writetable(displ_table_atm_all, strcat('./EXPORT/', export_name, '_ATMOSPHERE.csv'), 'WriteMode', 'overwrite');
-
-            updateOutput(app, '----------------------- STEP 4: Atmosphere time series export finished -----------------------');
-
-        end
+        %% Atmospheric delay export intentionally omitted.
 
         %% ----------------------------------------------------
 

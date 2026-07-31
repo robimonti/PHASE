@@ -168,6 +168,10 @@ def test_model_beta_supports_interactive_polygon_aoi(phase_root):
     assert 'id="aoi-map-panel"' in html
     assert "new PhaseMap" in js
     assert 'send("MapAoiChanged"' in js
+    assert '<script src="map.js"></script>' in html
+    assert "../PHASE_Preprocessing/phase_preprocessing_beta_ui/map.js" not in html
+    assert "copyfile(mapSource,mapTarget,'f')" in controller
+    assert "obj.ensureAssets();" in controller
 
 
 def test_model_beta_temporal_mode_skips_spatial_grid_and_exports_report_figures(phase_root):

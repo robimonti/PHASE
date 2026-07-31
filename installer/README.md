@@ -131,10 +131,11 @@ install-phase.ps1
 La cartella visibile `PHASE` contiene i collegamenti a PHASE Preprocessing,
 PHASE StaMPS e PHASE Model, oltre al README. Il collegamento StaMPS chiede
 esplicitamente la cartella dataset `ASC_*`/`DSC_*` prima di aprire l'app. Il motore
-standalone è nella sottocartella nascosta `engine`; StaMPS non viene quindi mai
-avviato accidentalmente nella root e può anche essere aperto automaticamente
-dal preprocessing. Nessuna delle tre beta carica un `.mlapp` a runtime; tutte usano
-lo stesso shell HTML chiaro mentre i motori MATLAB testuali restano nascosti.
+standalone è nella sottocartella visibile `engine`, così i sorgenti MATLAB restano
+ispezionabili e modificabili. StaMPS non viene comunque avviato accidentalmente
+nella root e può anche essere aperto automaticamente dal preprocessing. Nessuna
+delle tre beta carica un `.mlapp` a runtime; tutte usano lo stesso shell HTML
+chiaro e motori MATLAB testuali espliciti.
 
 ## Path configurati automaticamente
 
@@ -147,7 +148,7 @@ Dopo che l'installer ha finito, l'utente trova:
 | MATLAB path permanente (`pathdef.m`) | `matlab.exe -batch savepath` | `StaMPS\matlab` + `matlab_compat` + `TRAIN\matlab` |
 | Template config dataset | `<dest>\PHASE\engine\project.conf.template` | `GPTBIN_PATH` precompilato + AOI placeholder |
 
-L'utente avvia PHASE dai due collegamenti visibili. Il collegamento apre MATLAB,
+L'utente avvia PHASE dai tre collegamenti visibili. Il collegamento apre MATLAB,
 aggiunge il motore al path ed esegue immediatamente la funzione standalone;
 non apre il file nell'Editor.
 

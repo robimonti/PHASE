@@ -19,6 +19,7 @@ __pycache__/
 
 # PHASE_model generated state (per-user, not shared)
 input_model.mat
+phase_model_beta_ui/map.js
 
 # PHASE per-user config files (path assoluti locali: Python, SNAP, AOI)
 PHASE_Preprocessing/input_preprocessing.mat
