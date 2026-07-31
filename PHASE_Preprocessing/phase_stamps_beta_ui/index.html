@@ -10,14 +10,6 @@
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
-      <div class="brand-wrap">
-        <img class="phase-logo" src="assets/PHASE_logo.png" alt="PHASE — Multi-Sensor InSAR Deformation Monitoring">
-        <span class="logo-divider" aria-hidden="true"></span>
-        <div class="module-lockup">
-          <img class="module-logo" src="assets/PHASE_mod1b.png" alt="StaMPS PSI">
-          <span>Module 1B · Beta</span>
-        </div>
-      </div>
       <div class="topbar-center">
         <div class="path-label">Processing folder</div>
         <button id="workdir" class="path-button" type="button" title="Open processing folder">Connecting to MATLAB…</button>
@@ -32,6 +24,15 @@
     </header>
 
     <aside class="sidebar">
+      <div class="brand-wrap">
+        <img class="phase-logo" src="assets/PHASE_logo.png" alt="PHASE — Multi-Sensor InSAR Deformation Monitoring">
+        <span class="logo-divider" aria-hidden="true"></span>
+        <div class="module-lockup">
+          <img class="module-logo" src="assets/PHASE_mod1b.png" alt="StaMPS PSI">
+          <span>Module 1B · Beta</span>
+        </div>
+      </div>
+
       <div class="status-card">
         <div class="status-row">
           <span id="status-dot" class="status-dot idle"></span>
@@ -95,7 +96,7 @@
           <div class="summary-arrow">→</div>
           <div class="summary-block"><span>Last step</span><strong id="summary-last">—</strong></div>
           <div class="summary-divider"></div>
-          <div class="summary-block wide"><span>Atmospheric correction</span><strong id="summary-tropo">—</strong></div>
+          <div class="summary-block wide"><span>TRAIN tropospheric correction</span><strong id="summary-tropo">—</strong></div>
           <div class="summary-block wide"><span>Output</span><strong id="summary-output">—</strong></div>
         </div>
         <div class="console-wrap">
@@ -117,14 +118,13 @@
         </div>
         <div class="feature-panel">
           <div class="feature-visual" aria-hidden="true">
-            <span class="orbit"></span><span class="point p1"></span><span class="point p2"></span>
-            <span class="point p3"></span><span class="point p4"></span>
+            <img src="assets/PHASE_mod1b.png" alt="">
           </div>
           <div class="feature-content">
-            <div class="tag">Existing StaMPS tool</div>
-            <h2>Open the time-series picker</h2>
-            <p>The picker opens in a dedicated MATLAB window and uses the products in this processing folder. If needed, PHASE generates <code>ps_plot_ts_v-do.mat</code> first.</p>
-            <button id="open-ts-picker" class="button primary" type="button">Open TS picker</button>
+            <div class="tag">Integrated PHASE tool</div>
+            <h2>Load the time-series picker</h2>
+            <p>The native picker is loaded inside this PHASE StaMPS window and uses only the products in the current processing folder. No legacy MLAPP is opened. If needed, PHASE generates <code>ps_plot_ts_v-do.mat</code> first.</p>
+            <button id="open-ts-picker" class="button primary" type="button">Load TS picker</button>
           </div>
         </div>
       </section>
@@ -132,8 +132,5 @@
   </div>
 
   <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
-  <div id="blocking-overlay" class="blocking-overlay hidden">
-    <div class="spinner"></div><strong>MATLAB is processing</strong><span>The interface remains connected to the live log.</span>
-  </div>
 </body>
 </html>

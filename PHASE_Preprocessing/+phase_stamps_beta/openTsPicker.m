@@ -1,8 +1,11 @@
-function pickerFigure = openTsPicker(workDir, cfg, ownerFigure)
-%OPENTSPICKER Open the existing StaMPS picker from the web-based beta.
+function pickerContainer = openTsPicker(workDir, cfg, parentContainer)
+%OPENTSPICKER Load the native TS picker inside the PHASE StaMPS window.
 
-if nargin < 3, ownerFigure = []; end
-pickerFigure = [];
+if nargin < 3 || isempty(parentContainer) || ~isvalid(parentContainer)
+    error('PHASE_StaMPS_beta:tsContainerMissing', ...
+        'The integrated TS Points container is not available.');
+end
+pickerContainer = parentContainer;
 if ~isfolder(workDir)
     error('PHASE_StaMPS_beta:workDirMissing', ...
         'Cannot resolve the StaMPS processing folder: %s', workDir);
@@ -25,8 +28,7 @@ if exist(matPath, 'file') ~= 2
     newFigures = setdiff(figuresAfter, figuresBefore);
     for k = 1:numel(newFigures)
         try
-            if isvalid(newFigures(k)) && ...
-                    (isempty(ownerFigure) || newFigures(k) ~= ownerFigure)
+            if isvalid(newFigures(k))
                 delete(newFigures(k));
             end
         catch
@@ -39,14 +41,11 @@ if exist(matPath, 'file') ~= 2
     end
 end
 
-pickerFigure = uifigure('Name', 'PHASE · TS Points', ...
-    'Position', [120 90 1220 780], 'Color', [0.035 0.055 0.10]);
-container = uipanel(pickerFigure, 'Position', [0 0 1220 780], ...
-    'BorderType', 'none');
 try
-    ts_export_picker(workDir, container, valueType, char(string(cfg.export_name)));
+    delete(parentContainer.Children);
+    ts_export_picker(workDir, parentContainer, valueType, ...
+        char(string(cfg.export_name)));
 catch ME
-    if isvalid(pickerFigure), delete(pickerFigure); end
     rethrow(ME)
 end
 end

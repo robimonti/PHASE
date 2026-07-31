@@ -4,6 +4,16 @@ function [cfg, detected, messages] = autoDetectConfig(cfg, workDir)
 detected = {};
 messages = {};
 
+installationFolder = phase_stamps_beta.findStaMPSInstallation(cfg,workDir);
+if ~isempty(installationFolder) && ...
+        (~isfield(cfg,'installation_folder') || ...
+         ~samePath(cfg.installation_folder,installationFolder))
+    cfg.installation_folder = installationFolder;
+    detected{end+1} = 'installation_folder';
+    messages{end+1} = ['Automatic detection: StaMPS runtime found at ' ...
+        installationFolder '.'];
+end
+
 candidates = {};
 if isfield(cfg, 'project_path') && ~isempty(cfg.project_path)
     candidates{end+1} = fullfile(cfg.project_path, 'PHASE_Preprocessing');
@@ -27,6 +37,12 @@ end
 if isempty(preprocFolder)
     messages{end+1} = 'Automatic detection: no PHASE_Preprocessing/INSAR_* folder found.';
     return
+end
+
+projectFolder = char(java.io.File(fileparts(preprocFolder)).getCanonicalPath());
+if ~isfield(cfg, 'project_path') || ~samePath(cfg.project_path, projectFolder)
+    cfg.project_path = projectFolder;
+    detected{end+1} = 'project_path';
 end
 
 insarDirs = dir(fullfile(preprocFolder, 'INSAR_*'));
@@ -99,4 +115,24 @@ if ~isempty(timeMatch)
 end
 
 messages{end+1} = sprintf('Automatic detection: parameters read from %s.', diff0Path);
+detected = unique(detected, 'stable');
+end
+
+function tf = samePath(left, right)
+left = char(string(left));
+right = char(string(right));
+if isempty(left) || isempty(right)
+    tf = false;
+    return
+end
+try
+    left = char(java.io.File(left).getCanonicalPath());
+    right = char(java.io.File(right).getCanonicalPath());
+catch
+end
+if ispc
+    tf = strcmpi(left, right);
+else
+    tf = strcmp(left, right);
+end
 end

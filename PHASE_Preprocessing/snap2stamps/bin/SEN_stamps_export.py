@@ -14,6 +14,7 @@
 
 
 import os
+from phase_subprocess import live_popen
 from pathlib import Path
 import sys
 import glob
@@ -169,10 +170,9 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
         args = [ GPT, graph2run, '-c', CACHE, '-q', CPU]
         print(args)
         # Launching process
-        process = subprocess.Popen(args, stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        process = live_popen(args, stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0]
-        print('SNAP STDOUT:{}'.format(stdout))
         timeDelta = time.time() - timeStarted                     # Get execution time.
         print(('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.'))
         out_file.write('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.\n')

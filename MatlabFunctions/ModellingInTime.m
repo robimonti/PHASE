@@ -30,6 +30,13 @@ function [obs_p1, obs_p2, obs_p3, obs_p4, obs_p5] = ModellingInTime(...
 %   spline_method    - Auto spline selection method ('variance', 'MDL', 'F_test', 'chi2_test', required if num_spl_method = 'auto', default: 'variance').
 %   lambda_manual    - Manual regularization parameter (required if lambda_method = 'manual', default: 1).
 %   coll_step_est    - Time step for prediction mode in days (required if coll_proc = 'prediction', default: 6).
+%   min_period_days  - Shortest Fourier period retained, in days (default: 365.25).
+%   min_coll_snr     - Minimum residual signal-to-noise ratio for collocation (default: 100.10).
+%   min_coll_corr_samples - Minimum correlation length, in median sampling intervals (default: 1.5).
+%   spline_min_knot_intervals - Minimum knot spacing in median sampling intervals (default: 2).
+%   spline_max_fraction - Maximum spline count as a fraction of observations (default: 0.49).
+%   stop_check       - Optional callback used by the standalone GUI to stop
+%                      processing at the next safe numerical checkpoint.
 %
 % Outputs:
 %   obs_p1 - Cell array (n_PS x 7) with detrending and outlier rejection results:
@@ -98,6 +105,12 @@ addParameter(p, 'num_spl_manual', 2, @(x) isscalar(x) && x >= 2 && mod(x, 1) == 
 addParameter(p, 'spline_method', 'variance', @(x) ischar(x) && ismember(x, {'variance', 'MDL', 'F_test', 'chi2_test'}));
 addParameter(p, 'lambda_manual', 1, @(x) isscalar(x) && x > 0);
 addParameter(p, 'coll_step_est', 6, @(x) isscalar(x) && x > 0);
+addParameter(p, 'min_period_days', 365.25, @(x) isscalar(x) && x > 0);
+addParameter(p, 'min_coll_snr', 100.10, @(x) isscalar(x) && x > 0);
+addParameter(p, 'min_coll_corr_samples', 1.5, @(x) isscalar(x) && x >= 1);
+addParameter(p, 'spline_min_knot_intervals', 2, @(x) isscalar(x) && x >= 2);
+addParameter(p, 'spline_max_fraction', 0.49, @(x) isscalar(x) && x > 0 && x < 0.5);
+addParameter(p, 'stop_check', @() [], @(x) isa(x,'function_handle'));
 
 % parse inputs
 parse(p, detectedOS, outputDir, figsDir, dataIN_AOI, displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, xyIN_AOI, ...
@@ -105,6 +118,9 @@ parse(p, detectedOS, outputDir, figsDir, dataIN_AOI, displIN_AOI, PSidIN_AOI, t_
 
 if size(displIN_AOI, 1) ~= size(PSidIN_AOI, 1) || size(displIN_AOI, 2) ~= length(t_dateIN)
     error('Dimension mismatch: displIN_AOI, PSidIN_AOI, and t_dateIN must have consistent sizes.');
+end
+if numel(t_relIN) ~= numel(t_dateIN) || any(~isfinite(t_relIN)) || any(diff(t_relIN) <= 0)
+    error('t_relIN must be finite, strictly increasing, and have one value per observation date.');
 end
 
 % override default parameters with OptionalArgs if provided
@@ -114,7 +130,9 @@ if ~isempty(OptionalArgs)
     end
     % validate that all parameter names in OptionalArgs are recognized
     validParams = {'varNoise_manual', 'utmZone', 'coherence_dir', 'constellation', 'num_looks', ...
-                   'num_spl_manual', 'spline_method', 'lambda_manual', 'coll_step_est'};
+                   'num_spl_manual', 'spline_method', 'lambda_manual', 'coll_step_est', ...
+                   'min_period_days', 'min_coll_snr', 'min_coll_corr_samples', ...
+                   'spline_min_knot_intervals', 'spline_max_fraction', 'stop_check'};
     for i = 1:2:length(OptionalArgs)
         if ~ismember(OptionalArgs{i}, validParams)
             error('Unrecognized parameter name in OptionalArgs: %s', OptionalArgs{i});
@@ -135,6 +153,13 @@ num_spl_manual = p.Results.num_spl_manual;
 spline_method = p.Results.spline_method;
 lambda_manual = p.Results.lambda_manual;
 coll_step_est = p.Results.coll_step_est;
+min_period_days = p.Results.min_period_days;
+min_coll_snr = p.Results.min_coll_snr;
+min_coll_corr_samples = p.Results.min_coll_corr_samples;
+spline_min_knot_intervals = p.Results.spline_min_knot_intervals;
+spline_max_fraction = p.Results.spline_max_fraction;
+stop_check = p.Results.stop_check;
+stop_check();
 
 % conditional input validation
 % - varNoise_method
@@ -258,7 +283,7 @@ master_date = t_dateIN(master_idx);
 master_t_rel = t_relIN(master_idx);
 
 % initialize variables
-obs_p1 = cell(size(displIN_AOI, 1), 6);
+obs_p1 = cell(size(displIN_AOI, 1), 7);
 obs_p2 = cell(size(displIN_AOI, 1), 7);
 obs_p3 = cell(size(displIN_AOI, 1), 7);
 obs_p4 = cell(size(displIN_AOI, 1), 3);
@@ -268,6 +293,9 @@ obs_p5 = cell(size(displIN_AOI, 1), 6);
 max_iterations = 10;
 
 for i = 1:size(dataIN_AOI, 1)
+
+    drawnow limitrate
+    stop_check();
 
     % counter for iterations
     ii = 1;
@@ -307,6 +335,7 @@ for i = 1:size(dataIN_AOI, 1)
     
     % iterative model reduction
     while true
+        stop_check();
         % LS estimation
         if cond(A) > 1e10
             x_est = pinv(A' * W * A) * (A' * W * obs_col);
@@ -369,6 +398,7 @@ for i = 1:size(dataIN_AOI, 1)
         W_tmp = W;
     
         while outliers_removed < max_outliers
+            stop_check();
             % weighted LS estimation with current data
             if cond(A_tmp) > 1e10
                 x_est = pinv(A_tmp' * W_tmp * A_tmp) * (A_tmp' * W_tmp * obs_col_tmp);
@@ -512,6 +542,9 @@ for i = 1:size(dataIN_AOI, 1)
 
     while ii <= max_iterations
 
+        drawnow limitrate
+        stop_check();
+
         % -- 2) Fourier spectrum for outliers
         % compute the mode for uniform sampling
         mode_obs = min(diff(obs_p1{i, 2}));
@@ -527,8 +560,15 @@ for i = 1:size(dataIN_AOI, 1)
         obs_spectr = sqrt(obs_psd);
     
         % moving median on the spectrum
-        win_size = min(0.1 * length(obs_p1{i, 2}), 50);
-        win_size = max(win_size, 3); % ensure odd window size for movmedian
+        win_size = min(round(0.1 * length(obs_p1{i, 2})), 50);
+        win_size = max(win_size, 3);
+        if mod(win_size, 2) == 0
+            win_size = win_size + 1;
+        end
+        win_size = min(win_size, length(obs_spectr));
+        if mod(win_size, 2) == 0 && win_size > 1
+            win_size = win_size - 1;
+        end
         mov_spectr = movmedian(obs_spectr, win_size, 'omitnan');        
     
         % residuals between amplitude spectrum and movmedian
@@ -583,6 +623,10 @@ for i = 1:size(dataIN_AOI, 1)
         
             % identify fundamental frequencies
             fundamental_freq = freq(idx_cen + fund_idx);
+            max_fourier_frequency = 1 / min_period_days;
+            fundamental_freq = fundamental_freq(fundamental_freq > 0 & ...
+                fundamental_freq <= max_fourier_frequency);
+            fundamental_freq = unique(fundamental_freq, 'stable');
         else
             % NO CLEAR PERIODICITY DETECTED
             % no fundamental frequencies are set
@@ -717,8 +761,9 @@ for i = 1:size(dataIN_AOI, 1)
         % define min and max number of splines to be tested
         min_n_spl = 2;
     
-        T_min = 5 * median(diff(obs_p2{i, 4}));
-        max_n_spl = min(round((max(obs_p2{i, 4}) - min(obs_p2{i, 4})) / T_min), round(num_obs * 0.1));
+        T_min = spline_min_knot_intervals * median(diff(obs_p2{i, 4}));
+        max_n_spl = min(round((max(obs_p2{i, 4}) - min(obs_p2{i, 4})) / T_min), ...
+            round(num_obs * spline_max_fraction));
         max_n_spl = max(max_n_spl, 2);
 
         % validate manual inputs
@@ -1184,6 +1229,7 @@ for i = 1:size(dataIN_AOI, 1)
         % fit a polynomial to the empirical covariance with outlier removal
         l_out = min(20, idx_end - sum_out); 
         while it_out < max_it_out && sum_out~=0
+            stop_check();
             order = min(max_order, round(size(Yo_poly,1) / 3));
             p_eCov = polyfit(tau_poly, Yo_poly, order);
             eCovF_smooth_tmp = polyval(p_eCov, tau_poly);
@@ -1273,7 +1319,10 @@ for i = 1:size(dataIN_AOI, 1)
         
         % identify zero-crossing point in smoothed curve
         idxZero_smt = find(eCovF_smooth < 0, 1, 'first');
-        if idxZero_smt == 1
+        if isempty(idxZero_smt)
+            idxZero_smt = min(numel(eCovF_smooth), numel(tauGrid));
+            tauZero_smt = tauGrid(idxZero_smt);
+        elseif idxZero_smt == 1
             tauZero_smt = tauGrid(2)/2;   % fallback
         else
             tauZero_smt = mean(tauGrid(idxZero_smt-1 : idxZero_smt));
@@ -1290,7 +1339,7 @@ for i = 1:size(dataIN_AOI, 1)
         end
         
         % objective functions for Matlab built-in least squares function
-        fun1 = @(c) (1./sqrt(Q)) .* (Yo - mCovF1(c, tau));
+        fun1 = @(c) (1./sqrt(max(Q, 1))) .* (Yo - mCovF1(c, tau));
         fun2 = @(c) (1./sqrt(Q)) .* (Yo - mCovF2(c, tau));
         fun3 = @(c) (1./sqrt(Q)) .* (Yo - mCovF3(c, tau));
         
@@ -1302,6 +1351,9 @@ for i = 1:size(dataIN_AOI, 1)
         
         % -- Gaussian --
         % a-priori values for non-linear LS
+        % Retain the legacy initialisation for provenance, but use the robust
+        % Gaussian-only initialisation below.
+        if false %#ok<UNRCH>
         % c1
         if eCovF(2) < 0 && eCovF_smooth(2) < 0
             % fallback
@@ -1382,11 +1434,23 @@ for i = 1:size(dataIN_AOI, 1)
                 end
             end
         end
-        
+
+        end
+
+        positive_cov = eCovF(eCovF > 0 & isfinite(eCovF));
+        if isempty(positive_cov)
+            c1_app(1,1) = eps;
+        else
+            c1_app(1,1) = max(median( ...
+                positive_cov(1:min(3, numel(positive_cov)))), eps);
+        end
+        corr_scale = max(tauGrid(min(numel(tauGrid), ...
+            max(2, round(numel(tauGrid)/3)))), dtau);
+        c1_app(2,1) = 1 / corr_scale^2;
+
         % lower and upper bound for lsqnonlin
-        lb_1 = c1_app - [1, 2] .* thrs_bounds .* c1_app;
-        lb_1(lb_1 < 0) = 0;
-        ub_1 = c1_app + [1, 2] .* thrs_bounds .* c1_app;
+        lb_1 = [eps; eps];
+        ub_1 = [Inf; Inf];
         
         % non-linear LS
         [c1, ~] = lsqnonlin(fun1, c1_app, lb_1, ub_1);
@@ -1394,7 +1458,11 @@ for i = 1:size(dataIN_AOI, 1)
         % compute the score
         scoreCov_raw(1) = sum(((mCovF1(c1, tauGrid_orig(idx_in:idx_end)) - eCovF(idx_in:idx_end)) .* Cecf_std).^2);
         scoreCov_smt(1) = sum(((mCovF1(c1, tauGrid_orig(idx_in:idx_end)) - eCovF_smooth(1:idx_end-1)) .* Cecf_std).^2);
-        
+
+        % The current temporal implementation deliberately uses the robust
+        % Gaussian covariance only. The legacy alternatives remain below as
+        % disabled code so the scientific change stays explicit.
+        if false %#ok<UNRCH>
         % -- Gaussian with bell --
         % a-priori values for non-linear LS
         % c1
@@ -1548,45 +1616,11 @@ for i = 1:size(dataIN_AOI, 1)
         % compute the score
         scoreCov_raw(3) = sum(((mCovF3(c3, tauGrid_orig(idx_in:idx_end)) - eCovF(idx_in:idx_end)) .* Cecf_std).^2);
         scoreCov_smt(3) = sum(((mCovF3(c3, tauGrid_orig(idx_in:idx_end)) - eCovF_smooth(1:idx_end-1)) .* Cecf_std).^2);
-        
-        % get total score
-        scoreCov_tot = scoreCov_raw + scoreCov_smt;
-        
-        % get min values and indices
-        [min_mCovF_raw, idx_mCovF_raw] = min(scoreCov_raw);
-        [~, idx_mCovF_smt] = min(scoreCov_smt);
-        [~, idx_mCovF_tot] = min(scoreCov_tot);
-        
-        % choice of the empirical model
-        possib = [1 2 3];
-        possib(idx_mCovF_raw) = [];
-        if 2 * min_mCovF_raw < min(scoreCov_raw(possib))
-            idx_mCovF = idx_mCovF_raw;
-        elseif (idx_mCovF_raw ~=1 && idx_mCovF_smt ~=1) && idx_mCovF_tot ~=1
-            idx_mCovF = idx_mCovF_tot;
-        else
-            % max correlation length between gau and gau + bell
-            zeroF1 = find(mCovF1(c1, tauGrid) < 1e-6, 1, 'first');
-            zeroF2a = find(mCovF2(c2, tauGrid) < 1e-6, 1, 'first');
-            zeroF2b = find(mCovF2(c2, tauGrid(zeroF2a:end)) > -1e-6, 1, 'first') + zeroF2a - 1;
-            if zeroF1 > zeroF2b
-                idx_mCovF = 1;
-            else
-                idx_mCovF = 2;
-            end
         end
-        
-        % get corresponding covariance model
-        if idx_mCovF == 1
-            mCovFin = mCovF1;
-            cFin = c1;
-        elseif idx_mCovF == 2
-            mCovFin = mCovF2;
-            cFin = c2;
-        elseif idx_mCovF == 3
-            mCovFin = mCovF3;
-            cFin = c3;
-        end
+
+        idx_mCovF = 1;
+        mCovFin = mCovF1;
+        cFin = c1;
         
         % get the variance of the noise
         varNoise_cov = eCovF(1) - mCovFin(cFin, 0);
@@ -1599,6 +1633,7 @@ for i = 1:size(dataIN_AOI, 1)
                 varNoise_cov, PSidIN_AOI(i), ii, varNoise);
             varNoise = varNoise_initial;
         end
+        varNoise_cov = varNoise;
         
         % do not apply collocation if the amplitude of the signal is way
         % smaller than the amplitude of the noise and correlation is short
@@ -1608,7 +1643,7 @@ for i = 1:size(dataIN_AOI, 1)
         % find decorrelation time (first lag where rho drops below 1/e)
         tau_c_idx = find(rho < exp(-1), 1, 'first');
         if isempty(tau_c_idx)
-            tau_c = length(tauGrid);
+            tau_c = tauGrid(end);
         else
             tau_c = tauGrid(tau_c_idx);
         end
@@ -1616,11 +1651,19 @@ for i = 1:size(dataIN_AOI, 1)
         % signal-to-noise ratio
         NigNoiR = mCovFin(cFin, 0) / varNoise_cov;
         
-        % threshold for tau_c
-        tau_threshold = 2 * (1 / sqrt(NigNoiR)) * dtau;
-        
-        % condition
-        if NigNoiR < 0.10 && tau_c < tau_threshold
+        sample_intervals = diff(sort(unique(obs_p2{i, 4})));
+        median_sampling = median(sample_intervals(sample_intervals > 0));
+        n_obs_coll = numel(obs_p2{i, 4});
+        min_tau_c = min_coll_corr_samples * median_sampling;
+        has_resolvable_correlation = isfinite(tau_c) && isfinite(min_tau_c) && ...
+            tau_c >= min_tau_c;
+        has_sufficient_observations = n_obs_coll >= 8;
+        has_signal = isfinite(NigNoiR) && NigNoiR >= min_coll_snr;
+
+        if ~has_sufficient_observations || ~has_resolvable_correlation || ~has_signal
+            warning(['Collocation skipped for PS %d (n=%d, SNR=%.2f, ', ...
+                'correlation length=%.1f d, required >= %.1f d).'], ...
+                PSidIN_AOI(i), n_obs_coll, NigNoiR, tau_c, min_tau_c);
             idx_mCovF = 4;
             mCovFin = @(c, tau) zeros(size(tau));
             cFin = 0;

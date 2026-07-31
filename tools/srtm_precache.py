@@ -171,7 +171,7 @@ def _ensure_dir(path: Path) -> None:
 
 def precache(latmin: float, latmax: float, lonmin: float, lonmax: float,
              auxdata: Path | None = None,
-             downloader=download_tile) -> dict[str, list[str]]:
+             downloader=None) -> dict[str, list[str]]:
     """Ensure all SRTM tiles covering the AOI are present in `auxdata`.
 
     `downloader` is injectable for testing.
@@ -179,6 +179,10 @@ def precache(latmin: float, latmax: float, lonmin: float, lonmax: float,
     """
     if auxdata is None:
         auxdata = snap_auxdata_dir()
+    if downloader is None:
+        # Resolve at call time so tests and integrators can replace the
+        # downloader without changing runtime behaviour.
+        downloader = download_tile
     _ensure_dir(auxdata)
 
     tiles = aoi_tiles(latmin, latmax, lonmin, lonmax)

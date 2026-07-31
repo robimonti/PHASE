@@ -7,6 +7,7 @@ import glob
 import subprocess
 import time
 import re
+from phase_subprocess import live_popen
 
 inputfile = sys.argv[1]
 
@@ -114,10 +115,9 @@ with open(outlog, 'a') as out_file:
             file.write(filedata)
 
         args = [GPT, graph2run, '-c', CACHE, '-q', CPU]
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0].decode('utf-8', errors='ignore')
-        print(f'SNAP STDOUT:\n{stdout}')
         timeDelta = time.time() - timeStarted
 
         message_finish = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'

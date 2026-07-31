@@ -4,6 +4,7 @@ import sys
 import subprocess
 import shlex
 import time
+from phase_subprocess import live_popen
 
 inputfile = sys.argv[1]
 
@@ -162,10 +163,9 @@ if COH_FLAG == 0:
             args = [GPT, graph2run, '-c', CACHE, '-q', CPU]
 
             # Launch the processing
-            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             timeStarted = time.time()
             stdout = process.communicate()[0]
-            print(('SNAP STDOUT:{}'.format(stdout)))
             timeDelta = time.time() - timeStarted  # Get execution time.
             print(('[' + str(k) + '] Finished process in ' + str(timeDelta) + ' seconds.'))
             out_file.write('[' + str(k) + '] Finished process in ' + str(timeDelta) + ' seconds.\n')

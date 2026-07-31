@@ -20,6 +20,15 @@ OUTPUT = (
 )
 
 
+def _replace_checked(text: str, old: str, new: str, expected: int) -> str:
+    count = text.count(old)
+    if count != expected:
+        raise RuntimeError(
+            f"Expected {expected} StaMPS anchor(s), found {count}: {old!r}"
+        )
+    return text.replace(old, new)
+
+
 def extract(xml: str) -> str:
     start = xml.index("        function StartButtonPushed(app, event)")
     end = xml.index("        % Button pushed function: LoadButton", start)
@@ -64,6 +73,85 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
     callback = callback.replace(
         "        clc;\n",
         "        % Keep the Command Window history; the beta has its own live log.\n",
+        1,
+    )
+    callback = _replace_checked(
+        callback,
+        "'select_method', 'percent_rand', 'weed_standard_dev'",
+        "'select_method', 'percent_rand', 'density_rand', 'weed_standard_dev'",
+        1,
+    )
+    callback = _replace_checked(
+        callback,
+        "        setparm('percent_rand', percent_rand); % maximum acceptable percentage, alternative 'density_rand'",
+        """\
+        if strcmpi(select_method, 'DENSITY')
+            setparm('density_rand', density_rand); % maximum random PS density
+        else
+            setparm('percent_rand', percent_rand); % maximum acceptable percentage, alternative 'density_rand'
+        end""",
+        1,
+    )
+
+    # Execute PHASE-owned shell commands through Java ProcessBuilder so
+    # Windows never flashes cmd.exe windows and output is streamed to the
+    # Run monitor. Native commands launched internally by the maintained
+    # StaMPS fork inherit the same non-interactive MATLAB session.
+    mt_prep_system = (
+        "mt_prep_snap_status = system([which('mt_prep_snap.bat') ' ' "
+        "master_date ' ' s2s_export_path ' ' amplitude_threshold]);"
+    )
+    mt_prep_hidden = """\
+[mt_prep_snap_status, mt_prep_snap_output] = ...
+    phase_stamps_beta.runCommandHidden(app, ...
+        {which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, ...
+        'StaMPS data preparation');
+"""
+    callback = _replace_checked(
+        callback, mt_prep_system, mt_prep_hidden.rstrip(), 2
+    )
+    callback = _replace_checked(
+        callback,
+        "Check the Command Window above for the cause",
+        "Check the PHASE Run monitor above for the cause",
+        2,
+    )
+    for shell_command, label in (
+        (
+            "system(strjoin({source_stamps, source_train, source_snap}, ';'));",
+            "StaMPS, TRAIN and SNAP environment preparation",
+        ),
+        (
+            "system(strjoin({source_stamps, source_snap}, ';'));",
+            "StaMPS and SNAP environment preparation",
+        ),
+        (
+            "system(strjoin({source_stamps, source_train}, ';'));",
+            "StaMPS and TRAIN environment preparation",
+        ),
+        (
+            "system(source_stamps);",
+            "StaMPS environment preparation",
+        ),
+    ):
+        callback = _replace_checked(
+            callback,
+            shell_command,
+            f"phase_stamps_beta.runCommandHidden(app, "
+            f"{shell_command[len('system('):-2]}, '{label}');",
+            1,
+        )
+    callback = _replace_checked(
+        callback,
+        "[snaphu_status, snaphu_where] = dos('where snaphu');",
+        "[snaphu_status, snaphu_where] = phase_stamps_beta.runCommandHidden( ...\n"
+        "                    app, {'where','snaphu'}, 'snaphu lookup');",
+        1,
+    )
+    callback = _replace_checked(
+        callback,
+        "progress is printed in the MATLAB Command Window as ",
+        "progress is mirrored live in the PHASE Run monitor as ",
         1,
     )
     success_anchor = """\

@@ -154,7 +154,10 @@ def search(args):
                 "startTime": _scene_start_text(properties),
                 "platform": _as_text(properties.get("platform")),
                 "polarization": _as_text(properties.get("polarization")),
+                "pathNumber": int(properties.get("pathNumber") or 0),
+                "frameNumber": int(properties.get("frameNumber") or 0),
                 "url": _scene_download_url(scene_name, properties),
+                "sizeBytes": int(properties.get("bytes") or 0),
             }
         )
 

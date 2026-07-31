@@ -22,6 +22,7 @@
 [CmdletBinding()]
 param(
     [string]$DefaultInstallDir = "$env:USERPROFILE\Desktop",
+    [string]$PhaseBranch = 'codex/phase-stamps-beta',
     [switch]$DryRun
 )
 
@@ -33,7 +34,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Constants
 # -----------------------------------------------------------------------------
 $Script:PhaseRepo  = 'https://github.com/robimonti/PHASE.git'
-$Script:PhaseBranch = 'main'   # rinominato da windows-port/main -> main (commit dffa675)
+$Script:PhaseBranch = $PhaseBranch
 $Script:StampsRepo = 'https://github.com/pyccino/StaMPS.git'   # fork con TS picker + GUI fixes
 $Script:StampsBranch = 'master'
 $Script:TrainRepo  = 'https://github.com/pyccino/TRAIN.git'
@@ -727,6 +728,7 @@ function Invoke-MatlabSavePath {
             "    clap_low_pass_wavelength = 800;"
             "    select_method = 'PERCENT';"
             "    percent_rand = 1;"
+            "    density_rand = 25;"
             "    weed_standard_dev = 1;"
             "    weed_neighbours = 'y';"
             "    weed_zero_elevation = 'n';"
@@ -763,7 +765,7 @@ function Invoke-MatlabSavePath {
             "    ref_centre_lonlat_w = [0.0 0.0];"
             "    ref_radius_w = 0;"
             "    ph_output = 'unwrapped';"
-            "    save('$matFile', 'stamps_preparation', 'installation_folder', 'project_path', 'amplitude_threshold', 'master_date', 'export_name', 'time_span', 'weed_time_win', 'unwrap_time_win', 'scn_time_win', 'year_0', 'month_0', 'day_0', 'utc_time', 'train_flag', 'stamps_first_step', 'stamps_last_step', 'n_cores', 'heading', 'lambda', 'max_topo_err', 'filter_grid_size', 'filter_weighting', 'gamma_max_iterations', 'gamma_change_convergence', 'gamma_stdev_reject', 'quick_est_gamma_flag', 'small_baseline_flag', 'clap_win', 'clap_alpha', 'clap_beta', 'clap_low_pass_wavelength', 'select_method', 'percent_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', 'weed_max_noise', 'merge_resample_size', 'merge_standard_dev', 'unwrap_grid_size', 'unwrap_gold_n_win', 'unwrap_method', 'unwrap_gold_alpha', 'unwrap_alpha', 'unwrap_spatial_cost_func_flag', 'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', 'subtr_tropo', 'tropo_method', 'select_reest_gamma_flag', 'drop_ifg_index', 'scla_deramp', 'scla_method', 'scla_drop_index', 'scn_wavelength', 'scn_kriging_flag', 'ref_centre_lonlat', 'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output', '-mat');"
+            "    save('$matFile', 'stamps_preparation', 'installation_folder', 'project_path', 'amplitude_threshold', 'master_date', 'export_name', 'time_span', 'weed_time_win', 'unwrap_time_win', 'scn_time_win', 'year_0', 'month_0', 'day_0', 'utc_time', 'train_flag', 'stamps_first_step', 'stamps_last_step', 'n_cores', 'heading', 'lambda', 'max_topo_err', 'filter_grid_size', 'filter_weighting', 'gamma_max_iterations', 'gamma_change_convergence', 'gamma_stdev_reject', 'quick_est_gamma_flag', 'small_baseline_flag', 'clap_win', 'clap_alpha', 'clap_beta', 'clap_low_pass_wavelength', 'select_method', 'percent_rand', 'density_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', 'weed_max_noise', 'merge_resample_size', 'merge_standard_dev', 'unwrap_grid_size', 'unwrap_gold_n_win', 'unwrap_method', 'unwrap_gold_alpha', 'unwrap_alpha', 'unwrap_spatial_cost_func_flag', 'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', 'subtr_tropo', 'tropo_method', 'select_reest_gamma_flag', 'drop_ifg_index', 'scla_deramp', 'scla_method', 'scla_drop_index', 'scn_wavelength', 'scn_kriging_flag', 'ref_centre_lonlat', 'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output', '-mat');"
         )
     }
 
@@ -1643,9 +1645,9 @@ function Invoke-StampsBinariesDownload {
                         <TextBlock Text="PHASE folder" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,4"/>
                         <TextBlock x:Name="FinishPath" Text="" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="12" Margin="0,0,0,18" Foreground="#0F1430"/>
                         <TextBlock Text="Available MATLAB apps" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,8"/>
-                        <TextBlock Text="·  PHASE_Preprocessing.mlapp  —  module 1 (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  Module 2 (PHASE StaMPS) opens from the ASC_/DES_ dataset folder after preprocessing" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE_model.mlapp  —  module 3 (geospatial analysis)" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE Preprocessing Beta — module 1 (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE StaMPS Beta — opens automatically for each ASC_/DES_ dataset" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE Model Beta — standalone geospatial analysis" Margin="0,3" Foreground="#4A5168"/>
                     </StackPanel>
                 </Border>
 
@@ -1998,7 +2000,7 @@ $Script:PipelineTasks = @(
     @{ Key = 'gmt';         Label = 'Install GMT (portable)' }
     @{ Key = 'env';         Label = 'Configure environment variables' }
     @{ Key = 'matlab';      Label = 'MATLAB savepath + precompile .mat files' }
-    @{ Key = 'patch';       Label = 'Patch .mlapp files for auto-load' }
+    @{ Key = 'runtime';     Label = 'Prepare clean standalone beta runtime' }
 )
 
 # Tracks the start time of each running task so we can report elapsed time
@@ -2409,44 +2411,47 @@ function Set-SetupProgress {
 })
 
 # -----------------------------------------------------------------------------
-# Create root shortcuts for the two global apps plus a README. PHASE StaMPS is
-# intentionally excluded because its working directory must be a generated
-# ASC_/DES_ dataset folder; preprocessing copies and opens it there.
+# Create root shortcuts for the two global standalone launchers plus a README.
+# The shortcut starts MATLAB and executes the .m launcher immediately; a plain
+# .m file association would only open the MATLAB editor.
 # -----------------------------------------------------------------------------
 function New-PhaseLauncherShortcuts {
     param(
         [Parameter(Mandatory)] [string]$InstallDir,
         [Parameter(Mandatory)] [string]$PhaseDir,
+        [Parameter(Mandatory)] [string]$MatlabExe,
         [scriptblock]$StatusCallback = { param($m) }
     )
 
     $apps = @(
-        @{ Name = 'PHASE Preprocessing'; Target = (Join-Path $PhaseDir 'PHASE_Preprocessing.mlapp') }
-        @{ Name = 'PHASE model';         Target = (Join-Path $PhaseDir 'PHASE_model.mlapp') }
+        @{ Name = 'PHASE Preprocessing'; Launcher = 'PHASE_Preprocessing_beta.m'; Function = 'PHASE_Preprocessing_beta' }
+        @{ Name = 'PHASE Model';         Launcher = 'PHASE_Model_beta.m'; Function = 'PHASE_Model_beta' }
     )
 
-    # PHASE StaMPS is dataset-scoped: preprocessing copies the current app and
-    # input_StaMPS.mat into ASC_*/DES_* and opens it there. A global shortcut
-    # starts it in PHASE_Preprocessing, causing relative StaMPS products to be
-    # written to the wrong directory. Remove shortcuts left by older installers.
+    # PHASE StaMPS remains dataset-scoped and is opened automatically by
+    # preprocessing with the explicit ASC_/DES_ work folder.
     $obsoleteStaMPSShortcut = Join-Path $InstallDir 'PHASE StaMPS.lnk'
     if (Test-Path -LiteralPath $obsoleteStaMPSShortcut) {
         Remove-Item -LiteralPath $obsoleteStaMPSShortcut -Force
-        & $StatusCallback "Removed obsolete global PHASE StaMPS shortcut (module 2 is dataset-scoped)"
+        & $StatusCallback "Removed obsolete global PHASE StaMPS shortcut (module 1B is dataset-scoped)"
     }
 
     $wsh = New-Object -ComObject WScript.Shell
     try {
+        $phaseM = $PhaseDir.Replace('\','/').Replace("'","''")
         foreach ($a in $apps) {
-            if (-not (Test-Path $a.Target)) {
-                & $StatusCallback "[!] Shortcut skipped, target missing: $($a.Target)"
+            $launcherPath = Join-Path $PhaseDir $a.Launcher
+            if (-not (Test-Path $launcherPath)) {
+                & $StatusCallback "[!] Shortcut skipped, launcher missing: $launcherPath"
                 continue
             }
             $lnkPath = Join-Path $InstallDir ($a.Name + '.lnk')
             $sc = $wsh.CreateShortcut($lnkPath)
-            $sc.TargetPath = $a.Target
-            $sc.WorkingDirectory = (Split-Path -Parent $a.Target)
-            $sc.Description = "Open $($a.Name) in MATLAB App Designer"
+            $sc.TargetPath = $MatlabExe
+            $sc.Arguments = "-r `"try, cd('$phaseM'); addpath(genpath('$phaseM')); $($a.Function); catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end`""
+            $sc.WorkingDirectory = $PhaseDir
+            $sc.Description = "Launch $($a.Name)"
+            $sc.IconLocation = "$MatlabExe,0"
             $sc.Save()
             & $StatusCallback "[OK] Shortcut: $lnkPath"
         }
@@ -2462,15 +2467,14 @@ PHASE - InSAR PSI suite
 To START the application, double-click one of these shortcuts:
 
   - "PHASE Preprocessing.lnk"  ->  SNAP data preparation (module 1)
-  - "PHASE model.lnk"          ->  modelling (module 3)
+  - "PHASE Model.lnk"          ->  geospatial modelling
 
-PHASE StaMPS (module 2)
------------------------
-  Module 1 creates an ASC_<dates> or DES_<dates> processing folder, copies the
-  current PHASE_StaMPS.mlapp + input_StaMPS.mat into it, and offers to open it.
-  To resume a dataset later, open PHASE_StaMPS.mlapp inside that ASC_/DES_
-  folder. Do not launch module 2 from engine\PHASE_Preprocessing: StaMPS uses
-  relative paths and would write processing products into the wrong folder.
+PHASE StaMPS (module 1B)
+------------------------
+  Module 1 creates an ASC_<dates> or DES_<dates> processing folder and opens
+  PHASE StaMPS Beta with that folder explicitly. No legacy MLAPP is copied.
+  To resume later, launch PHASE_StaMPS_beta from MATLAB and pass the dataset
+  folder, or reopen it from PHASE Preprocessing.
 
 DATA INPUT
 ----------
@@ -2493,6 +2497,102 @@ contents will prevent the application from starting.
 "@
     Set-Content -Path $readme -Value $readmeText -Encoding UTF8
     & $StatusCallback "[OK] README: $readme"
+}
+
+# Remove development/provenance files from the installed runtime. The beta
+# branch is still cloned normally, so the exact tested revision is selected;
+# only files that are not used at runtime are removed after configuration.
+function Remove-PhaseLegacyRuntimeFiles {
+    param(
+        [Parameter(Mandatory)] [string]$PhaseDir,
+        [scriptblock]$StatusCallback = { param($m) }
+    )
+
+    $relativePaths = @(
+        'PHASE_Preprocessing.mlapp',
+        'PHASE_Preprocessing\PHASE_StaMPS.mlapp',
+        'PHASE_model.mlapp',
+        'tests',
+        'docs',
+        '.github',
+        '.codex',
+        '.agents',
+        'installer'
+    )
+    foreach ($relative in $relativePaths) {
+        $path = Join-Path $PhaseDir $relative
+        if (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Recurse -Force
+            & $StatusCallback "Removed non-runtime item: $relative"
+        }
+    }
+
+    # Most files under tools are migration/developer utilities. Keep the one
+    # runtime helpers imported by SEN_stamps_export.py; removing them would
+    # silently disable the SRTM pre-cache and SNAP-version compatibility guards.
+    $toolsDir = Join-Path $PhaseDir 'tools'
+    if (Test-Path -LiteralPath $toolsDir) {
+        $runtimeTools = @('srtm_precache.py', 'snap_dim_version_check.py')
+        Get-ChildItem -LiteralPath $toolsDir -Force |
+            Where-Object { $_.Name -notin $runtimeTools } |
+            ForEach-Object {
+                Remove-Item -LiteralPath $_.FullName -Recurse -Force
+            }
+        & $StatusCallback '[OK] Retained SNAP runtime helpers in tools.'
+    }
+
+    Get-ChildItem -LiteralPath $PhaseDir -Recurse -Force -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -eq '.DS_Store' -or
+            $_.Name -eq '__pycache__' -or
+            $_.Extension -eq '.pyc' -or
+            $_.Name -like 'transfer_PHASE_*.zip'
+        } |
+        Sort-Object FullName -Descending |
+        ForEach-Object {
+            Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    & $StatusCallback '[OK] Standalone beta runtime cleaned.'
+}
+
+function Assert-PhaseStandaloneRuntime {
+    param([Parameter(Mandatory)] [string]$PhaseDir)
+
+    $required = @(
+        'PHASE_Preprocessing_beta.m',
+        'PHASE_Model_beta.m',
+        'PHASE_Preprocessing\PHASE_StaMPS_beta.m',
+        'PHASE_Preprocessing\+phase_preprocessing_beta\App.m',
+        'PHASE_Preprocessing\+phase_stamps_beta\App.m',
+        'PHASE_Preprocessing\+phase_stamps_beta\runProcessing.m',
+        '+phase_model_beta\App.m',
+        '+phase_model_beta\LegacyEngine.m',
+        '+phase_model_beta\exportFigure.m',
+        '+phase_model_beta\throwIfStopped.m',
+        '+phase_model_beta\mapBase.m',
+        'PHASE_Preprocessing\phase_preprocessing_beta_ui\index.html',
+        'PHASE_Preprocessing\phase_stamps_beta_ui\index.html',
+        'phase_model_beta_ui\index.html',
+        'PHASE_Preprocessing\phase_preprocessing_beta_ui\map.js',
+        'tools\srtm_precache.py',
+        'tools\snap_dim_version_check.py'
+    )
+    $missing = @()
+    foreach ($relative in $required) {
+        if (-not (Test-Path -LiteralPath (Join-Path $PhaseDir $relative))) {
+            $missing += $relative
+        }
+    }
+    if ($missing.Count -gt 0) {
+        throw "The selected PHASE branch does not contain the complete standalone beta runtime: $($missing -join ', '). Nothing was cleaned; check that the tested beta branch was pushed before compiling/running this installer."
+    }
+}
+
+function Set-PhaseEngineHidden {
+    param([Parameter(Mandatory)] [string]$EngineDir)
+    if (-not (Test-Path -LiteralPath $EngineDir)) { return }
+    $item = Get-Item -LiteralPath $EngineDir -Force
+    $item.Attributes = $item.Attributes -bor [System.IO.FileAttributes]::Hidden
 }
 
 # -----------------------------------------------------------------------------
@@ -2658,9 +2758,9 @@ function Invoke-FullSetup {
         }
     }
 
-    # Task 9: patch .mlapp files
-    Set-SetupProgress 95 'patching mlapp files'
-    Update-Task -Key 'patch' -Status 'running' -Detail 'injecting startupFcn auto-load patches...'
+    # Legacy App Designer patching is retained below only as provenance and is
+    # deliberately unreachable in the standalone beta installer.
+    if ($false) {
     Get-Process matlab -ErrorAction SilentlyContinue | ForEach-Object {
         try { $_ | Stop-Process -Force; Add-SetupLog "MATLAB closed (PID $($_.Id)) to avoid stale class cache" } catch {}
     }
@@ -2792,20 +2892,29 @@ function Invoke-FullSetup {
         -InjectBlock $modelInject `
         -StatusCallback { param($m) Add-SetupLog $m })
 
-        Update-Task -Key 'patch' -Status 'done'
+        Update-Task -Key 'runtime' -Status 'done'
     } catch {
         # Patch non riuscita (tipicamente anchor non trovato per drift upstream
         # dei .mlapp). L'installazione resta valida: gli app si aprono comunque,
         # l'utente caricara' i default manualmente dal tab Save/Load.
         Add-SetupLog "WARNING: patch .mlapp non applicata ($($_.Exception.Message)) - installazione comunque valida, caricare i default manualmente."
-        Update-Task -Key 'patch' -Status 'skip' -Detail 'anchor non trovato - apri il .mlapp e usa Load manualmente'
+        Update-Task -Key 'runtime' -Status 'skip' -Detail 'legacy patch skipped'
+    }
     }
 
-    # Collegamenti + README nella cartella principale (engine\ resta nascosto
-    # all'uso quotidiano). Non bloccante: se fallisce, i .mlapp restano comunque
-    # apribili da engine\PHASE\.
+    # Task 9: remove legacy/development material from the installed clone.
+    Set-SetupProgress 95 'preparing standalone runtime'
+    Update-Task -Key 'runtime' -Status 'running' -Detail "validating branch $Script:PhaseBranch..."
+    Assert-PhaseStandaloneRuntime -PhaseDir $phaseDir
+    Set-TaskDetail -Key 'runtime' -Detail "cleaning branch $Script:PhaseBranch..."
+    Remove-PhaseLegacyRuntimeFiles -PhaseDir $phaseDir `
+        -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'runtime' -Detail $m }
+    Update-Task -Key 'runtime' -Status 'done'
+
+    # Standalone launch shortcuts + README in the visible project folder.
     try {
         New-PhaseLauncherShortcuts -InstallDir $appDir -PhaseDir $phaseDir `
+            -MatlabExe $Script:State.MatlabExe `
             -StatusCallback { param($m) Add-SetupLog $m }
     } catch {
         Add-SetupLog "[!] Could not create root shortcuts/README: $($_.Exception.Message)"
@@ -2816,9 +2925,10 @@ function Invoke-FullSetup {
     Add-SetupLog "=== Installation complete ==="
     Add-SetupLog "Launch the app from the shortcuts in $($appDir):"
     Add-SetupLog "  PHASE Preprocessing.lnk"
-    Add-SetupLog "  PHASE model.lnk"
+    Add-SetupLog "  PHASE Model.lnk"
     Add-SetupLog "PHASE StaMPS is opened by preprocessing from the generated ASC_/DES_ dataset folder."
     Add-SetupLog "(the actual files live in $phaseDir - no need to open them by hand)"
+    Set-PhaseEngineHidden -EngineDir $engineDir
 }
 
 # -----------------------------------------------------------------------------
@@ -2827,6 +2937,7 @@ function Invoke-FullSetup {
 
 if ($DryRun) {
     Write-Host "Dry run: XAML parsed OK, $($pages.Count) pages registered."
+    Write-Host "PHASE branch: $Script:PhaseBranch"
     Write-Host "Detection probes:"
     Write-Host "  MATLAB: $(Find-Matlab)"
     Write-Host "  SNAP:   $(Find-Snap)"

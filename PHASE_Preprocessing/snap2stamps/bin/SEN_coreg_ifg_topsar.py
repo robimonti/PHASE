@@ -10,6 +10,7 @@ import subprocess
 import time
 import re
 import shutil
+from phase_subprocess import live_popen
 
 inputfile = sys.argv[1]
 bar_message='\n#####################################################################\n'
@@ -230,7 +231,7 @@ for slave_date in sorted(os.listdir(slavesplittedfolder)):
         
         print(f"    -> Processing {swath} ...")
         args = [GPT, graph_swath, '-c', CACHE, '-q', CPU]
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         stdout = process.communicate()[0].decode('utf-8', errors='ignore')
         if process.returncode != 0:
             print(f"ERROR processing {swath}:\n{stdout}")
@@ -338,7 +339,7 @@ for slave_date in sorted(os.listdir(slavesplittedfolder)):
     with open(graph_final, 'w') as f: f.write("\n".join(xml))
     
     args = [GPT, graph_final, '-c', CACHE, '-q', CPU]
-    process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     timeStarted = time.time()
     stdout = process.communicate()[0].decode('utf-8', errors='ignore')
     timeDelta = time.time() - timeStarted

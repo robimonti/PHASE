@@ -14,7 +14,11 @@ classdef App < handle
         StatusDetail = 'Ready'
         IsDirty = false
         IsRunning = false
-        PickerFigure = []
+        TSPickerOverlay = []
+        TSPickerContainer = []
+        LiveLogFile = ''
+        LiveLogUrl = ''
+        DiaryActive = false
     end
 
     methods
@@ -45,9 +49,18 @@ classdef App < handle
             obj.HTML.Layout.Row = 1;
             obj.HTML.Layout.Column = 1;
             obj.HTML.HTMLEventReceivedFcn = @(~,event) obj.onHtmlEvent(event);
+            obj.configureLiveLog();
+            obj.createTsPickerOverlay();
+            obj.UIFigure.AutoResizeChildren = 'off';
+            obj.UIFigure.SizeChangedFcn = @(~,~) obj.layoutTsPickerOverlay();
 
             for k = 1:numel(messages)
                 obj.appendLog(messages{k});
+            end
+            if ~info.exists
+                obj.appendLog(['No input_StaMPS.mat was found. PHASE loaded an initial ', ...
+                    'configuration: review the detected values, select the StaMPS ', ...
+                    'installation folder and press Save to create it.']);
             end
             if ~isempty(info.migratedFields)
                 obj.appendLog(['Legacy input migrated in memory: ' ...
@@ -78,25 +91,29 @@ classdef App < handle
 
         function openTsPicker(obj)
             try
-                obj.PickerFigure = phase_stamps_beta.openTsPicker( ...
-                    obj.WorkDir, obj.Config, obj.UIFigure);
-                obj.appendLog('TS Points picker opened.');
+                if isempty(obj.TSPickerOverlay) || ~isvalid(obj.TSPickerOverlay)
+                    obj.createTsPickerOverlay();
+                end
+                obj.layoutTsPickerOverlay();
+                obj.TSPickerOverlay.Visible = 'on';
+                try, uistack(obj.TSPickerOverlay,'top'); catch, end
+                drawnow;
+                phase_stamps_beta.openTsPicker( ...
+                    obj.WorkDir, obj.Config, obj.TSPickerContainer);
+                obj.appendLog('TS Points picker loaded inside PHASE StaMPS.');
             catch ME
+                try, obj.TSPickerOverlay.Visible = 'off'; catch, end
                 obj.showError('TS picker unavailable', ME.message);
                 obj.appendLog(['TS picker failed: ' ME.message]);
             end
         end
 
         function delete(obj)
-            try
-                if ~isempty(obj.PickerFigure) && isvalid(obj.PickerFigure)
-                    delete(obj.PickerFigure);
-                end
-            catch
-            end
+            obj.endLiveDiary();
             try
                 if ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
                     obj.UIFigure.CloseRequestFcn = [];
+                    obj.UIFigure.SizeChangedFcn = [];
                     obj.UIFigure.UserData = [];
                     delete(obj.UIFigure);
                 end
@@ -162,12 +179,17 @@ classdef App < handle
             obj.Config = detected;
             obj.AutoDetectedFields = fields;
             obj.IsDirty = ~phase_stamps_beta.configsEqual(loaded, detected) || ...
-                ~isempty(info.migratedFields);
+                ~isempty(info.migratedFields) || ~info.exists;
             obj.Status = 'idle';
             obj.StatusDetail = ternary(obj.IsDirty, ...
                 'Loaded; detected or migrated values require Save', ...
                 'Configuration loaded from input_StaMPS.mat');
-            obj.appendLog(['Loaded configuration: ' info.path]);
+            if info.exists
+                obj.appendLog(['Loaded configuration: ' info.path]);
+            else
+                obj.appendLog(['No input_StaMPS.mat was found. Initial values are ready; ', ...
+                    'press Save to create ' info.path '.']);
+            end
             for k = 1:numel(messages), obj.appendLog(messages{k}); end
             obj.sendState();
         end
@@ -204,14 +226,18 @@ classdef App < handle
                      'Press Save before Start.']);
             end
 
+            runtimeMessages = phase_stamps_beta.prepareRuntime(candidate);
             obj.Config = candidate;
             obj.IsRunning = true;
             obj.Status = 'running';
             obj.StatusDetail = sprintf('Running StaMPS steps %s to %s', ...
                 candidate.stamps_first_step, candidate.stamps_last_step);
             obj.Logs = {};
+            obj.beginLiveDiary();
+            diaryCleanup = onCleanup(@() obj.endLiveDiary()); %#ok<NASGU>
             obj.sendState();
             for k = 1:numel(warnings), obj.appendLog(['Warning: ' warnings{k}]); end
+            for k = 1:numel(runtimeMessages), obj.appendLog(runtimeMessages{k}); end
             obj.appendLog(sprintf('Starting StaMPS steps %s -> %s in %s', ...
                 candidate.stamps_first_step, candidate.stamps_last_step, obj.WorkDir));
             drawnow;
@@ -233,6 +259,7 @@ classdef App < handle
                 obj.Status = 'error';
                 obj.StatusDetail = result.message;
             end
+            clear diaryCleanup
             obj.sendState();
         end
 
@@ -288,8 +315,96 @@ classdef App < handle
             state.status = obj.Status;
             state.statusDetail = obj.StatusDetail;
             state.logs = obj.Logs;
+            state.liveLogUrl = obj.LiveLogUrl;
             obj.HTML.Data = state;
             drawnow limitrate
+        end
+
+        function configureLiveLog(obj)
+            runtimeDir = fullfile(obj.LauncherDir, ...
+                'phase_stamps_beta_ui','runtime_logs');
+            if ~isfolder(runtimeDir), mkdir(runtimeDir); end
+            token = char(java.util.UUID.randomUUID());
+            fileName = ['stamps_' token '.log'];
+            obj.LiveLogFile = fullfile(runtimeDir,fileName);
+            obj.LiveLogUrl = ['runtime_logs/' fileName];
+        end
+
+        function beginLiveDiary(obj)
+            obj.endLiveDiary();
+            if isempty(obj.LiveLogFile), obj.configureLiveLog(); end
+            try
+                if isfile(obj.LiveLogFile), delete(obj.LiveLogFile); end
+                diary(obj.LiveLogFile);
+                diary on
+                obj.DiaryActive = true;
+            catch ME
+                obj.DiaryActive = false;
+                obj.appendLog(['Live Command Window capture unavailable: ' ME.message]);
+            end
+        end
+
+        function endLiveDiary(obj)
+            if ~obj.DiaryActive, return; end
+            try, diary off; catch, end
+            obj.DiaryActive = false;
+        end
+
+        function createTsPickerOverlay(obj)
+            if ~isempty(obj.TSPickerOverlay) && isvalid(obj.TSPickerOverlay)
+                return
+            end
+            obj.TSPickerOverlay = uipanel(obj.UIFigure, ...
+                'BorderType','none','BackgroundColor',[0.985 0.988 0.994], ...
+                'Visible','off');
+            outer = uigridlayout(obj.TSPickerOverlay,[2 1]);
+            outer.RowHeight = {58,'1x'};
+            outer.Padding = [18 14 18 18];
+            outer.RowSpacing = 10;
+
+            header = uigridlayout(outer,[1 3]);
+            header.Layout.Row = 1;
+            header.ColumnWidth = {'1x','fit','fit'};
+            header.Padding = [0 0 0 0];
+            title = uilabel(header,'Text','TS Points', ...
+                'FontName','Helvetica','FontSize',20,'FontWeight','bold', ...
+                'FontColor',[0.27 0.275 0.275]);
+            title.Layout.Column = 1;
+            refresh = uibutton(header,'push','Text','Reload picker', ...
+                'ButtonPushedFcn',@(~,~) obj.openTsPicker(), ...
+                'BackgroundColor',[0.92 0.945 1.0], ...
+                'FontColor',[0.208 0.396 0.812]);
+            refresh.Layout.Column = 2;
+            back = uibutton(header,'push','Text','Back to PHASE', ...
+                'ButtonPushedFcn',@(~,~) obj.closeTsPicker(), ...
+                'BackgroundColor',[1 1 1], ...
+                'FontColor',[0.27 0.275 0.275]);
+            back.Layout.Column = 3;
+
+            obj.TSPickerContainer = uipanel(outer, ...
+                'BorderType','line','BackgroundColor',[1 1 1]);
+            obj.TSPickerContainer.Layout.Row = 2;
+            obj.layoutTsPickerOverlay();
+        end
+
+        function layoutTsPickerOverlay(obj)
+            if isempty(obj.TSPickerOverlay) || ~isvalid(obj.TSPickerOverlay) || ...
+                    isempty(obj.UIFigure) || ~isvalid(obj.UIFigure)
+                return
+            end
+            position = obj.UIFigure.Position;
+            sidebarWidth = 254;
+            if position(3) <= 1150, sidebarWidth = 224; end
+            topbarHeight = 72;
+            obj.TSPickerOverlay.Position = [sidebarWidth 0 ...
+                max(100,position(3)-sidebarWidth) ...
+                max(100,position(4)-topbarHeight)];
+        end
+
+        function closeTsPicker(obj)
+            if ~isempty(obj.TSPickerOverlay) && isvalid(obj.TSPickerOverlay)
+                obj.TSPickerOverlay.Visible = 'off';
+            end
         end
 
         function showError(obj, titleText, message)

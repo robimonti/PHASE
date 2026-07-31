@@ -9,6 +9,7 @@ import sys
 import glob
 import subprocess
 import time
+from phase_subprocess import live_popen
 
 inputfile = sys.argv[1]
 
@@ -128,7 +129,7 @@ for acdatefolder in sorted(os.listdir(masterfolder)):
 
         args = [GPT, graph2run, '-c', CACHE, '-q', CPU]
 
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0].decode('utf-8')
         timeDelta = time.time() - timeStarted

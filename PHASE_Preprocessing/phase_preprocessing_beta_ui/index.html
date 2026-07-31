@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHASE · Preprocessing Beta</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="topbar-center">
+        <div class="path-label">PHASE preprocessing folder</div>
+        <button id="workdir" class="path-button" type="button" title="Open preprocessing folder">Connecting to MATLAB…</button>
+      </div>
+      <div class="topbar-actions">
+        <button id="load-button" class="button ghost" type="button">Load</button>
+        <button id="save-button" class="button secondary" type="button">Save</button>
+        <button id="start-button" class="button primary" type="button">
+          <span class="play-icon">▶</span><span>Start preprocessing</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="brand-wrap">
+        <img class="phase-logo" src="assets/PHASE_logo.png" alt="PHASE — Multi-Sensor InSAR Deformation Monitoring">
+        <span class="logo-divider" aria-hidden="true"></span>
+        <div class="module-lockup">
+          <img class="module-logo" src="assets/PHASE_mod1a.png" alt="SAR images processing">
+          <span>Module 1A · Beta</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-row">
+          <span id="status-dot" class="status-dot idle"></span>
+          <div>
+            <div id="status-title" class="status-title">Initialising</div>
+            <div id="status-detail" class="status-detail">Loading the processing engine</div>
+          </div>
+        </div>
+        <div class="range-track"><div id="range-progress" class="range-progress"></div></div>
+        <div id="range-label" class="range-label">Preprocessing —</div>
+      </div>
+
+      <nav id="navigation" class="navigation" aria-label="Preprocessing sections"></nav>
+
+      <div class="sidebar-footer">
+        <div id="version" class="version">Beta</div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div id="dirty-banner" class="banner warning hidden">
+        <div><strong>Unsaved changes</strong><span>Save the visible configuration before Start.</span></div>
+        <button id="banner-save" type="button">Save now</button>
+      </div>
+      <div id="error-banner" class="banner error hidden"></div>
+
+      <section id="form-page" class="page active">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">Configuration</div>
+            <h1 id="section-title">Setup</h1>
+            <p id="section-subtitle">Satellite family and executable paths</p>
+          </div>
+          <div id="section-meta" class="section-meta"></div>
+        </div>
+        <div id="resume-warning" class="resume-warning hidden">
+          <span class="resume-warning-icon">!</span>
+          <div>
+            <strong>Resuming from slave step <span id="resume-warning-step">2</span></strong>
+            <p>Master processing is disabled automatically. PHASE will preserve and reuse the existing master products required by the selected resume step.</p>
+          </div>
+        </div>
+        <div id="aoi-map-panel" class="map-card embedded-panel hidden">
+          <div class="map-heading">
+            <div>
+              <span class="data-kicker">Interactive AOI map</span>
+              <h2>Footprint and processing area</h2>
+              <p>The footprint is read from the first valid product in <code>PHASE_Preprocessing/slaves</code>. Draw the AOI and PHASE will update its bounding coordinates below.</p>
+            </div>
+            <div class="map-actions">
+              <button id="map-draw" class="button primary" type="button">Draw polygon</button>
+              <button id="map-finish" class="button secondary hidden" type="button">Finish</button>
+              <button id="map-clear" class="button ghost" type="button">Reset AOI</button>
+              <button id="map-fit" class="button ghost" type="button">Fit footprint</button>
+              <button id="map-refresh" class="button ghost" type="button">Refresh</button>
+            </div>
+          </div>
+          <div id="aoi-map" class="phase-map" tabindex="0" aria-label="Interactive geographic map">
+            <svg id="map-svg" role="img" aria-label="Local satellite footprint and AOI polygon"></svg>
+            <div id="map-tooltip" class="map-tooltip hidden"></div>
+            <div id="map-coordinate" class="map-coordinate">Move over the map to inspect coordinates</div>
+            <div class="map-attribution">Esri World Imagery · PHASE overlays</div>
+          </div>
+          <div class="bbox-strip">
+            <span>Bounding box</span>
+            <strong id="map-bbox">—</strong>
+            <span id="map-footprint-count">No footprint in slaves</span>
+          </div>
+        </div>
+        <div id="form-grid" class="form-grid"></div>
+        <div id="images-panel" class="data-grid embedded-panel hidden">
+          <article class="data-card">
+            <span class="data-kicker">Local acquisitions</span>
+            <h2>Import images</h2>
+            <p id="import-description">Move or copy satellite products into the project slaves folder.</p>
+            <div class="data-actions">
+              <button id="import-images" class="button primary" type="button">Import images</button>
+              <button id="open-slaves-folder" class="button ghost" type="button">Open slaves folder</button>
+              <button id="refresh-slaves" class="button ghost" type="button">Refresh inventory</button>
+            </div>
+          </article>
+          <article id="sentinel-tools" class="data-card">
+            <span class="data-kicker">Sentinel-1 · ASF</span>
+            <h2>Download and stack update</h2>
+            <p>Search and download Sentinel-1 acquisitions, or append newer scenes to an existing processed stack.</p>
+            <div class="data-actions">
+              <button id="open-downloader" class="button primary" type="button">Download images</button>
+              <button id="open-update" class="button secondary" type="button">Stack update</button>
+            </div>
+          </article>
+          <article class="data-card wide inventory-card">
+            <div class="card-heading-row">
+              <div><span class="data-kicker">PHASE_Preprocessing/slaves</span><h2>Local image inventory</h2></div>
+              <span id="slaves-count" class="count-pill">0 files</span>
+            </div>
+            <div class="table-shell compact-table">
+              <table><thead><tr><th>File</th><th>Date</th><th>Type</th><th>Status</th><th>Size</th></tr></thead>
+                <tbody id="slaves-table-body"><tr><td colspan="5" class="empty-cell">No images in slaves</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="downloader-panel" class="data-card wide workflow-panel hidden">
+            <div class="card-heading-row">
+              <div><span class="data-kicker">Sentinel-1 · Alaska Satellite Facility</span><h2>ASF downloader</h2></div>
+              <button id="close-downloader" class="button ghost" type="button">Close</button>
+            </div>
+            <div id="earthdata-signed-out" class="login-strip">
+              <div><strong>Earthdata login</strong><span>Credentials are checked by the existing PHASE ASF backend.</span></div>
+              <input id="earthdata-username" type="text" autocomplete="username" placeholder="Username">
+              <input id="earthdata-password" type="password" autocomplete="current-password" placeholder="Password">
+              <button id="earthdata-login" class="button secondary" type="button">Sign in</button>
+            </div>
+            <div id="earthdata-signed-in" class="login-strip signed-in hidden">
+              <div><strong id="earthdata-user">Signed in</strong><span>Earthdata credentials are ready for downloads.</span></div>
+              <button id="earthdata-logout" class="button ghost" type="button">Sign out</button>
+            </div>
+
+            <div class="downloader-layout">
+              <div class="download-map-column">
+                <div class="subsection-heading"><div><strong>Download area</strong><span>Independent from the processing AOI.</span></div>
+                  <div class="inline-actions">
+                    <button id="download-use-processing-aoi" class="button ghost" type="button">Use processing AOI</button>
+                    <button id="download-map-draw" class="button secondary" type="button">Draw polygon</button>
+                    <button id="download-map-finish" class="button primary hidden" type="button">Finish</button>
+                    <button id="download-map-fit" class="button ghost" type="button">Fit results</button>
+                  </div>
+                </div>
+                <div id="download-map" class="phase-map download-map" tabindex="0" aria-label="ASF download AOI map">
+                  <svg role="img" aria-label="ASF search footprints and download AOI"></svg>
+                  <div class="map-tooltip hidden"></div>
+                  <div class="map-coordinate">Move over the map to inspect coordinates</div>
+                  <div class="map-attribution">Esri imagery + places · ASF footprints</div>
+                </div>
+                <div id="download-aoi-summary" class="download-aoi-summary">No download AOI selected</div>
+              </div>
+
+              <div class="filters-column">
+                <div class="subsection-heading"><div><strong>Search filters</strong><span>Defaults reproduce the PHASE SLC/IW search.</span></div>
+                  <button id="reset-asf-filters" class="button ghost" type="button">Reset</button>
+                </div>
+                <div class="filter-grid">
+                  <label class="filter-field"><span>Start date</span><input id="asf-start-date" type="date"></label>
+                  <label class="filter-field"><span>End date</span><input id="asf-end-date" type="date"></label>
+                  <label class="filter-field"><span>Path start</span><input id="asf-path-start" type="number" min="1"></label>
+                  <label class="filter-field"><span>Path end</span><input id="asf-path-end" type="number" min="1"></label>
+                  <label class="filter-field"><span>Frame start</span><input id="asf-frame-start" type="number" min="1"></label>
+                  <label class="filter-field"><span>Frame end</span><input id="asf-frame-end" type="number" min="1"></label>
+                  <label class="filter-field"><span>Group ID</span><input id="asf-group-id" type="number" min="1"></label>
+                  <label class="filter-field sampling-field"><span>Sampling</span><div><input id="asf-sampling-rate" type="number" min="1" placeholder="All"><select id="asf-sampling-unit"><option>Week</option><option selected>Month</option><option>Year</option></select></div></label>
+                </div>
+                <details class="filter-disclosure" open><summary>Processing level</summary><div id="filter-processing-level" class="filter-chips">
+                  <label><input type="checkbox" value="SLC" checked>SLC</label><label><input type="checkbox" value="GRD-HD">GRD-HD</label><label><input type="checkbox" value="GRD-MD">GRD-MD</label><label><input type="checkbox" value="GRD-MS">GRD-MS</label><label><input type="checkbox" value="GRD-HS">GRD-HS</label><label><input type="checkbox" value="OCN">OCN</label><label><input type="checkbox" value="RAW">RAW</label><label><input type="checkbox" value="XML_GRD-MS">XML GRD-MS</label><label><input type="checkbox" value="XML_GRD-HD">XML GRD-HD</label><label><input type="checkbox" value="XML_RAW">XML RAW</label><label><input type="checkbox" value="XML_GRD-HS">XML GRD-HS</label><label><input type="checkbox" value="XML_GRD-MD">XML GRD-MD</label><label><input type="checkbox" value="XML_SLC">XML SLC</label><label><input type="checkbox" value="XML_OCN">XML OCN</label>
+                </div></details>
+                <details class="filter-disclosure"><summary>Beam mode</summary><div id="filter-beam-mode" class="filter-chips">
+                  <label><input type="checkbox" value="IW" checked>IW</label><label><input type="checkbox" value="EW">EW</label><label><input type="checkbox" value="S1">S1</label><label><input type="checkbox" value="S2">S2</label><label><input type="checkbox" value="S3">S3</label><label><input type="checkbox" value="S4">S4</label><label><input type="checkbox" value="S5">S5</label><label><input type="checkbox" value="S6">S6</label><label><input type="checkbox" value="WV">WV</label>
+                </div></details>
+                <details class="filter-disclosure"><summary>Polarization</summary><div id="filter-polarization" class="filter-chips">
+                  <label><input type="checkbox" value="VV">VV</label><label><input type="checkbox" value="HH">HH</label><label><input type="checkbox" value="VV+HH">VV+HH</label><label><input type="checkbox" value="HH+HV">HH+HV</label><label><input type="checkbox" value="Dual HH">Dual HH</label><label><input type="checkbox" value="Dual HV">Dual HV</label><label><input type="checkbox" value="Dual VH">Dual VH</label><label><input type="checkbox" value="Dual VV">Dual VV</label>
+                </div></details>
+                <details class="filter-disclosure"><summary>Orbit direction and platform subtype</summary><div class="split-chip-groups">
+                  <div id="filter-flight-direction" class="filter-chips"><label><input type="checkbox" value="ASCENDING">Ascending</label><label><input type="checkbox" value="DESCENDING">Descending</label></div>
+                  <div id="filter-subtype" class="filter-chips"><label><input type="checkbox" value="SA">S1A</label><label><input type="checkbox" value="SB">S1B</label><label><input type="checkbox" value="SC">S1C</label><label><input type="checkbox" value="SD">S1D</label></div>
+                </div></details>
+                <button id="search-asf" class="button primary search-button" type="button">Search ASF</button>
+
+                <div class="results-section">
+                  <div class="subsection-heading results-heading">
+                    <div><strong class="results-title">Search results</strong><span id="asf-recommended">Run a search to load compatible acquisitions.</span></div>
+                    <div class="inline-actions results-actions">
+                      <label class="sort-control"><span>Sort by</span><select id="asf-sort-key"><option value="date">Date</option><option value="path">Path</option><option value="frame">Frame</option></select></label>
+                      <button id="asf-sort-direction" class="button ghost" type="button">Oldest first</button>
+                      <span id="asf-result-summary" class="count-pill">0 products</span>
+                    </div>
+                  </div>
+                  <div class="selection-toolbar">
+                    <label class="select-all-label"><input id="asf-select-all" type="checkbox"> Select all</label>
+                    <button id="download-selected" class="button primary" type="button" disabled>Download selected</button>
+                  </div>
+                  <div class="table-shell results-table"><table><thead><tr><th></th><th>Date</th><th>Time</th><th>Path</th><th>Frame</th><th>Direction</th><th>Size</th><th>Scene</th></tr></thead>
+                    <tbody id="asf-results-body"><tr><td colspan="8" class="empty-cell">No ASF results</td></tr></tbody></table></div>
+                </div>
+
+                <div id="download-transfer-card" class="transfer-card hidden">
+                  <div class="transfer-heading">
+                    <div><span>Transfer progress</span><strong>Sentinel-1 image download</strong></div>
+                    <strong id="download-transfer-percent" class="transfer-percentage">0%</strong>
+                  </div>
+                  <div class="transfer-track"><span id="download-transfer-progress"></span></div>
+                  <div class="transfer-metrics">
+                    <strong id="download-transfer-count">Image 0 of 0</strong>
+                    <span id="download-transfer-bytes">0 B of 0 B</span>
+                  </div>
+                  <div id="download-transfer-file" class="transfer-file">Waiting to start</div>
+                  <div class="transfer-footer">
+                    <span id="downloader-status">Downloader ready</span>
+                    <button id="stop-download-transfer" class="button danger" type="button">Force stop download</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="update-panel" class="data-card wide workflow-panel hidden">
+            <div class="card-heading-row"><div><span class="data-kicker">Sentinel-1 existing stack</span><h2>Stack update</h2></div><button id="close-update" class="button ghost" type="button">Close</button></div>
+            <p id="update-context">Inspecting local Sentinel-1 acquisitions…</p>
+            <div class="update-toolbar">
+              <label class="filter-field"><span>Search through</span><input id="update-end-date" type="date"></label>
+              <button id="refresh-update" class="button ghost" type="button">Refresh context</button>
+              <button id="search-update" class="button secondary" type="button">Search newer images</button>
+              <label class="select-all-label"><input id="update-select-all" type="checkbox" checked> Select all</label>
+              <button id="download-update" class="button primary" type="button" disabled>Download selected</button>
+            </div>
+            <div class="subsection-heading results-heading update-results-heading">
+              <div><strong class="results-title">New acquisitions</strong><span>Compatible Sentinel-1 images available for the existing stack.</span></div>
+              <div class="inline-actions results-actions">
+                <label class="sort-control"><span>Sort by</span><select id="update-sort-key"><option value="date">Date</option><option value="path">Path</option><option value="frame">Frame</option></select></label>
+                <button id="update-sort-direction" class="button ghost" type="button">Oldest first</button>
+              </div>
+            </div>
+            <div class="table-shell results-table"><table><thead><tr><th></th><th>Date</th><th>Path</th><th>Frame</th><th>Platform</th><th>Polarization</th><th>Scene</th></tr></thead>
+              <tbody id="update-results-body"><tr><td colspan="7" class="empty-cell">No update search results</td></tr></tbody></table></div>
+            <div id="update-status" class="workflow-status">Stack update ready</div>
+            <div id="update-transfer-card" class="transfer-card hidden">
+              <div class="transfer-heading">
+                <div><span>Transfer progress</span><strong>Stack update download</strong></div>
+                <strong id="update-transfer-percent" class="transfer-percentage">0%</strong>
+              </div>
+              <div class="transfer-track"><span id="update-transfer-progress"></span></div>
+              <div class="transfer-metrics">
+                <strong id="update-transfer-count">Image 0 of 0</strong>
+                <span id="update-transfer-bytes">0 B of 0 B</span>
+              </div>
+              <div id="update-transfer-file" class="transfer-file">Waiting to start</div>
+              <div class="transfer-footer">
+                <span id="update-transfer-message">Stack update ready</span>
+                <button id="stop-update-transfer" class="button danger" type="button">Force stop download</button>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="page-controls">
+          <button id="previous-section" class="button ghost" type="button">← Previous</button>
+          <button id="next-section" class="button secondary" type="button">Next →</button>
+        </div>
+      </section>
+
+      <section id="run-page" class="page">
+        <div class="page-heading run-heading">
+          <div>
+            <div class="eyebrow">Execution and diagnostics</div>
+            <h1>Run monitor</h1>
+            <p>Live messages from PHASE, SNAP and the satellite-specific scripts.</p>
+          </div>
+          <div class="monitor-actions">
+            <button id="stop-button" class="button danger" type="button">Force stop now</button>
+            <button id="clear-log" class="button ghost" type="button">Clear view</button>
+          </div>
+        </div>
+        <div class="run-summary">
+          <div class="summary-block wide"><span>Constellation</span><strong id="summary-constellation">—</strong></div>
+          <div class="summary-divider"></div>
+          <div class="summary-block"><span>First step</span><strong id="summary-first">—</strong></div>
+          <div class="summary-divider"></div>
+          <div class="summary-block wide"><span>Master selection</span><strong id="summary-master">—</strong></div>
+          <div class="summary-block wide"><span>Output CRS</span><strong id="summary-epsg">—</strong></div>
+        </div>
+        <div class="processing-progress-card">
+          <div class="processing-progress-heading">
+            <div>
+              <span>Current operation</span>
+              <strong id="processing-progress-phase">Ready</strong>
+            </div>
+            <strong id="processing-progress-percent">0%</strong>
+          </div>
+          <div class="processing-progress-track">
+            <span id="processing-progress-bar"></span>
+          </div>
+          <div class="processing-progress-metrics">
+            <div><span>Elapsed</span><strong id="processing-elapsed">0m 00s</strong></div>
+            <div><span>Estimated remaining</span><strong id="processing-eta">—</strong></div>
+            <div><span>Progress model</span><strong>Pipeline milestones</strong></div>
+          </div>
+        </div>
+        <div class="console-wrap">
+          <div class="console-bar"><span>Processing log</span><span id="log-count">0 messages</span></div>
+          <div id="console" class="console" role="log" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+</body>
+</html>

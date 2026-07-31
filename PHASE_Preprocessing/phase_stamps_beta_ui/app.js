@@ -9,6 +9,10 @@ const PhaseUI = {
   localDirty: false,
   logs: [],
   detected: new Set(),
+  liveRaw: "",
+  liveLines: [],
+  liveTimer: null,
+  runStartedAt: null,
 };
 
 function setup(htmlComponent) {
@@ -41,14 +45,23 @@ function wireStaticControls() {
 
 function receiveState(state) {
   if (!state || state.kind !== "state") return;
+  const wasRunning = Boolean(PhaseUI.state?.running);
   PhaseUI.state = state;
   PhaseUI.schema = state.schema || { groups: [], items: [] };
   PhaseUI.config = { ...(state.config || {}) };
   PhaseUI.localDirty = Boolean(state.dirty);
   PhaseUI.detected = new Set(asArray(state.detectedFields));
   PhaseUI.logs = asArray(state.logs);
-  if (!findGroup(PhaseUI.active)) PhaseUI.active = "project";
+  if (!wasRunning && state.running) {
+    PhaseUI.liveRaw = "";
+    PhaseUI.liveLines = [];
+    PhaseUI.runStartedAt = Date.now();
+  }
+  if (!findGroup(PhaseUI.active) && !["run", "ts"].includes(PhaseUI.active)) {
+    PhaseUI.active = "project";
+  }
   renderAll();
+  syncLiveLogPolling();
 }
 
 function renderAll() {
@@ -59,7 +72,6 @@ function renderAll() {
   renderSummary();
   byId("workdir").textContent = PhaseUI.state?.workDir || "No processing folder";
   byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || "beta"}`;
-  byId("blocking-overlay").classList.toggle("hidden", !PhaseUI.state?.running);
 }
 
 function renderNavigation() {
@@ -69,7 +81,7 @@ function renderNavigation() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `nav-item${PhaseUI.active === group.id ? " active" : ""}`;
-    button.innerHTML = `<span class="nav-index">${index + 1}</span><span class="nav-text">${escapeHtml(group.title)}</span>${PhaseUI.localDirty ? '<i class="nav-dirty"></i>' : ""}`;
+    button.innerHTML = `<span class="nav-index">${index + 1}</span><span class="nav-text">${escapeHtml(group.title)}</span>`;
     button.addEventListener("click", () => switchPage(group.id));
     nav.appendChild(button);
   });
@@ -103,7 +115,9 @@ function renderPage() {
   if (!group) return;
   byId("section-title").textContent = group.title;
   byId("section-subtitle").textContent = group.subtitle || "";
-  const items = PhaseUI.schema.items.filter(item => item.group === group.id);
+  const items = PhaseUI.schema.items.filter(item =>
+    item.group === group.id && isItemVisible(item)
+  );
   byId("section-meta").textContent = `${items.length} controls`;
   const grid = byId("form-grid");
   grid.innerHTML = "";
@@ -141,14 +155,28 @@ function createField(item) {
     wrapper.appendChild(switchWrap);
   } else {
     control = document.createElement("input");
-    control.type = item.type === "date" ? "date" : "text";
-    control.value = textValue(PhaseUI.config[item.id]);
+    if (item.id === "master_date") {
+      control.type = "date";
+      control.value = dateInputValue(PhaseUI.config[item.id]);
+    } else if (item.id === "weed_standard_dev") {
+      control.type = "number";
+      control.min = "0";
+      control.max = "100";
+      control.step = "0.1";
+      control.value = Number(PhaseUI.config[item.id]).toFixed(1);
+    } else {
+      control.type = item.type === "date" ? "date" : "text";
+      control.value = textValue(PhaseUI.config[item.id]);
+    }
     control.spellcheck = false;
   }
   control.id = `field-${item.id}`;
   control.dataset.configField = item.id;
   control.addEventListener("input", markDirty);
-  control.addEventListener("change", markDirty);
+  control.addEventListener("change", () => {
+    markDirty();
+    if (item.id === "select_method") renderPage();
+  });
 
   if (item.type === "path") {
     const row = document.createElement("div");
@@ -172,7 +200,9 @@ function updateSwitchState(wrapper, checked) {
 
 function collectVisibleForm() {
   document.querySelectorAll("[data-config-field]").forEach(control => {
-    PhaseUI.config[control.dataset.configField] = control.type === "checkbox" ? control.checked : control.value;
+    let value = control.type === "checkbox" ? control.checked : control.value;
+    if (control.dataset.configField === "master_date") value = compactDate(value);
+    PhaseUI.config[control.dataset.configField] = value;
   });
 }
 
@@ -182,6 +212,16 @@ function markDirty() {
   renderStatus();
   renderNavigation();
   renderSummary();
+}
+
+function isItemVisible(item) {
+  if (item.id === "percent_rand") {
+    return textValue(PhaseUI.config.select_method).toUpperCase() !== "DENSITY";
+  }
+  if (item.id === "density_rand") {
+    return textValue(PhaseUI.config.select_method).toUpperCase() === "DENSITY";
+  }
+  return true;
 }
 
 function renderStatus() {
@@ -198,14 +238,16 @@ function renderStatus() {
   const first = Number(PhaseUI.config.stamps_first_step || 1);
   const last = Number(PhaseUI.config.stamps_last_step || 7);
   const width = Math.max(0, Math.min(100, ((last - first + 1) / 8) * 100));
+  const left = Math.max(0, Math.min(100, ((first - 1) / 8) * 100));
   byId("range-progress").style.width = `${width}%`;
+  byId("range-progress").style.marginLeft = `${left}%`;
   byId("range-label").textContent = `StaMPS steps ${first} → ${last}`;
 }
 
 function renderSummary() {
   byId("summary-first").textContent = textValue(PhaseUI.config.stamps_first_step) || "—";
   byId("summary-last").textContent = textValue(PhaseUI.config.stamps_last_step) || "—";
-  byId("summary-tropo").textContent = PhaseUI.config.train_enabled && PhaseUI.config.subtr_tropo === "y" ? `TRAIN · ${PhaseUI.config.tropo_method}` : "Disabled";
+  byId("summary-tropo").textContent = PhaseUI.config.train_enabled && PhaseUI.config.subtr_tropo === "y" ? PhaseUI.config.tropo_method : "Not applied";
   byId("summary-output").textContent = PhaseUI.config.ph_output || "—";
 }
 
@@ -219,9 +261,10 @@ function appendLog(entry) {
 function renderLogs() {
   const consoleNode = byId("console");
   consoleNode.innerHTML = "";
-  PhaseUI.logs.forEach(entry => consoleNode.appendChild(logElement(entry)));
+  const entries = PhaseUI.liveLines.length ? PhaseUI.liveLines : PhaseUI.logs;
+  entries.forEach(entry => consoleNode.appendChild(logElement(entry)));
   consoleNode.scrollTop = consoleNode.scrollHeight;
-  updateLogCount();
+  updateLogCount(entries.length);
 }
 
 function logElement(entry) {
@@ -237,7 +280,51 @@ function logElement(entry) {
   return line;
 }
 
-function updateLogCount() { byId("log-count").textContent = `${PhaseUI.logs.length} message${PhaseUI.logs.length === 1 ? "" : "s"}`; }
+function updateLogCount(count = null) {
+  const value = count === null
+    ? (PhaseUI.liveLines.length ? PhaseUI.liveLines.length : PhaseUI.logs.length)
+    : count;
+  byId("log-count").textContent = `${value} line${value === 1 ? "" : "s"}`;
+}
+
+function syncLiveLogPolling() {
+  const url = PhaseUI.state?.liveLogUrl;
+  if (!url) return;
+  if (PhaseUI.state?.running) {
+    if (!PhaseUI.liveTimer) {
+      pollLiveLog();
+      PhaseUI.liveTimer = window.setInterval(pollLiveLog, 500);
+    }
+  } else {
+    if (PhaseUI.liveTimer) {
+      window.clearInterval(PhaseUI.liveTimer);
+      PhaseUI.liveTimer = null;
+    }
+    pollLiveLog();
+    window.setTimeout(pollLiveLog, 350);
+  }
+}
+
+async function pollLiveLog() {
+  const url = PhaseUI.state?.liveLogUrl;
+  if (!url) return;
+  try {
+    const separator = url.includes("?") ? "&" : "?";
+    const response = await fetch(`${url}${separator}v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const raw = await response.text();
+    if (raw === PhaseUI.liveRaw) return;
+    PhaseUI.liveRaw = raw;
+    PhaseUI.liveLines = raw
+      .replace(/\u001b\[[0-9;]*m/g, "")
+      .split(/\r?\n/)
+      .map(line => line.trimEnd())
+      .filter(line => line.trim().length > 0);
+    renderLogs();
+  } catch (_) {
+    // The diary file is created when processing begins; an initial 404 is normal.
+  }
+}
 
 function save() { collectVisibleForm(); send("Save", payload()); }
 function start() { collectVisibleForm(); PhaseUI.active = "run"; renderNavigation(); renderPage(); send("Start", payload()); }
@@ -259,6 +346,13 @@ function findGroup(id) { return PhaseUI.schema.groups.find(group => group.id ===
 function byId(id) { return document.getElementById(id); }
 function asArray(value) { if (!value) return []; return Array.isArray(value) ? value : [value]; }
 function textValue(value) { return value === null || value === undefined ? "" : String(value); }
+function dateInputValue(value) {
+  const compact = textValue(value).replace(/[^0-9]/g, "");
+  return /^\d{8}$/.test(compact)
+    ? `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}`
+    : "";
+}
+function compactDate(value) { return textValue(value).replace(/[^0-9]/g, ""); }
 function escapeHtml(value) { const node = document.createElement("div"); node.textContent = textValue(value); return node.innerHTML; }
 function toast(message) {
   const node = document.createElement("div"); node.className = "toast"; node.textContent = message;

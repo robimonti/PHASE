@@ -7,6 +7,7 @@ import subprocess
 import time
 import glob
 import re
+from phase_subprocess import live_popen
 
 inputfile = sys.argv[1]
 bar_message = '\n#####################################################################\n'
@@ -194,7 +195,7 @@ with open(graphxml, 'w') as xml_file:
 print("## Computing Full-Stack Average Intensity scene")
 with open(outlog, 'a') as out_file:
     args = [GPT, graphxml, '-c', CACHE, '-q', CPU]
-    process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     timeStarted = time.time()
     stdout = process.communicate()[0].decode('utf-8', errors='ignore')
     timeDelta = time.time() - timeStarted

@@ -26,5 +26,35 @@ def test_installer_does_not_advertise_invalid_global_stamps_shortcut(phase_root)
 
     assert "@{ Name = 'PHASE StaMPS'" not in apps
     assert "Removed obsolete global PHASE StaMPS shortcut" in apps
-    assert "To resume a dataset later, open PHASE_StaMPS.mlapp inside" in source
+    assert "No legacy MLAPP is copied" in source
     assert "PHASE StaMPS is opened by preprocessing" in source
+
+
+def test_beta_installer_clones_branch_and_launches_standalone_m_files(phase_root):
+    source = _installer(phase_root)
+
+    assert "[string]$PhaseBranch = 'codex/phase-stamps-beta'" in source
+    assert "$Script:PhaseBranch = $PhaseBranch" in source
+    assert "PHASE_Preprocessing_beta.m" in source
+    assert "PHASE_Model_beta.m" in source
+    assert "$sc.TargetPath = $MatlabExe" in source
+    assert "$($a.Function)" in source
+    assert "Open $($a.Name) in MATLAB App Designer" not in source
+
+
+def test_beta_installer_cleans_legacy_runtime_and_hides_engine(phase_root):
+    source = _installer(phase_root)
+
+    assert "function Remove-PhaseLegacyRuntimeFiles" in source
+    assert "'PHASE_Preprocessing.mlapp'" in source
+    assert "'PHASE_Preprocessing\\PHASE_StaMPS.mlapp'" in source
+    assert "'PHASE_model.mlapp'" in source
+    assert "'srtm_precache.py', 'snap_dim_version_check.py'" in source
+    assert "$_.Name -notin $runtimeTools" in source
+    assert "Retained SNAP runtime helpers in tools." in source
+    assert "function Set-PhaseEngineHidden" in source
+    assert "[System.IO.FileAttributes]::Hidden" in source
+    assert "Set-PhaseEngineHidden -EngineDir $engineDir" in source
+    assert "function Assert-PhaseStandaloneRuntime" in source
+    assert "Assert-PhaseStandaloneRuntime -PhaseDir $phaseDir" in source
+    assert "Nothing was cleaned" in source

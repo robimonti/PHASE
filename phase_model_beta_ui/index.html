@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHASE · Geospatial Model Beta</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="../PHASE_Preprocessing/phase_preprocessing_beta_ui/map.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-center">
+        <div class="path-label">PHASE project</div>
+        <button id="root-button" class="path-button" type="button">Connecting to MATLAB…</button>
+      </div>
+      <div class="topbar-actions">
+        <button id="load-button" class="button ghost" type="button">Load</button>
+        <button id="save-button" class="button secondary" type="button">Save</button>
+        <button id="start-button" class="button primary" type="button">
+          <span class="play-icon">▶</span> Start modelling
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="brand-wrap">
+        <img class="phase-logo" src="assets/PHASE_logo.png" alt="PHASE">
+        <span class="logo-divider"></span>
+        <div class="module-lockup">
+          <img class="module-logo" src="assets/PHASE_mod2.png" alt="PHASE Model">
+          <span>Module 2 · Beta</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-row">
+          <span id="status-dot" class="status-dot idle"></span>
+          <div>
+            <div id="status-title" class="status-title">Initialising</div>
+            <div id="status-detail" class="status-detail">Waiting for MATLAB</div>
+          </div>
+        </div>
+        <div class="progress-track"><div id="sidebar-progress" class="progress-fill"></div></div>
+        <div id="sidebar-progress-label" class="progress-label">Model ready</div>
+      </div>
+
+      <nav id="navigation" class="navigation" aria-label="Model sections"></nav>
+      <div class="sidebar-footer">
+        <span id="version">PHASE Model Beta</span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div id="dirty-banner" class="banner warning hidden">
+        <div><strong>Unsaved changes</strong><span>Save the visible configuration before Start.</span></div>
+        <button id="banner-save" type="button">Save now</button>
+      </div>
+      <div id="error-banner" class="banner error hidden"></div>
+
+      <section id="form-page" class="page active">
+        <div class="page-heading">
+          <div>
+            <div id="section-kicker" class="eyebrow">Configuration</div>
+            <h1 id="section-title">Project</h1>
+            <p id="section-subtitle">Time-series source and execution environment</p>
+          </div>
+          <div id="section-meta" class="section-meta"></div>
+        </div>
+        <div id="context-note" class="context-note hidden"></div>
+        <div id="aoi-map-panel" class="map-card hidden">
+          <div class="map-heading">
+            <div>
+              <span class="data-kicker">Interactive AOI map</span>
+              <h2>Draw the modelling area</h2>
+              <p>Draw any polygon around the PS to model. PHASE stores the complete shape and automatically updates the four bounding coordinates below.</p>
+            </div>
+            <div class="map-actions">
+              <button id="map-draw" class="button primary" type="button">Draw polygon</button>
+              <button id="map-finish" class="button secondary hidden" type="button">Finish</button>
+              <button id="map-rectangle" class="button ghost" type="button">Use coordinate rectangle</button>
+              <button id="map-fit" class="button ghost" type="button">Fit AOI</button>
+            </div>
+          </div>
+          <div id="aoi-map" class="phase-map" tabindex="0" aria-label="Interactive model AOI map">
+            <svg role="img" aria-label="Satellite map and model AOI polygon"></svg>
+            <div class="map-tooltip hidden"></div>
+            <div class="map-coordinate">Move over the map to inspect coordinates</div>
+            <div class="map-attribution">Esri World Imagery · PHASE overlay</div>
+          </div>
+          <div class="bbox-strip"><span>Bounding box</span><strong id="map-bbox">No AOI drawn</strong><span id="map-vertices">—</span></div>
+        </div>
+        <div id="form-grid" class="form-grid"></div>
+        <div class="page-controls">
+          <button id="previous-section" class="button ghost" type="button">← Previous</button>
+          <button id="next-section" class="button secondary" type="button">Next →</button>
+        </div>
+      </section>
+
+      <section id="run-page" class="page">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">Execution and diagnostics</div>
+            <h1>Run monitor</h1>
+            <p>Progress and messages from MATLAB and the Python report helpers.</p>
+          </div>
+          <div class="run-actions">
+            <button id="clear-log" class="button ghost" type="button">Clear view</button>
+            <button id="stop-button" class="button danger" type="button" disabled>Hard stop now</button>
+          </div>
+        </div>
+        <div class="run-card">
+          <div class="run-card-top">
+            <div>
+              <span class="run-caption">Current operation</span>
+              <strong id="run-phase">Ready</strong>
+            </div>
+            <strong id="run-percentage" class="run-percentage">0%</strong>
+          </div>
+          <div class="run-track"><div id="run-progress" class="run-progress"></div></div>
+          <div class="run-metrics">
+            <span>Elapsed <strong id="run-elapsed">00:00</strong></span>
+            <span id="run-model-summary">—</span>
+          </div>
+        </div>
+        <div class="console-wrap">
+          <div class="console-bar">
+            <span>Processing log</span>
+            <span id="log-count">0 messages</span>
+          </div>
+          <div id="console" class="console" role="log" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

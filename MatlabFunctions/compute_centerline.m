@@ -35,6 +35,21 @@ function [centerline_data, xy_grid, lonlat_grid_AOI] = compute_centerline(xyAOI,
         xyAOI_unique = xyAOI;
     end
 
+    % Bridge shapefiles can contain a tiny digitisation spike/near-duplicate
+    % at a corner. Remove it before deciding between the analytical and
+    % skeletonisation engines; otherwise a 4-corner bridge is misclassified
+    % as a complex polygon and the skeleton tracer may stop after one end.
+    cleanup_done = true;
+    while cleanup_done && size(xyAOI_unique,1) > 4
+        edge_lengths = sqrt(sum((xyAOI_unique([2:end 1],:) - xyAOI_unique).^2,2));
+        [shortest_edge, shortest_idx] = min(edge_lengths);
+        cleanup_done = shortest_edge <= max(1, 0.01*max(edge_lengths));
+        if cleanup_done
+            delete_idx = mod(shortest_idx, size(xyAOI_unique,1)) + 1;
+            xyAOI_unique(delete_idx,:) = [];
+        end
+    end
+
     num_vertices = size(xyAOI_unique, 1);
 
     % =====================================================================

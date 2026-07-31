@@ -12,6 +12,12 @@ cleanup = onCleanup(@() removeTemporary(temporaryDir)); %#ok<NASGU>
 cfg = phase_stamps_beta.defaultConfig();
 cfg.installation_folder = temporaryDir;
 cfg.project_path = temporaryDir;
+cfg.weed_standard_dev = 37.5;
+[initial, missingInfo] = phase_stamps_beta.loadConfig(temporaryDir);
+assert(~missingInfo.exists, ...
+    'A new StaMPS dataset should start without input_StaMPS.mat.');
+assert(phase_stamps_beta.configsEqual(initial,phase_stamps_beta.defaultConfig()), ...
+    'Missing configuration did not load the canonical initial values.');
 ui = phase_stamps_beta.configToUi(cfg);
 roundTrip = phase_stamps_beta.uiToConfig(ui, cfg);
 assert(phase_stamps_beta.configsEqual(cfg, roundTrip), ...
@@ -23,7 +29,11 @@ assert(info.exists, 'Saved input_StaMPS.mat was not found.');
 assert(phase_stamps_beta.configsEqual(cfg, loaded), ...
     'MAT save/load round-trip changed configuration values.');
 
-[errors, warnings] = phase_stamps_beta.validateConfig(cfg, true);
+validationCfg = cfg;
+% Configuration self-tests deliberately do not require an external StaMPS
+% checkout. Real Start performs the strict MATLAB/binary runtime preflight.
+validationCfg.installation_folder = '';
+[errors, warnings] = phase_stamps_beta.validateConfig(validationCfg, false);
 assert(isempty(errors), strjoin(errors, newline));
 
 definition = phase_stamps_beta.schema();

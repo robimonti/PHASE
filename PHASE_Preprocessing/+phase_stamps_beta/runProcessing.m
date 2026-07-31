@@ -32,7 +32,7 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
             'n_cores', 'heading', 'lambda', 'max_topo_err', 'filter_grid_size', 'filter_weighting', ...
             'gamma_max_iterations', 'gamma_change_convergence', 'gamma_stdev_reject', 'quick_est_gamma_flag', ...
             'small_baseline_flag', 'clap_win', 'clap_alpha', 'clap_beta', 'clap_low_pass_wavelength', ...
-            'select_method', 'percent_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', ...
+            'select_method', 'percent_rand', 'density_rand', 'weed_standard_dev', 'weed_neighbours', 'weed_zero_elevation', ...
             'weed_max_noise', 'merge_resample_size', 'merge_standard_dev', 'unwrap_grid_size', ...
             'unwrap_gold_n_win', 'unwrap_method', 'unwrap_gold_alpha', 'unwrap_alpha', 'unwrap_spatial_cost_func_flag', ...
             'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', ...
@@ -346,23 +346,29 @@ else
 end
                 source_train = [source space train_path];
                 if isunix
-    system(strjoin({source_stamps, source_train, source_snap}, ';'));
+    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train, source_snap}, ';'), 'StaMPS, TRAIN and SNAP environment preparation');
 else
-    mt_prep_snap_status = system([which('mt_prep_snap.bat') ' ' master_date ' ' s2s_export_path ' ' amplitude_threshold]);
+    [mt_prep_snap_status, mt_prep_snap_output] = ...
+    phase_stamps_beta.runCommandHidden(app, ...
+        {which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, ...
+        'StaMPS data preparation');
     if mt_prep_snap_status ~= 0
 error('PHASE_StaMPS:mtPrepSnapFailed', ...
-      'mt_prep_snap failed (exit code %d). Check the Command Window above for the cause (commonly: a previous MATLAB session is still holding files in PATCH_* — close it and retry).', ...
+      'mt_prep_snap failed (exit code %d). Check the PHASE Run monitor above for the cause (commonly: a previous MATLAB session is still holding files in PATCH_* — close it and retry).', ...
       mt_prep_snap_status);
     end
 end % source all the softwares and prepare the data
             else
                 if isunix
-    system(strjoin({source_stamps, source_snap}, ';'));
+    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_snap}, ';'), 'StaMPS and SNAP environment preparation');
 else
-    mt_prep_snap_status = system([which('mt_prep_snap.bat') ' ' master_date ' ' s2s_export_path ' ' amplitude_threshold]);
+    [mt_prep_snap_status, mt_prep_snap_output] = ...
+    phase_stamps_beta.runCommandHidden(app, ...
+        {which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, ...
+        'StaMPS data preparation');
     if mt_prep_snap_status ~= 0
 error('PHASE_StaMPS:mtPrepSnapFailed', ...
-      'mt_prep_snap failed (exit code %d). Check the Command Window above for the cause (commonly: a previous MATLAB session is still holding files in PATCH_* — close it and retry).', ...
+      'mt_prep_snap failed (exit code %d). Check the PHASE Run monitor above for the cause (commonly: a previous MATLAB session is still holding files in PATCH_* — close it and retry).', ...
       mt_prep_snap_status);
     end
 end % source all the softwares and prepare the data
@@ -380,14 +386,14 @@ end % source all the softwares and prepare the data
                 train_path = which('APS_CONFIG.sh');
                 source_train = [source space train_path];
                 if isunix
-    system(strjoin({source_stamps, source_train}, ';'));
+    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train}, ';'), 'StaMPS and TRAIN environment preparation');
 else
     % Windows: when train_flag==0 reaches here, Change #1 has already
     % verified TRAIN is on MATLABPATH; no shell config to source.
 end % source all the softwares and prepare the data
             else
                 if isunix
-    system(source_stamps);
+    phase_stamps_beta.runCommandHidden(app, source_stamps, 'StaMPS environment preparation');
 else
     % Environment comes from self-bootstrapping .bat shim
 end % source all the softwares and prepare the data
@@ -434,7 +440,11 @@ end % source all the softwares and prepare the data
         setparm('clap_low_pass_wavelength', clap_low_pass_wavelength); % CLAP filter spatial wavelength cutoff (m)
         % Step 3 - PS Selection
         setparm('select_method', select_method); % selection method for pixels with random phase, alternative 'DENSITY'
-        setparm('percent_rand', percent_rand); % maximum acceptable percentage, alternative 'density_rand'
+        if strcmpi(select_method, 'DENSITY')
+            setparm('density_rand', density_rand); % maximum random PS density
+        else
+            setparm('percent_rand', percent_rand); % maximum acceptable percentage, alternative 'density_rand'
+        end
         % Step 4 - PS Weeding
         setparm('weed_time_win', weed_time_win); % smoothing window (days)
         setparm('weed_standard_dev', weed_standard_dev); % threshold standard deviation
@@ -533,7 +543,8 @@ end % source all the softwares and prepare the data
                          'pyccino/StaMPS master fork.'], uw_stat_impl);
                 end
 
-                [snaphu_status, snaphu_where] = dos('where snaphu');
+                [snaphu_status, snaphu_where] = phase_stamps_beta.runCommandHidden( ...
+                    app, {'where','snaphu'}, 'snaphu lookup');
                 if snaphu_status ~= 0 || isempty(strtrim(snaphu_where))
                     expected_snaphu = fullfile(installation_folder, ...
                         'external', 'snaphu', 'bin', 'snaphu.exe');
@@ -550,7 +561,7 @@ end % source all the softwares and prepare the data
             end
 
             updateOutput(app, ['Step 6 preflight passed. Phase unwrapping can take ', ...
-                'a long time; progress is printed in the MATLAB Command Window as ', ...
+                'a long time; progress is mirrored live in the PHASE Run monitor as ', ...
                 '''Processing IFG x of y''.']);
             drawnow;
             clear ps_unwrap_impl ps_unwrap_src old_unwrap_call uw_stat_impl
@@ -900,7 +911,7 @@ end % source all the softwares and prepare the data
             daily_displ = export_res(:,4:end);  % export second part of the table
             table_p2 = [time_days; daily_displ];
             displacements = table(table_p2);
-            writetable(displacements, strcat(cd_fullpath, '/EXPORT/', export_name, '.xlsx'), 'Range', 'E1:FZ500000');
+            writetable(displacements, strcat(cd_fullpath, '/EXPORT/', export_name, '.xlsx'), 'Range', 'E1');
 
             displ_table_all = readtable(strcat('./EXPORT/', export_name, '.xlsx'));
             writetable(displ_table_all, strcat('./EXPORT/', export_name, '.csv'), 'WriteMode', 'overwrite');
@@ -965,7 +976,7 @@ end % source all the softwares and prepare the data
             daily_displ = export_res(:,3:end);  % export second part of the table
             table_p2 = [time_days; daily_displ];
             displacements = table(table_p2);
-            writetable(displacements, strcat(cd_fullpath, '/EXPORT/', export_name, '_phW.xlsx'), 'Range', 'D1:FZ500000');
+            writetable(displacements, strcat(cd_fullpath, '/EXPORT/', export_name, '_phW.xlsx'), 'Range', 'D1');
 
             displ_table_all = readtable(strcat('./EXPORT/', export_name, '_phW.xlsx'));
             writetable(displ_table_all, strcat('./EXPORT/', export_name, '_phW.csv'), 'WriteMode', 'overwrite');
@@ -1003,7 +1014,7 @@ end % source all the softwares and prepare the data
 
             table_p2_tropo = [time_days; atm_mm_AOI]; % export second part of the table
             atm_delay = table(table_p2_tropo);
-            writetable(atm_delay, strcat(cd_fullpath, '/EXPORT/', export_name, '_ATMOSPHERE.xlsx'), 'Range', 'D1:FZ500000');
+            writetable(atm_delay, strcat(cd_fullpath, '/EXPORT/', export_name, '_ATMOSPHERE.xlsx'), 'Range', 'D1');
 
             displ_table_atm_all = readtable(strcat('./EXPORT/', export_name, '_ATMOSPHERE.xlsx'));
             writetable(displ_table_atm_all, strcat('./EXPORT/', export_name, '_ATMOSPHERE.csv'), 'WriteMode', 'overwrite');

@@ -3,8 +3,8 @@
 The stable MLAPP remains the source of truth while the beta is evaluated.  The
 generated class preserves every callback and component so download, map,
 update, import and processing code remain available.  Only class visibility,
-repository-root resolution, the hidden engine window and an external log hook
-are adapted for the new controller.
+repository-root resolution, the hidden engine window, the live process bridge
+and the beta StaMPS handoff are adapted for the new controller.
 """
 
 from pathlib import Path
@@ -26,6 +26,15 @@ def _replace_last(text: str, old: str, new: str) -> str:
     if index < 0:
         raise RuntimeError(f"Could not locate final engine anchor: {old!r}")
     return text[:index] + new + text[index + len(old):]
+
+
+def _replace_checked(text: str, old: str, new: str, expected: int) -> str:
+    count = text.count(old)
+    if count != expected:
+        raise RuntimeError(
+            f"Expected {expected} processing anchor(s), found {count}: {old!r}"
+        )
+    return text.replace(old, new)
 
 
 def extract(xml: str) -> str:
@@ -56,7 +65,8 @@ def extract(xml: str) -> str:
     code = code.replace(
         component_anchor,
         component_anchor
-        + "        ExternalLogCallback              = []\n",
+        + "        ExternalLogCallback              = []\n"
+        + "        ExternalProgressCallback         = []\n",
         1,
     )
 
@@ -131,6 +141,23 @@ def extract(xml: str) -> str:
 """
         code = code[:start] + replacement + code[end:]
 
+    # The copied MLAPP used to create the dataset directory as a side effect.
+    # The text beta must create it before copying any diagnostic/configuration.
+    stamps_folder_anchor = (
+        "                        stamps_folder_full = "
+        "fullfile(project_parent_path_full, stamps_folder);\n"
+    )
+    if code.count(stamps_folder_anchor) != 2:
+        raise RuntimeError("Could not locate both StaMPS dataset folder assignments")
+    code = code.replace(
+        stamps_folder_anchor,
+        stamps_folder_anchor
+        + "                        if ~isfolder(stamps_folder_full)\n"
+        + "                            mkdir(stamps_folder_full);\n"
+        + "                            updateOutput(app, ['Created StaMPS dataset folder: ' stamps_folder_full]);\n"
+        + "                        end\n",
+    )
+
     # Open the text-based StaMPS beta from its canonical installation and pass
     # the new dataset folder explicitly.
     stable_launcher = "stamps_app_file = fullfile(stamps_app_full, 'PHASE_StaMPS.mlapp');"
@@ -142,7 +169,18 @@ def extract(xml: str) -> str:
         raise RuntimeError("Could not locate both stable StaMPS run calls")
     code = code.replace(
         "run(stamps_app_file);",
-        "PHASE_StaMPS_beta(stamps_app_full);",
+        "phase_preprocessing_beta.launchStampsBeta(stamps_app_file, stamps_app_full);",
+    )
+    code = _replace_checked(
+        code,
+        """\
+                                cd(stamps_app_full);
+                                updateOutput(app, ['Changed MATLAB current directory to: ' stamps_app_full]);
+""",
+        """\
+                                updateOutput(app, ['Launching the canonical PHASE_StaMPS_beta runtime for: ' stamps_app_full]);
+""",
+        2,
     )
     code = code.replace(
         "['Open it manually with: run(''' stamps_app_file ''')']",
@@ -151,6 +189,17 @@ def extract(xml: str) -> str:
     code = code.replace(
         "PHASE_StaMPS.mlapp not found in ' stamps_app_full",
         "PHASE_StaMPS_beta.m not found in ' project_path_full",
+    )
+    missing_stamps_config = """\
+                            updateOutput(app, ['WARNING: input_StaMPS.mat was not found. ', ...
+                                'Configure and save the StaMPS installation path before running.']);
+"""
+    bootstrap_stamps_config = """\
+                            updateOutput(app, ['NOTICE: input_StaMPS.mat is not available yet. ', ...
+                                'PHASE_StaMPS_beta will create it when the initial settings are saved.']);
+"""
+    code = _replace_checked(
+        code,missing_stamps_config,bootstrap_stamps_config,2
     )
     prompt_start = """\
                         try
@@ -163,14 +212,119 @@ def extract(xml: str) -> str:
         start = code.index(prompt_start)
         end = code.index(prompt_end, start)
         replacement = """\
+                        updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
                         choice = 'Open now';
-                        updateOutput(app, ['Preprocessing completed. Opening PHASE_StaMPS_beta in: ' stamps_app_full]);
+                        if isfile(dst_input_mat)
+                            updateOutput(app, ['Opening PHASE_StaMPS_beta with the existing configuration in: ' stamps_app_full]);
+                        else
+                            updateOutput(app, ['Opening PHASE_StaMPS_beta to create the initial configuration in: ' stamps_app_full]);
+                        end
 """
         code = code[:start] + replacement + code[end:]
     code = code.replace(
         "% OPEN PHASE_StaMPS.mlapp (cross-platform).",
         "% OPEN PHASE_StaMPS_beta (cross-platform).",
     )
+
+    # Replace platform terminals/asynchronous BAT execution with the beta's
+    # silent process bridge. It runs the same generated scripts, but streams
+    # their output and progress to the modern Run monitor.
+    code = _replace_checked(
+        code,
+        "system(path_2_master);",
+        "phase_preprocessing_beta.runCommandLive(app, path_2_master, ...\n"
+        "                                    'Master selection and preparation', 3, 18, 1, 1);",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "system(strjoin({chmod, path_2_master}, ';'));",
+        "system(chmod);\n"
+        "                                phase_preprocessing_beta.runCommandLive(app, path_2_master, ...\n"
+        "                                    'Master selection and preparation', 3, 18, 1, 1);",
+        4,
+    )
+    code = _replace_checked(
+        code,
+        "fullfile(project_path_full, '\\snap2stamps\\bin\\snap2stamps_slaves.bat &')",
+        "fullfile(project_path_full, '\\snap2stamps\\bin\\snap2stamps_slaves.bat')",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "                            path_2_slaves = [xterm space path_2_slaves];\n",
+        "",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "                            path_2_slaves = ['open -a Terminal ' path_2_slaves]; ",
+        "                            % Executed without opening Terminal by runCommandLive.",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "                            path_2_slaves = ['open -a Terminal ' path_2_slaves];",
+        "                            % Executed without opening Terminal by runCommandLive.",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "system(path_2_slaves); % execute the batch file",
+        "phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...\n"
+        "                                'Slave processing pipeline', 18, 92, first_step_num, 6);",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "system(path_2_slaves, '-echo');",
+        "phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...\n"
+        "                                'Slave processing pipeline', 18, 92, first_step_num, 6);",
+        4,
+    )
+    code = _replace_checked(
+        code,
+        "fullfile(project_path_full, '\\snap2stamps\\bin\\snap2stamps_update_average_intensity.bat &')",
+        "fullfile(project_path_full, '\\snap2stamps\\bin\\snap2stamps_update_average_intensity.bat')",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "                                path_2_average_intensity = [xterm space path_2_average_intensity];\n",
+        "",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "                                path_2_average_intensity = ['open -a Terminal ' path_2_average_intensity]; ",
+        "                                % Executed without opening Terminal by runCommandLive.",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "system(path_2_average_intensity);",
+        "phase_preprocessing_beta.runCommandLive(app, path_2_average_intensity, ...\n"
+        "                                    'Full-stack average intensity', 78, 92, 5, 5);",
+        1,
+    )
+    code = _replace_checked(
+        code,
+        "system(path_2_average_intensity, '-echo');",
+        "phase_preprocessing_beta.runCommandLive(app, path_2_average_intensity, ...\n"
+        "                                    'Full-stack average intensity', 78, 92, 5, 5);",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "                        updateOutput(app, 'An error occurred during script execution. Please check each step log file!');",
+        "                        if strcmp(ME.identifier,'PHASE:ProcessingStopped')\n"
+        "                            updateOutput(app, 'Preprocessing was force-stopped by the user.');\n"
+        "                        else\n"
+        "                            updateOutput(app, 'An error occurred during script execution. Please check each step log file!');\n"
+        "                        end",
+        2,
+    )
+
     code = _replace_last(
         code,
         "app.UIFigure.Visible = 'on';",
@@ -183,6 +337,9 @@ def extract(xml: str) -> str:
 % The complete formerly embedded App Designer source follows as editable text.
 
 """
+    # App Designer XML contains pervasive indentation-only/trailing spaces.
+    # Normalise them so the editable generated backend remains diff-clean.
+    code = "\n".join(line.rstrip() for line in code.splitlines())
     return header + code.rstrip() + "\n"
 
 

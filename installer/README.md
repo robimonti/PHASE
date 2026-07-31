@@ -1,9 +1,11 @@
 ﻿# PHASE Windows Installer
 
-Wizard end-to-end (GUI WPF) che installa PHASE e tutte le sue dipendenze su
+Wizard end-to-end (GUI WPF) che installa la beta standalone di PHASE e tutte le sue dipendenze su
 Windows: MATLAB detection, SNAP install, Python 3.11+ silent install, clone di
 PHASE/StaMPS/TRAIN, download verificato dei binari Triangle/snaphu, configurazione `MATLAB_EXE` +
-`python.txt` + `savepath`.
+`python.txt` + `savepath`. Per default clona il branch
+`codex/phase-stamps-beta`; il branch può essere sovrascritto con
+`-PhaseBranch`.
 
 ## File
 
@@ -44,7 +46,7 @@ Install-Module -Name ps2exe -Scope CurrentUser -Force
 powershell -ExecutionPolicy Bypass -File compile-to-exe.ps1
 ```
 
-Produce `install-phase.exe` (~3 MB) accanto allo script.
+Produce `install-phase-beta.exe` (~3 MB) accanto allo script.
 
 ### 2. Bundle l'installer SNAP
 
@@ -54,7 +56,7 @@ accanto a sé. Per distribuirlo come pacchetto self-contained:
 ```powershell
 # Layout finale del pacchetto:
 phase-installer-v1.0.0\
-├── install-phase.exe                                       # 3 MB
+├── install-phase-beta.exe                                  # 3 MB
 └── installers\
     └── esa-snap_sentinel_windows-13.0.0.exe               # ~500 MB
 
@@ -62,7 +64,8 @@ phase-installer-v1.0.0\
 Compress-Archive -Path phase-installer-v1.0.0 -DestinationPath phase-installer-v1.0.0.zip
 ```
 
-L'utente finale estrae lo zip e fa doppio click su `install-phase.exe`.
+L'utente finale estrae lo zip e fa doppio click su
+`install-phase-beta.exe`.
 
 ### 3. SmartScreen / firma digitale
 
@@ -117,17 +120,21 @@ install-phase.ps1
 5. **Cartella destinazione** — default `%USERPROFILE%\Desktop\PHASE`.
    Validazione: scrivibile, no OneDrive (warning, non blocco), no caratteri
    non-ASCII.
-6. **Installazione** — clone PHASE + StaMPS + TRAIN, scarica e verifica i nove
+6. **Installazione** — clona il branch beta di PHASE + StaMPS + TRAIN, scarica e verifica i nove
    eseguibili StaMPS Windows (incluso `snaphu.exe`; un fallimento interrompe
    l'installazione), scrive `MATLAB_EXE` env var, scrive
    `%APPDATA%\PHASE\python.txt`, scrive `project.conf.template`, lancia
-   `matlab.exe -batch` per addpath+savepath. Log live in console scrollabile.
+   `matlab.exe -batch` per addpath+savepath, rimuove dal runtime i vecchi
+   `.mlapp` e i file di sviluppo. Log live in console scrollabile.
 7. **Fine** — riepilogo + bottoni "Apri cartella PHASE" e "Apri log".
 
-Il modulo PHASE StaMPS non ha un collegamento globale: usa percorsi relativi al
-dataset. Il preprocessing crea la cartella `ASC_<date>`/`DES_<date>`, vi copia
-la versione corrente di `PHASE_StaMPS.mlapp` e `input_StaMPS.mat` e propone di
-aprirla. Per riprendere un'elaborazione si riapre quella copia nel dataset.
+La cartella visibile `PHASE` contiene solo i collegamenti a
+`PHASE_Preprocessing_beta.m` e `PHASE_Model_beta.m` e il README. Il motore
+standalone è nella sottocartella nascosta `engine`. Il modulo PHASE StaMPS non
+ha un collegamento globale: usa percorsi relativi al dataset e viene aperto dal
+preprocessing con la cartella `ASC_<date>`/`DES_<date>` esplicitamente
+selezionata. Nessuna delle tre beta carica un `.mlapp` a runtime; tutte usano
+lo stesso shell HTML chiaro mentre i motori MATLAB testuali restano nascosti.
 
 ## Path configurati automaticamente
 
@@ -138,11 +145,11 @@ Dopo che l'installer ha finito, l'utente trova:
 | `MATLAB_EXE` env var (user scope) | `setx` registry | Path a `matlab.exe` |
 | Python override per StaMPS | `%APPDATA%\PHASE\python.txt` | Path a `python.exe` (letto da `mt_prep_snap.bat:27`) |
 | MATLAB path permanente (`pathdef.m`) | `matlab.exe -batch savepath` | `StaMPS\matlab` + `matlab_compat` + `TRAIN\matlab` |
-| Template config dataset | `<dest>\PHASE\project.conf.template` | `GPTBIN_PATH` precompilato + AOI placeholder |
+| Template config dataset | `<dest>\PHASE\engine\project.conf.template` | `GPTBIN_PATH` precompilato + AOI placeholder |
 
-L'utente apre uno qualsiasi dei `.mlapp` da MATLAB e tutto funziona. Per ogni
-nuovo dataset deve solo copiare `project.conf.template` in `project.conf` e
-riempire `MASTER` + bounding box AOI.
+L'utente avvia PHASE dai due collegamenti visibili. Il collegamento apre MATLAB,
+aggiunge il motore al path ed esegue immediatamente la funzione standalone;
+non apre il file nell'Editor.
 
 ## Caveat noti
 
@@ -151,14 +158,15 @@ riempire `MASTER` + bounding box AOI.
 2. **SNAP semi-interattivo**: l'installer ESA non ha modalità completamente
    silent senza response file pre-generato. Lo lanciamo standard, l'utente
    clicca Avanti×3 (~5 minuti).
-3. **git richiesto sul sistema**: per il clone. Se non c'è, l'installer
-   stoppa con messaggio actionable. (TODO: download di Portable Git
-   on-the-fly).
+3. **git**: se assente, il wizard installa Portable Git nel profilo utente.
 4. **SmartScreen**: vedi sezione "Firma digitale" sopra.
 5. **`matlab.exe -batch savepath`**: richiede licenza MATLAB già attivata.
    Se la licenza non è ancora stata accettata, il savepath fallisce con
    warning ma l'install procede; l'utente fa addpath/savepath manualmente
    alla prima apertura di MATLAB.
+6. **Build dell'EXE**: PS2EXE richiede Windows PowerShell. Il sorgente
+   `install-phase.ps1` può essere verificato nel repository, ma l'EXE finale
+   va compilato su Windows con `compile-to-exe.ps1`.
 
 ## Disinstallazione
 
