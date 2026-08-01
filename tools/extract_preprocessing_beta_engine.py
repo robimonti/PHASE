@@ -12,7 +12,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MLAPP = ROOT / "PHASE_Preprocessing.mlapp"
+MLAPP = ROOT / "legacy" / "PHASE_Preprocessing.mlapp"
 OUTPUT = (
     ROOT
     / "PHASE_Preprocessing"

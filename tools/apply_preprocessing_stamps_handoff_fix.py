@@ -20,7 +20,7 @@ from mlapp_roundtrip import edit_mlapp
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MLAPP = REPO_ROOT / "PHASE_Preprocessing.mlapp"
+MLAPP = REPO_ROOT / "legacy" / "PHASE_Preprocessing.mlapp"
 
 
 HANDOFF_PATTERN = re.compile(

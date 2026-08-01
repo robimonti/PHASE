@@ -177,8 +177,8 @@ function [centerline_data, xy_grid, lonlat_grid_AOI] = compute_centerline(xyAOI,
         s = (0:cline_resolution:s_total)';
         if s(end) ~= s_total, s = [s; s_total]; end
         
-        centerline_x = interp1(cumdist, xy_skeleton_ordered(:,1), s, 'linear');
-        centerline_y = interp1(cumdist, xy_skeleton_ordered(:,2), s, 'linear');
+        centerline_x = interp1Unique(cumdist, xy_skeleton_ordered(:,1), s, 'linear');
+        centerline_y = interp1Unique(cumdist, xy_skeleton_ordered(:,2), s, 'linear');
         xy_centerline = [centerline_x, centerline_y];
     end
 

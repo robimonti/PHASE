@@ -3,7 +3,7 @@ import zipfile
 
 
 def _stable_xml(phase_root):
-    path = phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
+    path = phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
     with zipfile.ZipFile(path) as app:
         return app.read("matlab/document.xml").decode("utf-8")
 

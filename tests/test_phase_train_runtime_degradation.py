@@ -23,7 +23,7 @@ def _extract_guard(mlapp_path: Path) -> str:
 @pytest.mark.requires_matlab
 def test_degradation_when_train_missing(phase_root: Path, tmp_path: Path):
     guard = _extract_guard(
-        phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+        phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
 
     driver = tmp_path / "driver.m"
     driver.write_text(

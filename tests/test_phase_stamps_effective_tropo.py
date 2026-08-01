@@ -13,7 +13,7 @@ def _start_callback(xml):
 
 
 def test_train_request_requires_both_user_controls(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
 
     assert (
@@ -23,7 +23,7 @@ def test_train_request_requires_both_user_controls(phase_root):
 
 
 def test_one_effective_flag_controls_processing_and_export(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
 
     decision = callback.index("% begin effective tropospheric-correction decision")
@@ -44,7 +44,7 @@ def test_one_effective_flag_controls_processing_and_export(phase_root):
 
 
 def test_subtr_tropo_n_run_does_not_enter_tca2_export(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
     atmosphere = callback.index("%% ------------------ EXPORT ATMOSPHERIC CORRECTION")
     tca_load = callback.index("load('tca2.mat'", atmosphere)

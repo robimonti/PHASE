@@ -65,8 +65,8 @@ class PhaseMap {
     if (!this.drawing && !this.vertexDrag) this.polygon = closePolygon(normaliseMatrix(data.polygon));
     if (!this.initialised && this.container.clientWidth > 40 && this.container.clientHeight > 40) {
       this.initialised = true;
-      if (this.footprints.length) this.fitToFootprints(false);
-      else if (this.polygon.length) this.fitBounds(this.polygon, false);
+      if (this.polygon.length) this.fitBounds(this.polygon, false);
+      else if (this.footprints.length) this.fitToFootprints(false);
     }
     this.render();
   }

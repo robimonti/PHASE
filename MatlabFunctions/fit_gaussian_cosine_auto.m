@@ -37,7 +37,7 @@ Cecf_poly = Cecf;
 if length(eCovF) > 2 && eCovF(2) < 0
     x = [tauGrid_poly(2), tauGrid_poly(3)];
     y = [eCovF_poly(2), eCovF_poly(3)];
-    tau0_interp = max(interp1(x, y, 0, 'linear', 'extrap'), 0);
+    tau0_interp = max(interp1Unique(x, y, 0, 'linear', 'extrap'), 0);
     
     tauGrid_poly = [tauGrid_poly(1); 0; tauGrid_poly(2:end)];
     eCovF_poly   = [eCovF_poly(1); tau0_interp; eCovF_poly(2:end)];
@@ -128,7 +128,7 @@ if length(Yo) < min_obs && length(tauGrid_used) > 1
     fine_step = tauGrid_used(end) / (min_obs - 1);
     tau_fine = (0:fine_step:tauGrid_used(end))';
     eCovF_smooth_fine = polyval(p_eCov, tau_fine);
-    Q_fine = interp1(tauGrid(1:min(length(tauGrid), length(Cecf))), ...
+    Q_fine = interp1Unique(tauGrid(1:min(length(tauGrid), length(Cecf))), ...
                      Cecf(1:min(length(tauGrid), length(Cecf))), tau_fine, 'linear', 'extrap');
     tau = tau_fine; Yo = eCovF_smooth_fine; Q = Q_fine;
 else

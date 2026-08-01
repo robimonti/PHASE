@@ -8,12 +8,12 @@ def _text(path):
 
 
 def _stable_xml(phase_root):
-    with zipfile.ZipFile(phase_root / "PHASE_Preprocessing.mlapp") as app:
+    with zipfile.ZipFile(phase_root / "legacy/PHASE_Preprocessing.mlapp") as app:
         return app.read("matlab/document.xml").decode("utf-8")
 
 
 def test_preprocessing_beta_has_text_launcher_and_preserves_stable_app(phase_root):
-    assert (phase_root / "PHASE_Preprocessing.mlapp").is_file()
+    assert (phase_root / "legacy/PHASE_Preprocessing.mlapp").is_file()
     assert (phase_root / "PHASE_Preprocessing_beta.m").is_file()
     assert not (phase_root / "PHASE_Preprocessing_beta.mlapp").exists()
     assert "phase_preprocessing_beta.App" in _text(phase_root / "PHASE_Preprocessing_beta.m")

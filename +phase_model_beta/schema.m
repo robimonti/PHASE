@@ -1,7 +1,7 @@
 function schema = schema()
 %SCHEMA Visible metadata for the standalone PHASE Model interface.
 
-schema.version = '0.2.0-beta';
+schema.version = '6.0.0';
 schema.groups = [
     group('project','Project','Inputs','Time-series source and execution environment')
     group('aoi','Area of interest','Selection','Shapefile or geographic bounding box')

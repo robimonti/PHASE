@@ -7,7 +7,7 @@ def _read_xml(path):
 
 
 def test_step6_preflight_precedes_every_stamps_branch(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     preflight = xml.index("% begin Windows StaMPS step-6 preflight")
     first_stamps_call = xml.index("stamps(stamps_first_step,6);")
@@ -23,7 +23,7 @@ def test_step6_preflight_precedes_every_stamps_branch(phase_root):
 
 
 def test_step6_preflight_rejects_both_known_windows_regressions(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     preflight = xml.index("% begin Windows StaMPS step-6 preflight")
     end = xml.index("% end Windows StaMPS step-6 preflight", preflight)
     guarded = xml[preflight:end]
@@ -36,7 +36,7 @@ def test_step6_preflight_rejects_both_known_windows_regressions(phase_root):
 
 
 def test_start_callback_persists_extended_error_report(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     assert "getReport(ME, 'extended', 'hyperlinks', 'off')" in xml
     assert "PHASE_StaMPS_error.log" in xml
@@ -52,7 +52,7 @@ def test_start_callback_persists_extended_error_report(phase_root):
 
 
 def test_matlab_source_in_cdata_contains_no_literal_xml_entities(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     code_start = xml.index("<![CDATA[")
     code_end = xml.index("]]>", code_start)
     matlab_source = xml[code_start:code_end]

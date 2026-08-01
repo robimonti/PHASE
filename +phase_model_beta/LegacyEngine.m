@@ -1734,7 +1734,17 @@ classdef LegacyEngine < matlab.apps.AppBase
 
             try
 
+                % Every legacy relative path is rooted explicitly for the
+                % complete run. Results are stored beside the visible PHASE
+                % shortcuts rather than inside the editable engine clone.
+                runtimeRoot = phase_model_beta.projectRoot();
+                previousRunFolder = pwd;
+                runFolderCleanup = onCleanup(@() cd(previousRunFolder)); %#ok<NASGU>
+                cd(runtimeRoot);
+                outputRoot = fileparts(runtimeRoot);
+
                 % --- 0. Prepare the environment ---
+
                 % - 0.1) Add the path to the MatlabFunctions folder
                     addpath(fullfile(phase_model_beta.projectRoot(), 'MatlabFunctions'));
 
@@ -2006,9 +2016,8 @@ classdef LegacyEngine < matlab.apps.AppBase
 
 
                 % - 2.2) Import the shapefile of the AOI
-                if ~flag_AOIbb
-                    fileAOI = shaperead(filepathAOI);
-                end
+                % Loaded later by phase_model_beta.readAoiShapefile so the
+                % map and numerical selection share one geometry.
 
 
                 % - 2.3) Import coordinates of unwrapping reference point
@@ -2052,7 +2061,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 % - 3.1) Removal of all output folders
                 % get the status quo
                 baseFolderName = 'output';
-                allFolders = dir();
+                allFolders = dir(outputRoot);
                 allFolderNames = {allFolders([allFolders.isdir]).name};
                 outputFolders = allFolderNames(startsWith(allFolderNames, baseFolderName));
 
@@ -2064,7 +2073,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         for i = 1:numel(outputFolders)
                             folderToRemove = outputFolders{i};
                             if ~strcmp(folderToRemove, '.') && ~strcmp(folderToRemove, '..')
-                                rmdir(folderToRemove, 's');
+                                rmdir(fullfile(outputRoot,folderToRemove), 's');
                                 fprintf('Removed folder: %s\n', folderToRemove);
                             end
                         end
@@ -2078,7 +2087,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                 % - 3.2) Output folder
                 % get the status quo
-                allFolders = dir();
+                allFolders = dir(outputRoot);
                 allFolderNames = {allFolders([allFolders.isdir]).name};
                 outputFolders = allFolderNames(startsWith(allFolderNames, baseFolderName));
 
@@ -2100,8 +2109,17 @@ classdef LegacyEngine < matlab.apps.AppBase
                     end
                 end
 
-                % create the folder
-                mkdir(outputDir);
+                % Keep relative paths compatible with the scientific helpers,
+                % while placing the actual result beside the PHASE shortcuts.
+                outputDir = fullfile('..',outputDir);
+                [created,createMessage] = mkdir(outputDir);
+                if ~created
+                    error('PHASE_Model_beta:outputCreateFailed', ...
+                        'Could not create output folder %s: %s',outputDir,createMessage);
+                end
+                app.outputDir = char(java.io.File(outputDir).getCanonicalPath());
+                fprintf('Output folder created: %s\n',app.outputDir);
+
 
                 % folder for figures
                 figsDir = fullfile(outputDir, 'figures');
@@ -2166,47 +2184,17 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                     case false
                     % b) shapefile
-                    % read bounding box and check for coordinate type
-                    bboxAOI = [min([fileAOI.X]), max([fileAOI.X]); min([fileAOI.Y]), max([fileAOI.Y])];
-
-                    if all(bboxAOI(1, :) >= -180 & bboxAOI(1, :) <= 180) && all(bboxAOI(2, :) >= -90 & bboxAOI(2, :) <= 90)
-                        fprintf('The shapefile AOI coordinates are geographic (lat/lon).\n');
-                        coordType = 'geographic';
-                    else
-                        fprintf('The shapefile AOI coordinates are projected (x/y).\n');
-                        coordType = 'projected';
-                    end
-
-                    % read the shapefile and automatically detect CRS
-                    try
-                        gtblAOI = readgeotable(filepathAOI);
-                        crsAOI = gtblAOI.Shape.CoordinateSystemType;
-                        fprintf('Detected CRS: %s\n', crsAOI);
-                        if strcmp(crsAOI, 'planar')
-                            detectedCRS = 'projected';
-                        else
-                            detectedCRS = crsAOI;
-                        end
-                    catch ME
-                        % handle cases where the shapefile or CRS cannot be read
-                        if strcmp(ME.identifier, 'MATLAB:readgeotable:missingPRJ')
-                            fprintf('No .prj file found. Cannot determine CRS details.\n');
-                        else
-                            fprintf('Error reading the shapefile or interpreting CRS: %s\n', ME.message);
-                        end
-                        detectedCRS = 'unknown';
-                    end
-
-                    % perform coordinates tranformation based on the input type
-                    if strcmp(coordType, 'geographic') && (strcmp(detectedCRS, 'geographic') || strcmp(detectedCRS, 'unknown'))
-                        lonlatAOI = [fileAOI.X(~isnan(fileAOI.X))', fileAOI.Y(~isnan(fileAOI.Y))'];
-                        [xAOI, yAOI] = deg2utm(lonlatAOI(:,2), lonlatAOI(:,1));
-                        xyAOI = [xAOI, yAOI];
-                    elseif strcmp(coordType, 'projected') && (strcmp(detectedCRS, 'projected') || strcmp(detectedCRS, 'unknown'))
-                        xyAOI = [fileAOI.X(~isnan(fileAOI.X))', fileAOI.Y(~isnan(fileAOI.Y))'];
-                        [latAOI, lonAOI] = utm2deg(xyAOI(:,1), xyAOI(:,2), repmat(utmZone, size(xyAOI,1), 1));
-                        lonlatAOI = [lonAOI, latAOI];
-                    end
+                    % Use the same multipart-aware geographic geometry shown
+                    % in the standalone map.
+                    [lonlatAOI,~,aoiInfo] = phase_model_beta.readAoiShapefile( ...
+                        filepathAOI,filepathIN);
+                    fprintf('The shapefile AOI coordinates are %s.\n',aoiInfo.coordinateType);
+                    fprintf('AOI polygon parts: %d\n',aoiInfo.partCount);
+                    finiteAOI = all(isfinite(lonlatAOI),2);
+                    xyAOI = NaN(size(lonlatAOI));
+                    [xAOI,yAOI] = deg2utm( ...
+                        lonlatAOI(finiteAOI,2),lonlatAOI(finiteAOI,1));
+                    xyAOI(finiteAOI,:) = [xAOI,yAOI];
 
                 end
 
@@ -2217,40 +2205,47 @@ classdef LegacyEngine < matlab.apps.AppBase
                 dataIN_AOI = dataIN(xyIN_AOI_flag, :);
                 displIN_AOI = displIN(xyIN_AOI_flag, :);
                 PSidIN_AOI = PSidIN(xyIN_AOI_flag, :);
+                if isempty(PSidIN_AOI)
+                    error('PHASE_Model_beta:noPsInsideAoi', ...
+                        ['The selected AOI contains no persistent scatterers from the ', ...
+                         'input dataset. Check the AOI shown on the map or select the ', ...
+                         'full PS extent before starting.']);
+                end
 
 
                 % - 4.3) Figure of processing scene & AOI
                 f = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
                 geobasemap satellite
                 hold on
-                switch flag_AOIbb
-                    case true
-                    geoplot(geopolyshape(lonlatAOI(:,2), lonlatAOI(:,1)), 'FaceColor', '#FFFF9F', 'EdgeColor', 'black', 'LineWidth', 1);
-                    case false
-                    geoplot(readgeotable(filepathAOI), 'FaceColor', '#FFFF9F', 'EdgeColor', 'black', 'LineWidth', 1);
-                end
+                legendHandles = gobjects(0); legendLabels = {};
+                aoiPlot = geoplot(geopolyshape(lonlatAOI(:,2), lonlatAOI(:,1)), ...
+                    'FaceColor', '#FFFF9F', 'EdgeColor', 'black', 'LineWidth', 1);
+                legendHandles(end+1) = aoiPlot(1);
+                legendLabels{end+1} = 'AOI';
                 if contains(filepathIN, 'ASC')
                     % detected ASC orbit data
-                    geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'r', 'filled', 'MarkerEdgeColor', 'k')
-                    geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled', 'MarkerEdgeColor', 'k')
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'r', 'filled', 'MarkerEdgeColor', 'k');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled', 'MarkerEdgeColor', 'k');
                     title('Imported PS - ASC orbit', 'FontSize', 20)
                 elseif contains(filepathIN, 'DSC')
                     % detected DSC orbit data
-                    geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'Color', [30 144 255]/255, 'MarkerEdgeColor', 'k')
-                    geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'c', 'filled', 'MarkerEdgeColor', 'k')
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'Color', [30 144 255]/255, 'MarkerEdgeColor', 'k');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'c', 'filled', 'MarkerEdgeColor', 'k');
                     title('Imported PS - DSC orbit', 'FontSize', 20)
                 else
                     % no detected orbit
-                    geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'm')
-                    geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled')
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'm');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled');
                     title('Imported PS', 'FontSize', 20)
                 end
+                legendLabels(end+1:end+2) = {'PS outside AOI','PS inside AOI'};
                 if ~any(isnan(ref_centre_lonlat)) && ~isnan(ref_radius)
                     % add reference area used for unwrapping
-                    geoscatter(ref_centre_lonlat(2), ref_centre_lonlat(1), 10, 'g', 'filled');
+                    legendHandles(end+1) = geoscatter(ref_centre_lonlat(2), ref_centre_lonlat(1), 10, 'g', 'filled');
                     geoplot(lonlat_circle(:,2), lonlat_circle(:,1), 'g', 'LineWidth', 1.2);
+                    legendLabels{end+1} = 'unwrapping ref.';
                 end
-                legend('AOI', 'PS outside AOI', 'PS inside AOI', 'unwrapping ref.', 'FontSize', 13)
+                legend(legendHandles,legendLabels,'FontSize',13)
                 fig1_filename = strcat(figsDir, filesep, 'AOI_PS.png');
                 phase_model_beta.exportFigure(f,fig1_filename);
                 close(f)
@@ -2304,7 +2299,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                 % - 4.5) Determine municipality and define export filenames
                 % use the reference point if valid; otherwise, use the center of the PS data inside the AOI
-                if ~isnan(ref_centre_lonlat(1))
+                if numel(ref_centre_lonlat)>=2 && all(isfinite(ref_centre_lonlat(1:2)))
                     query_lon = ref_centre_lonlat(1);
                     query_lat = ref_centre_lonlat(2);
                 else
@@ -2313,7 +2308,13 @@ classdef LegacyEngine < matlab.apps.AppBase
                 end
 
                 % fetch the location data
-                [municipality, country] = get_place_from_coordinates(query_lon, query_lat);
+                if isfinite(query_lon) && isfinite(query_lat) && ...
+                        abs(query_lon)<=180 && abs(query_lat)<=90
+                    [municipality, country] = get_place_from_coordinates(query_lon, query_lat);
+                else
+                    municipality = 'Unknown'; country = 'Unknown';
+                    fprintf('Reverse geocoding skipped because the AOI centre is invalid.\n');
+                end
                 municipality_exp = create_safe_filename(municipality);
 
                 % define the export filename
@@ -2335,8 +2336,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                 countriesShpPath = fullfile('Extra', 'NaturalEarth', 'ne_50m_admin_0_countries.shp');
                 countries = shaperead(countriesShpPath, 'UseGeoCoords', true);
 
-                aoi_mean_lon = mean(lonlatAOI(:,1));
-                aoi_mean_lat = mean(lonlatAOI(:,2));
+                aoi_mean_lon = mean(lonlatAOI(:,1),'omitnan');
+                aoi_mean_lat = mean(lonlatAOI(:,2),'omitnan');
 
                 % Pre-allocate to prevent undefined variable crashes
                 countryShp = [];

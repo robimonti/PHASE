@@ -2,6 +2,14 @@ function [municipality, country] = get_place_from_coordinates(lon, lat)
 
 % get_place_from_coordinates Get municipality name and country for a given latitude and longitude
 
+municipality = 'Unknown';
+country = 'Unknown';
+if ~isscalar(lon) || ~isscalar(lat) || ~isfinite(lon) || ~isfinite(lat) || ...
+        abs(lon)>180 || abs(lat)>90
+    disp('Reverse geocoding skipped: longitude/latitude are invalid.');
+    return
+end
+
 % API Endpoint URL
 apiURL = sprintf('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%.6f&lon=%.6f', lat, lon);
 

@@ -12,17 +12,20 @@ GEOSPLINTER_FILES = [
 
 
 @pytest.mark.parametrize("filename", GEOSPLINTER_FILES)
-def test_geosplinter_has_isunix_branch(phase_root: Path, filename: str):
+def test_geosplinter_uses_cross_platform_direct_runner(phase_root: Path, filename: str):
     path = phase_root / "MatlabFunctions" / filename
     text = path.read_text(encoding="utf-8")
-    assert "if isunix" in text, f"{filename}: no isunix branch found"
-    assert "tempname()" in text, f"{filename}: missing Windows tempname branch"
-    # Ensure no raw `sprintf('%s < %s', ...)` remains without an isunix guard
-    # (the raw pattern may legitimately appear INSIDE the isunix branch).
-    lines = text.splitlines()
-    in_isunix = False
-    for i, line in enumerate(lines):
-        if "if isunix" in line: in_isunix = True
-        elif line.strip() == "end" and in_isunix: in_isunix = False
-        elif "sprintf(" in line and "'%s < %s'" in line and not in_isunix:
-            pytest.fail(f"{filename}:{i+1}: raw stdin redirect outside isunix guard")
+    assert "runGeoSplinter(" in text, f"{filename}: direct runner not used"
+    assert "tempname()" not in text, f"{filename}: legacy Windows batch file remains"
+    assert "'%s < %s'" not in text, f"{filename}: shell stdin redirection remains"
+    assert "system(job_execution" not in text
+
+
+def test_direct_runner_resolves_windows_executable_and_redirects_job(phase_root: Path):
+    runner = (phase_root / "MatlabFunctions" / "runGeoSplinter.m").read_text(
+        encoding="utf-8"
+    )
+    assert "java.lang.ProcessBuilder" in runner
+    assert "redirectInput(java.io.File(jobFile))" in runner
+    assert "endsWith(lower(executable),'.exe')" in runner
+    assert "candidate.getCanonicalPath()" in runner

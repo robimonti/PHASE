@@ -167,18 +167,10 @@ for id = 1:size(displIN_AOI,1)
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
             gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-            if isunix
-                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution = ['"' temp_bat '"'];
-            end
-            status = system(job_execution);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
             if status ~= 0
-                error('Error executing geoSplinter_analysis for file: %s', file_out);
+                error('Error executing geoSplinter_analysis for file %s: %s', ...
+                    file_out,strtrim(geoOutput));
             end
 
             % define the output file base name from geoSplinter run

@@ -13,7 +13,7 @@ def _start_callback(xml):
 
 
 def test_start_checks_visible_tropo_controls_after_loading_mat(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
 
     load_mat = callback.index("load('input_StaMPS.mat'")
@@ -29,7 +29,7 @@ def test_start_checks_visible_tropo_controls_after_loading_mat(phase_root):
 
 
 def test_start_never_overwrites_mat_to_resolve_a_visible_mismatch(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
 
     assert "SaveButtonPushed(app, event);" not in callback
@@ -38,7 +38,7 @@ def test_start_never_overwrites_mat_to_resolve_a_visible_mismatch(phase_root):
 
 
 def test_start_reports_the_loaded_effective_tropo_controls(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     callback = _start_callback(xml)
 
     assert "Loaded configuration: TRAIN=%d, subtr_tropo=%s, tropo_method=%s" in callback

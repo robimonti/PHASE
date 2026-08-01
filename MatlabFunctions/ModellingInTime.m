@@ -236,7 +236,8 @@ end
 % check for required functions in MatlabFunctions folder
 requiredFunctions = {'read_coherence_tifs', 'compute_varNoise_from_coherence1D', ...
                     'jobFile_analysis', 'geoSplinter_noFig', 'jobFile_synthesis', ...
-                    'compute_B_spline_row', 'f1DEmpCovEst', 'nearestSPD'};
+                    'compute_B_spline_row', 'f1DEmpCovEst', 'nearestSPD', ...
+                    'runGeoSplinter', 'interp1Unique'};
 for func = requiredFunctions
     if ~exist(fullfile('MatlabFunctions', func{1}), 'file')
         error('Required function %s not found in MatlabFunctions folder.', func{1});
@@ -553,7 +554,7 @@ for i = 1:size(dataIN_AOI, 1)
         t_reg = min(obs_p1{i, 2}) : mode_obs : max(max(obs_p1{i, 2}), mode_obs * ceil(max(obs_p1{i, 2})/mode_obs));
     
         % re-sample the signal at the mode with interp1
-        obs_reg = interp1(obs_p1{i, 2}, obs_p1{i, 3}, t_reg, "linear");
+        obs_reg = interp1Unique(obs_p1{i, 2}, obs_p1{i, 3}, t_reg, "linear");
     
         % compute the PSD and amplitude spectrum
         [obs_psd, freq, ~, ~] = sigs2epsd(obs_reg, t_reg', '--noPadding');
@@ -841,18 +842,10 @@ for i = 1:size(dataIN_AOI, 1)
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
             gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-            if isunix
-                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution = ['"' temp_bat '"'];
-            end
-            status = system(job_execution);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
-                error('Error executing geoSplinter_analysis for file: %s', file_out);
+                error('Error executing geoSplinter_analysis for file %s: %s', ...
+                    file_out,strtrim(geoOutput));
             end
 
             % import results
@@ -1156,6 +1149,32 @@ for i = 1:size(dataIN_AOI, 1)
     
         
         % -- 4) Covariance modelling
+        % A temporal covariance cannot be estimated robustly from fewer than
+        % eight finite, distinct epochs.  The legacy code checked this only
+        % after fitting the covariance, so short series could fail while
+        % indexing an empty lag grid even though collocation would eventually
+        % have been disabled.  Keep the valid spline solution and bypass the
+        % covariance/collocation iteration immediately in that case.
+        covariance_times = obs_p2{i, 4}(:);
+        covariance_residuals = obs_p3{i, 5}(:);
+        covariance_valid = isfinite(covariance_times) & isfinite(covariance_residuals);
+        n_obs_coll = sum(covariance_valid);
+        n_epochs_coll = numel(unique(covariance_times(covariance_valid)));
+        if n_obs_coll < 8 || n_epochs_coll < 8
+            warning(['Covariance modelling and collocation skipped for PS %d: ', ...
+                '%d finite observations at %d distinct epochs; at least 8 are required. ', ...
+                'The spline-only temporal result is retained.'], ...
+                PSidIN_AOI(i), n_obs_coll, n_epochs_coll);
+            idx_mCovF = 4;
+            mCovFin = @(c, tau) zeros(size(tau));
+            cFin = 0;
+            varNoise_cov = varNoise;
+            obs_p4{i, 1} = mCovFin;
+            obs_p4{i, 2} = cFin;
+            obs_p4{i, 3} = varNoise_cov;
+            break
+        end
+
         % define the possible empirical models
         % gaussian
         mCovF1 = @(c, tau) c(1) .* exp(-c(2) .* tau.^2);
@@ -1167,6 +1186,34 @@ for i = 1:size(dataIN_AOI, 1)
         % compute the empirical covariance function
         dtau = 2 * mode_obs;
         [~, ~, tauGrid, eCovF, Cecf, ~] = f1DEmpCovEst(obs_p3{i, 5}', obs_p2{i, 4}', dtau, 0);
+
+        % Keep the covariance vectors aligned and reject non-finite/empty
+        % empirical bins before any fixed indexing (the fitter uses bins 1:3).
+        covariance_bin_count = min([numel(tauGrid), numel(eCovF), numel(Cecf)]);
+        if covariance_bin_count > 0
+            tauGrid = tauGrid(1:covariance_bin_count);
+            eCovF = eCovF(1:covariance_bin_count);
+            Cecf = Cecf(1:covariance_bin_count);
+            valid_covariance_bins = isfinite(tauGrid) & isfinite(eCovF) & ...
+                isfinite(Cecf) & Cecf > 0;
+            tauGrid = tauGrid(valid_covariance_bins);
+            eCovF = eCovF(valid_covariance_bins);
+            Cecf = Cecf(valid_covariance_bins);
+        end
+        if numel(tauGrid) < 3 || numel(unique(tauGrid)) < 3
+            warning(['Covariance modelling and collocation skipped for PS %d: ', ...
+                'the empirical covariance contains only %d usable lag bins. ', ...
+                'The spline-only temporal result is retained.'], ...
+                PSidIN_AOI(i), numel(tauGrid));
+            idx_mCovF = 4;
+            mCovFin = @(c, tau) zeros(size(tau));
+            cFin = 0;
+            varNoise_cov = varNoise;
+            obs_p4{i, 1} = mCovFin;
+            obs_p4{i, 2} = cFin;
+            obs_p4{i, 3} = varNoise_cov;
+            break
+        end
         
         % create temporary copies for polynomial fitting
         tauGrid_poly = tauGrid;
@@ -1177,7 +1224,7 @@ for i = 1:size(dataIN_AOI, 1)
         if eCovF(2) < 0
             x = [tauGrid_poly(2), tauGrid_poly(3)];
             y = [eCovF_poly(2), eCovF_poly(3)];
-            tau0_interp = interp1(x, y, 0, 'linear', 'extrap');
+            tau0_interp = interp1Unique(x, y, 0, 'linear', 'extrap');
             tau0_interp = max(tau0_interp, 0);
             tauGrid_poly = [tauGrid_poly(1); 0; tauGrid_poly(2:end)];
             eCovF_poly = [eCovF_poly(1); tau0_interp; eCovF_poly(2:end)];
@@ -1282,6 +1329,21 @@ for i = 1:size(dataIN_AOI, 1)
         
         % evaluate the smoothed covariance in all sampling distances
         eCovF_smooth = polyval(p_eCov, tauGrid(1:idx_end));
+
+        if idx_end < 1 || isempty(eCovF_smooth) || ...
+                any(~isfinite(eCovF_smooth)) || isempty(tauGrid)
+            warning(['Covariance modelling and collocation skipped for PS %d: ', ...
+                'the smoothed covariance is empty or non-finite. ', ...
+                'The spline-only temporal result is retained.'], PSidIN_AOI(i));
+            idx_mCovF = 4;
+            mCovFin = @(c, tau) zeros(size(tau));
+            cFin = 0;
+            varNoise_cov = varNoise;
+            obs_p4{i, 1} = mCovFin;
+            obs_p4{i, 2} = cFin;
+            obs_p4{i, 3} = varNoise_cov;
+            break
+        end
         
         % drop last point if it deviates > 2 std from mean of previous 3
         if length(eCovF_smooth) >= 4
@@ -1307,9 +1369,23 @@ for i = 1:size(dataIN_AOI, 1)
         min_obs = idx_end_min * 2;   % threshold for resampling (30 points)
         if length(Yo) < min_obs
             fine_step = tauGrid(idx_end) / (min_obs - 1);   % finer grid step
+            if ~isfinite(fine_step) || fine_step <= 0
+                warning(['Covariance modelling and collocation skipped for PS %d: ', ...
+                    'the empirical lag interval is not positive. ', ...
+                    'The spline-only temporal result is retained.'], PSidIN_AOI(i));
+                idx_mCovF = 4;
+                mCovFin = @(c, tau) zeros(size(tau));
+                cFin = 0;
+                varNoise_cov = varNoise;
+                obs_p4{i, 1} = mCovFin;
+                obs_p4{i, 2} = cFin;
+                obs_p4{i, 3} = varNoise_cov;
+                break
+            end
             tau_fine = 0:fine_step:tauGrid(idx_end);
             eCovF_smooth_fine = polyval(p_eCov, tau_fine)';
-            Q_fine = interp1(tauGrid(1:idx_end), Cecf(1:idx_end), tau_fine, 'linear', 'extrap');
+            Q_fine = interp1Unique(tauGrid(1:idx_end), Cecf(1:idx_end), ...
+                tau_fine, 'linear', 'extrap');
             tau = tau_fine;
             Yo = eCovF_smooth_fine;
             Q = Q_fine;
@@ -1318,6 +1394,19 @@ for i = 1:size(dataIN_AOI, 1)
         end
         
         % identify zero-crossing point in smoothed curve
+        if isempty(eCovF_smooth) || isempty(tauGrid)
+            warning(['Covariance modelling and collocation skipped for PS %d: ', ...
+                'the resampled covariance grid is empty. ', ...
+                'The spline-only temporal result is retained.'], PSidIN_AOI(i));
+            idx_mCovF = 4;
+            mCovFin = @(c, tau) zeros(size(tau));
+            cFin = 0;
+            varNoise_cov = varNoise;
+            obs_p4{i, 1} = mCovFin;
+            obs_p4{i, 2} = cFin;
+            obs_p4{i, 3} = varNoise_cov;
+            break
+        end
         idxZero_smt = find(eCovF_smooth < 0, 1, 'first');
         if isempty(idxZero_smt)
             idxZero_smt = min(numel(eCovF_smooth), numel(tauGrid));
@@ -1725,18 +1814,10 @@ for i = 1:size(dataIN_AOI, 1)
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
             gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-            if isunix
-                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution = ['"' temp_bat '"'];
-            end
-            status = system(job_execution);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
-                error('Error executing geoSplinter_analysis for file: %s', file_out);
+                error('Error executing geoSplinter_analysis for file %s: %s', ...
+                    file_out,strtrim(geoOutput));
             end
 
             % import normal matrix and normal vector
@@ -1863,18 +1944,10 @@ for i = 1:size(dataIN_AOI, 1)
             % run geoSplinter_synthesis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
             gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
-            if isunix
-                job_execution_syn = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution_syn = ['"' temp_bat '"'];
-            end
-            status = system(job_execution_syn);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
-                error('Error executing geoSplinter_synthesis for file: %s', file_syn);
+                error('Error executing geoSplinter_synthesis for file %s: %s', ...
+                    file_syn,strtrim(geoOutput));
             end
                 
             % results import
@@ -2016,18 +2089,10 @@ for i = 1:size(dataIN_AOI, 1)
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
             gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-            if isunix
-                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution = ['"' temp_bat '"'];
-            end
-            status = system(job_execution);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
-                error('Error executing geoSplinter_analysis for file: %s', file_out);
+                error('Error executing geoSplinter_analysis for file %s: %s', ...
+                    file_out,strtrim(geoOutput));
             end
 
             % import normal matrix and normal vector
@@ -2154,18 +2219,10 @@ for i = 1:size(dataIN_AOI, 1)
             % run geoSplinter_synthesis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
             gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
-            if isunix
-                job_execution_syn = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution_syn = ['"' temp_bat '"'];
-            end
-            status = system(job_execution_syn);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
-                error('Error executing geoSplinter_synthesis for file: %s', file_syn);
+                error('Error executing geoSplinter_synthesis for file %s: %s', ...
+                    file_syn,strtrim(geoOutput));
             end
                 
             % results import

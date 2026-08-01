@@ -186,18 +186,10 @@ for id = 1:size(displIN_AOI,1)
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
             gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-            if isunix
-                job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-            else
-                temp_bat = [tempname() '.bat'];
-                fid = fopen(temp_bat, 'w');
-                fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-                fclose(fid);
-                job_execution = ['"' temp_bat '"'];
-            end
-            status = system(job_execution);
+            [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
             if status ~= 0
-                error('Error executing geoSplinter_analysis for file: %s', file_out);
+                error('Error executing geoSplinter_analysis for file %s: %s', ...
+                    file_out,strtrim(geoOutput));
             end
 
             % define the output file base name from geoSplinter run
@@ -1023,18 +1015,10 @@ for r = rows_to_test
         % Run geoSplinter_analysis
         gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
         gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
-        if isunix
-            job_execution = sprintf('%s < %s', gS_exec, gS_job_file);
-        else
-            temp_bat = [tempname() '.bat'];
-            fid = fopen(temp_bat, 'w');
-            fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-            fclose(fid);
-            job_execution = ['"' temp_bat '"'];
-        end
-        status = system(job_execution);
+        [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
         if status ~= 0
-            error('Error executing geoSplinter_analysis for file: %s', file_out);
+            error('Error executing geoSplinter_analysis for file %s: %s', ...
+                file_out,strtrim(geoOutput));
         end
 
         % Import results
@@ -1364,18 +1348,10 @@ jobFile_synthesis(data_dim, type_spl, file_spl, file_est, file_syn, gS_input_pat
 % Run geoSplinter_synthesis
 gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
 gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
-if isunix
-    job_execution_syn = sprintf('%s < %s', gS_exec, gS_job_file);
-else
-    temp_bat = [tempname() '.bat'];
-    fid = fopen(temp_bat, 'w');
-    fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-    fclose(fid);
-    job_execution_syn = ['"' temp_bat '"'];
-end
-status = system(job_execution_syn);
+[status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
 if status ~= 0
-    error('Error executing geoSplinter_synthesis for file: %s', file_syn);
+    error('Error executing geoSplinter_synthesis for file %s: %s', ...
+        file_syn,strtrim(geoOutput));
 end
 
 % Results import
@@ -1452,18 +1428,10 @@ jobFile_synthesis(data_dim, type_spl, file_spl, [gS_est_obs, '.txt'], file_syn_o
 % Run geoSplinter_synthesis
 gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
 gS_job_file = fullfile('.', gS_job_path, [file_syn_obs, '.job']);
-if isunix
-    job_execution_syn_obs = sprintf('%s < %s', gS_exec, gS_job_file);
-else
-    temp_bat = [tempname() '.bat'];
-    fid = fopen(temp_bat, 'w');
-    fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file);
-    fclose(fid);
-    job_execution_syn_obs = ['"' temp_bat '"'];
-end
-status = system(job_execution_syn_obs);
+[status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
 if status ~= 0
-    error('Error executing geoSplinter_synthesis for Obs Grid: %s', file_syn_obs);
+    error('Error executing geoSplinter_synthesis for Obs Grid %s: %s', ...
+        file_syn_obs,strtrim(geoOutput));
 end
 
 % Import results
@@ -1528,18 +1496,10 @@ if exist('xy_EXTR', 'var') && ~isempty(xy_EXTR)
 
     % Run geoSplinter_synthesis
     gS_job_file_extr = fullfile('.', gS_job_path, [file_syn_extr, '.job']);
-    if isunix
-        job_exec_extr = sprintf('%s < %s', gS_exec, gS_job_file_extr);
-    else
-        temp_bat = [tempname() '.bat'];
-        fid = fopen(temp_bat, 'w');
-        fprintf(fid, '@echo off\r\n"%s" < "%s"\r\n', gS_exec, gS_job_file_extr);
-        fclose(fid);
-        job_exec_extr = ['"' temp_bat '"'];
-    end
-    status = system(job_exec_extr);
+    [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file_extr);
     if status ~= 0
-        error('Error executing geoSplinter_synthesis for Extrapolation Grid');
+        error('Error executing geoSplinter_synthesis for Extrapolation Grid: %s', ...
+            strtrim(geoOutput));
     end
 
     spl_extr_full = readmatrix(fullfile(gS_synth_path, file_syn_extr));

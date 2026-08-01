@@ -5,7 +5,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MLAPP = ROOT / "PHASE_model.mlapp"
+MLAPP = ROOT / "legacy" / "PHASE_model.mlapp"
 OUTPUT = ROOT / "+phase_model_beta" / "LegacyEngine.m"
 
 
@@ -53,6 +53,81 @@ def extract(xml: str) -> str:
     code = code.replace(
         "fullfile(pwd, 'PHASE_logo.png')",
         "fullfile(phase_model_beta.projectRoot(), 'PHASE_logo.png')",
+    )
+
+    run_root_anchor = "                % --- 0. Prepare the environment ---"
+    if code.count(run_root_anchor) != 1:
+        raise RuntimeError("Could not locate Model processing-root anchor")
+    code = code.replace(
+        run_root_anchor,
+        """\
+                % Every legacy relative path is rooted explicitly for the
+                % complete run. Results are stored beside the visible PHASE
+                % shortcuts rather than inside the editable engine clone.
+                runtimeRoot = phase_model_beta.projectRoot();
+                previousRunFolder = pwd;
+                runFolderCleanup = onCleanup(@() cd(previousRunFolder)); %#ok<NASGU>
+                cd(runtimeRoot);
+                outputRoot = fileparts(runtimeRoot);
+
+                % --- 0. Prepare the environment ---
+""",
+        1,
+    )
+
+    output_scan_anchor = """\
+                allFolders = dir();
+                allFolderNames = {allFolders([allFolders.isdir]).name};
+                outputFolders = allFolderNames(startsWith(allFolderNames, baseFolderName));
+"""
+    if code.count(output_scan_anchor) != 2:
+        raise RuntimeError("Could not locate both Model output-folder scans")
+    code = code.replace(
+        output_scan_anchor,
+        """\
+                allFolders = dir(outputRoot);
+                allFolderNames = {allFolders([allFolders.isdir]).name};
+                outputFolders = allFolderNames(startsWith(allFolderNames, baseFolderName));
+""",
+    )
+
+    output_remove_anchor = """\
+                            folderToRemove = outputFolders{i};
+                            if ~strcmp(folderToRemove, '.') && ~strcmp(folderToRemove, '..')
+                                rmdir(folderToRemove, 's');
+"""
+    if code.count(output_remove_anchor) != 1:
+        raise RuntimeError("Could not locate Model output-folder removal")
+    code = code.replace(
+        output_remove_anchor,
+        """\
+                            folderToRemove = outputFolders{i};
+                            if ~strcmp(folderToRemove, '.') && ~strcmp(folderToRemove, '..')
+                                rmdir(fullfile(outputRoot,folderToRemove), 's');
+""",
+        1,
+    )
+
+    output_create_anchor = """\
+                % create the folder
+                mkdir(outputDir);"""
+    if code.count(output_create_anchor) != 1:
+        raise RuntimeError("Could not locate Model output-folder creation")
+    code = code.replace(
+        output_create_anchor,
+        """\
+                % Keep relative paths compatible with the scientific helpers,
+                % while placing the actual result beside the PHASE shortcuts.
+                outputDir = fullfile('..',outputDir);
+                [created,createMessage] = mkdir(outputDir);
+                if ~created
+                    error('PHASE_Model_beta:outputCreateFailed', ...
+                        'Could not create output folder %s: %s',outputDir,createMessage);
+                end
+                app.outputDir = char(java.io.File(outputDir).getCanonicalPath());
+                fprintf('Output folder created: %s\\n',app.outputDir);
+""",
+        1,
     )
 
     autoload_start = "            % Automatic load from input_model.mat if it exists\n"
@@ -295,6 +370,142 @@ def extract(xml: str) -> str:
     if code.count(polygon_anchor) != 1:
         raise RuntimeError("Could not locate Model AOI polygon anchor")
     code = code.replace(polygon_anchor, polygon_replacement, 1)
+
+    shapefile_start = "                    % b) shapefile\n                    % read bounding box and check for coordinate type\n"
+    shapefile_end = "                end\n                \n                % check which PS are inside the AOI\n"
+    if code.count(shapefile_start) != 1 or code.count(shapefile_end) != 1:
+        raise RuntimeError("Could not locate Model shapefile AOI block")
+    start = code.index(shapefile_start)
+    end = code.index(shapefile_end,start)
+    shapefile_replacement = """\
+                    % b) shapefile
+                    % Use the same multipart-aware geographic geometry shown
+                    % in the standalone map.
+                    [lonlatAOI,~,aoiInfo] = phase_model_beta.readAoiShapefile( ...
+                        filepathAOI,filepathIN);
+                    fprintf('The shapefile AOI coordinates are %s.\\n',aoiInfo.coordinateType);
+                    fprintf('AOI polygon parts: %d\\n',aoiInfo.partCount);
+                    finiteAOI = all(isfinite(lonlatAOI),2);
+                    xyAOI = NaN(size(lonlatAOI));
+                    [xAOI,yAOI] = deg2utm( ...
+                        lonlatAOI(finiteAOI,2),lonlatAOI(finiteAOI,1));
+                    xyAOI(finiteAOI,:) = [xAOI,yAOI];
+
+"""
+    code = code[:start] + shapefile_replacement + code[end:]
+
+    shapefile_import_anchor = """\
+                % - 2.2) Import the shapefile of the AOI
+                if ~flag_AOIbb
+                    fileAOI = shaperead(filepathAOI);
+                end
+"""
+    shapefile_import_replacement = """\
+                % - 2.2) Import the shapefile of the AOI
+                % Loaded later by phase_model_beta.readAoiShapefile so the
+                % map and numerical selection share one geometry.
+"""
+    if code.count(shapefile_import_anchor) != 1:
+        raise RuntimeError("Could not locate legacy shapefile import")
+    code = code.replace(shapefile_import_anchor,shapefile_import_replacement,1)
+
+    ps_filter_anchor = "                PSidIN_AOI = PSidIN(xyIN_AOI_flag, :);\n"
+    if code.count(ps_filter_anchor) != 1:
+        raise RuntimeError("Could not locate Model AOI PS-filter anchor")
+    code = code.replace(
+        ps_filter_anchor,
+        ps_filter_anchor
+        + "                if isempty(PSidIN_AOI)\n"
+          "                    error('PHASE_Model_beta:noPsInsideAoi', ...\n"
+          "                        ['The selected AOI contains no persistent scatterers from the ', ...\n"
+          "                         'input dataset. Check the AOI shown on the map or select the ', ...\n"
+          "                         'full PS extent before starting.']);\n"
+          "                end\n",
+        1,
+    )
+
+    figure_start = "                % - 4.3) Figure of processing scene & AOI\n"
+    figure_end = "                fig1_filename = strcat(figsDir, filesep, 'AOI_PS.png');\n"
+    if code.count(figure_start) != 1 or code.count(figure_end) != 1:
+        raise RuntimeError("Could not locate Model AOI report figure block")
+    start = code.index(figure_start)
+    end = code.index(figure_end,start)
+    figure_replacement = """\
+                % - 4.3) Figure of processing scene & AOI
+                f = figure('Visible', 'off', 'Position', [100, 100, 1200, 600]);
+                geobasemap satellite
+                hold on
+                legendHandles = gobjects(0); legendLabels = {};
+                aoiPlot = geoplot(geopolyshape(lonlatAOI(:,2), lonlatAOI(:,1)), ...
+                    'FaceColor', '#FFFF9F', 'EdgeColor', 'black', 'LineWidth', 1);
+                legendHandles(end+1) = aoiPlot(1);
+                legendLabels{end+1} = 'AOI';
+                if contains(filepathIN, 'ASC')
+                    % detected ASC orbit data
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'r', 'filled', 'MarkerEdgeColor', 'k');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled', 'MarkerEdgeColor', 'k');
+                    title('Imported PS - ASC orbit', 'FontSize', 20)
+                elseif contains(filepathIN, 'DSC')
+                    % detected DSC orbit data
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'Color', [30 144 255]/255, 'MarkerEdgeColor', 'k');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'c', 'filled', 'MarkerEdgeColor', 'k');
+                    title('Imported PS - DSC orbit', 'FontSize', 20)
+                else
+                    % no detected orbit
+                    legendHandles(end+1) = geoscatter(lonlatIN(:,2), lonlatIN(:,1), 30, 'm');
+                    legendHandles(end+1) = geoscatter(lonlatIN_AOI(:,2), lonlatIN_AOI(:,1), 30, 'm', 'filled');
+                    title('Imported PS', 'FontSize', 20)
+                end
+                legendLabels(end+1:end+2) = {'PS outside AOI','PS inside AOI'};
+                if ~any(isnan(ref_centre_lonlat)) && ~isnan(ref_radius)
+                    % add reference area used for unwrapping
+                    legendHandles(end+1) = geoscatter(ref_centre_lonlat(2), ref_centre_lonlat(1), 10, 'g', 'filled');
+                    geoplot(lonlat_circle(:,2), lonlat_circle(:,1), 'g', 'LineWidth', 1.2);
+                    legendLabels{end+1} = 'unwrapping ref.';
+                end
+                legend(legendHandles,legendLabels,'FontSize',13)
+"""
+    code = code[:start] + figure_replacement + code[end:]
+
+    reverse_anchor = """\
+                if ~isnan(ref_centre_lonlat(1))
+                    query_lon = ref_centre_lonlat(1);
+                    query_lat = ref_centre_lonlat(2);
+                else
+                    query_lon = mean(lonlatIN_AOI(:,1), 'omitnan');
+                    query_lat = mean(lonlatIN_AOI(:,2), 'omitnan');
+                end
+                \n                % fetch the location data
+                [municipality, country] = get_place_from_coordinates(query_lon, query_lat);
+"""
+    reverse_replacement = """\
+                if numel(ref_centre_lonlat)>=2 && all(isfinite(ref_centre_lonlat(1:2)))
+                    query_lon = ref_centre_lonlat(1);
+                    query_lat = ref_centre_lonlat(2);
+                else
+                    query_lon = mean(lonlatIN_AOI(:,1), 'omitnan');
+                    query_lat = mean(lonlatIN_AOI(:,2), 'omitnan');
+                end
+
+                % fetch the location data
+                if isfinite(query_lon) && isfinite(query_lat) && ...
+                        abs(query_lon)<=180 && abs(query_lat)<=90
+                    [municipality, country] = get_place_from_coordinates(query_lon, query_lat);
+                else
+                    municipality = 'Unknown'; country = 'Unknown';
+                    fprintf('Reverse geocoding skipped because the AOI centre is invalid.\\n');
+                end
+"""
+    if code.count(reverse_anchor) != 1:
+        raise RuntimeError("Could not locate Model reverse-geocoding block")
+    code = code.replace(reverse_anchor,reverse_replacement,1)
+    code = code.replace(
+        "                aoi_mean_lon = mean(lonlatAOI(:,1));\n"
+        "                aoi_mean_lat = mean(lonlatAOI(:,2));",
+        "                aoi_mean_lon = mean(lonlatAOI(:,1),'omitnan');\n"
+        "                aoi_mean_lat = mean(lonlatAOI(:,2),'omitnan');",
+        1,
+    )
 
     grid_start = "                % - 4.4) Create the interpolation grid / centerline based on projDim\n"
     grid_end = "                % - 4.5) Determine municipality and define export filenames\n"

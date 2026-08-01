@@ -1,10 +1,9 @@
 ﻿# PHASE Windows Installer
 
-Wizard end-to-end (GUI WPF) che installa la beta standalone di PHASE e tutte le sue dipendenze su
+Wizard end-to-end (GUI WPF) che installa PHASE 6.0 e tutte le sue dipendenze su
 Windows: MATLAB detection, SNAP install, Python 3.11+ silent install, clone di
 PHASE/StaMPS/TRAIN, download verificato dei binari Triangle/snaphu, configurazione `MATLAB_EXE` +
-`python.txt` + `savepath`. Per default clona il branch
-`codex/phase-stamps-beta`; il branch può essere sovrascritto con
+`python.txt` + `savepath`. Per default clona il branch `main`; il branch può essere sovrascritto con
 `-PhaseBranch`.
 
 ## File
@@ -46,7 +45,7 @@ Install-Module -Name ps2exe -Scope CurrentUser -Force
 powershell -ExecutionPolicy Bypass -File compile-to-exe.ps1
 ```
 
-Produce `install-phase-beta.exe` (~3 MB) accanto allo script.
+Produce `install-phase.exe` accanto allo script.
 
 ### 2. Bundle l'installer SNAP
 
@@ -55,17 +54,17 @@ accanto a sé. Per distribuirlo come pacchetto self-contained:
 
 ```powershell
 # Layout finale del pacchetto:
-phase-installer-v1.0.0\
-├── install-phase-beta.exe                                  # 3 MB
+phase-installer-v6.0.0\
+├── install-phase.exe
 └── installers\
     └── esa-snap_sentinel_windows-13.0.0.exe               # ~500 MB
 
 # Comprimi:
-Compress-Archive -Path phase-installer-v1.0.0 -DestinationPath phase-installer-v1.0.0.zip
+Compress-Archive -Path phase-installer-v6.0.0 -DestinationPath phase-installer-v6.0.0.zip
 ```
 
 L'utente finale estrae lo zip e fa doppio click su
-`install-phase-beta.exe`.
+`install-phase.exe`.
 
 ### 3. SmartScreen / firma digitale
 
@@ -120,12 +119,12 @@ install-phase.ps1
 5. **Cartella destinazione** — default `%USERPROFILE%\Desktop\PHASE`.
    Validazione: scrivibile, no OneDrive (warning, non blocco), no caratteri
    non-ASCII.
-6. **Installazione** — clona il branch beta di PHASE + StaMPS + TRAIN, scarica e verifica i nove
+6. **Installazione** — clona il branch `main` di PHASE + StaMPS + TRAIN, scarica e verifica i nove
    eseguibili StaMPS Windows (incluso `snaphu.exe`; un fallimento interrompe
    l'installazione), scrive `MATLAB_EXE` env var, scrive
    `%APPDATA%\PHASE\python.txt`, scrive `project.conf.template`, lancia
-   `matlab.exe -batch` per addpath+savepath, rimuove dal runtime i vecchi
-   `.mlapp` e i file di sviluppo. Log live in console scrollabile.
+   `matlab.exe -batch` per addpath+savepath, rimuove dal runtime `legacy` e i
+   file di sviluppo. Log live in console scrollabile.
 7. **Fine** — riepilogo + bottoni "Apri cartella PHASE" e "Apri log".
 
 La cartella visibile `PHASE` contiene i collegamenti a PHASE Preprocessing,
@@ -134,7 +133,7 @@ esplicitamente la cartella dataset `ASC_*`/`DSC_*` prima di aprire l'app. Il mot
 standalone è nella sottocartella visibile `engine`, così i sorgenti MATLAB restano
 ispezionabili e modificabili. StaMPS non viene comunque avviato accidentalmente
 nella root e può anche essere aperto automaticamente dal preprocessing. Nessuna
-delle tre beta carica un `.mlapp` a runtime; tutte usano lo stesso shell HTML
+dei tre moduli carica un `.mlapp` a runtime; tutti usano lo stesso shell HTML
 chiaro e motori MATLAB testuali espliciti.
 
 ## Path configurati automaticamente

@@ -79,7 +79,7 @@ classdef App < handle
             obj.UpdateStatus = obj.UpdateContext.message;
             obj.Transfer = defaultTransfer();
 
-            obj.UIFigure = uifigure('Name', 'PHASE · Preprocessing Beta', ...
+            obj.UIFigure = uifigure('Name', 'PHASE · Preprocessing', ...
                 'Color', [1 1 1], 'Position', centeredPosition(1500, 920));
             obj.UIFigure.UserData = obj;
             obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
@@ -111,7 +111,7 @@ classdef App < handle
             catch ME
                 obj.Status = 'error'; obj.StatusDetail = ME.message;
                 obj.appendLog(['Engine initialisation failed [' ME.identifier ']: ' ME.message]);
-                obj.showError('PHASE Preprocessing Beta', ME.message);
+                obj.showError('PHASE Preprocessing', ME.message);
             end
             obj.sendState();
         end
@@ -184,7 +184,7 @@ classdef App < handle
                 obj.IsRunning = false;
                 obj.Status = 'error'; obj.StatusDetail = ME.message;
                 obj.appendLog(['Interface action failed [' ME.identifier ']: ' ME.message]);
-                obj.showError('PHASE Preprocessing Beta', ME.message);
+                obj.showError('PHASE Preprocessing', ME.message);
                 obj.sendState();
             end
         end
@@ -1059,7 +1059,7 @@ classdef App < handle
                 'footprints',{obj.MapFootprints},'polygon',obj.MapPolygon);
             updateState = struct('context',obj.UpdateContext, ...
                 'results',{obj.UpdateResults},'status',obj.UpdateStatus,'busy',obj.UpdateBusy);
-            state = struct('kind','state','version','0.1.0-beta', ...
+            state = struct('kind','state','version','6.0.0', ...
                 'workDir',fullfile(obj.RootDir,'PHASE_Preprocessing'), ...
                 'configPath',fullfile(obj.RootDir,'PHASE_Preprocessing','input_preprocessing.mat'), ...
                 'schema',phase_preprocessing_beta.schema(), ...

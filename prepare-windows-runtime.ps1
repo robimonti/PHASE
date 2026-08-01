@@ -10,7 +10,7 @@ $BinariesUrl = 'https://github.com/pyccino/StaMPS/releases/download/windows-port
 
 function Write-Step {
     param([string]$Message)
-    Write-Host "[PHASE beta] $Message" -ForegroundColor Cyan
+    Write-Host "[PHASE 6.0] $Message" -ForegroundColor Cyan
 }
 
 function Invoke-Git {
@@ -102,8 +102,8 @@ function Install-StampsBinaries {
     Write-Step 'All 9 native StaMPS executables are ready.'
 }
 
-if (-not (Test-Path (Join-Path $PhaseRoot 'PHASE_Preprocessing\PHASE_StaMPS_beta.m'))) {
-    throw "PHASE standalone beta was not found in $PhaseRoot. Run this script from the extracted package root."
+if (-not (Test-Path (Join-Path $PhaseRoot 'PHASE_Preprocessing\PHASE_StaMPS.m'))) {
+    throw "PHASE 6.0 was not found in $PhaseRoot. Run this script from the repository root."
 }
 
 $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
@@ -133,8 +133,8 @@ if ($missingRequired.Count -gt 0) {
 }
 
 Write-Host ''
-Write-Host 'PHASE beta dependencies are ready.' -ForegroundColor Green
+Write-Host 'PHASE 6.0 dependencies are ready.' -ForegroundColor Green
 Write-Host "StaMPS: $StampsRoot"
 Write-Host "TRAIN:  $TrainRoot"
 Write-Host ''
-Write-Host 'Next: restart MATLAB, cd to this folder, run addpath(genpath(pwd)) and launch PHASE_Preprocessing_beta.'
+Write-Host 'Next: restart MATLAB, cd to this folder, run addpath(genpath(pwd)) and launch PHASE_Preprocessing.'

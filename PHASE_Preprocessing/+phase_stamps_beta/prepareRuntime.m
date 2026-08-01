@@ -47,7 +47,7 @@ if ~isempty(trainRoot)
 elseif cfg.train_flag == 0 && strcmpi(strtrim(cfg.subtr_tropo),'y')
     error('PHASE_StaMPS_beta:trainRuntimeMissing', ...
         ['TRAIN correction is enabled, but no TRAIN clone was found beside ', ...
-         'PHASE/StaMPS. Run prepare-beta-test-windows.ps1 or disable TRAIN.']);
+         'PHASE/StaMPS. Run prepare-windows-runtime.ps1 or disable TRAIN.']);
 end
 end
 

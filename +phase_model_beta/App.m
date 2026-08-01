@@ -22,6 +22,8 @@ classdef App < handle
         DiaryActive = false
         MapBase
         MapPolygon
+        MapPsExtent = zeros(0,2)
+        MapAoiFootprints = struct([])
         MapTileBusy = false
     end
 
@@ -36,11 +38,13 @@ classdef App < handle
             obj.IsDirty = ~info.exists;
             obj.MapBase = phase_model_beta.mapBase();
             obj.MapPolygon = configPolygon(obj.Config);
+            obj.applyDefaultPsBounds(false);
+            obj.refreshMapAoi(false);
             obj.configureLiveLog();
             obj.ensureAssets();
 
             obj.UIFigure = uifigure( ...
-                'Name','PHASE · Geospatial Model Beta', ...
+                'Name','PHASE · Geospatial Model', ...
                 'Color',[1 1 1], ...
                 'Position',centeredPosition(1500,920));
             obj.UIFigure.UserData = obj;
@@ -61,10 +65,15 @@ classdef App < handle
                 obj.Engine.UIFigure.CloseRequestFcn = @(~,~) obj.hideEngine();
                 obj.Engine.UIFigure.Visible = 'off';
                 phase_model_beta.applyConfigToEngine(obj.Engine,obj.Config);
-                if info.exists
+                if info.exists && ~obj.IsDirty
                     obj.Status = 'saved';
                     obj.StatusDetail = 'Configuration loaded; model ready';
                     obj.appendLog(['Loaded configuration: ' info.path]);
+                elseif info.exists
+                    obj.Status = 'idle';
+                    obj.StatusDetail = 'Default PS extent detected; save before starting';
+                    obj.appendLog(['Loaded configuration and initialised its missing AOI: ' ...
+                        info.path]);
                 else
                     obj.Status = 'idle';
                     obj.StatusDetail = 'Review and save the initial configuration';
@@ -75,7 +84,7 @@ classdef App < handle
                 obj.Status = 'error';
                 obj.StatusDetail = ME.message;
                 obj.appendLog(['Engine initialisation failed [' ME.identifier ']: ' ME.message]);
-                obj.showError('PHASE Model Beta',ME.message);
+                obj.showError('PHASE Model',ME.message);
             end
             obj.sendState();
         end
@@ -159,22 +168,27 @@ classdef App < handle
                     obj.StatusDetail = ME.message;
                 end
                 obj.appendLog(['Interface action failed [' ME.identifier ']: ' ME.message]);
-                obj.showError('PHASE Model Beta',ME.message);
+                obj.showError('PHASE Model',ME.message);
                 obj.sendState();
             end
         end
 
         function updateFromPayload(obj,payload)
             candidate = obj.payloadConfig(payload);
+            inputChanged = ~strcmp(char(string(candidate.filepathIN)), ...
+                char(string(obj.Config.filepathIN)));
             obj.Config = candidate;
-            obj.MapPolygon = configPolygon(candidate);
-            obj.IsDirty = ~phase_model_beta.configsEqual(candidate,obj.SavedConfig);
+            if inputChanged
+                obj.applyDefaultPsBounds(true);
+            end
+            obj.refreshMapAoi(false);
+            obj.IsDirty = ~phase_model_beta.configsEqual(obj.Config,obj.SavedConfig);
             if ~obj.IsRunning
                 obj.Status = ternary(obj.IsDirty,'idle','saved');
                 obj.StatusDetail = ternary(obj.IsDirty, ...
                     'Unsaved changes','Configuration saved and ready');
             end
-            obj.sendStatus();
+            obj.sendState();
         end
 
         function saveFromPayload(obj,payload)
@@ -187,7 +201,7 @@ classdef App < handle
             pathValue = phase_model_beta.saveConfig(obj.RootDir,candidate);
             obj.Config = candidate;
             obj.SavedConfig = candidate;
-            obj.MapPolygon = configPolygon(candidate);
+            obj.refreshMapAoi(true);
             obj.IsDirty = false;
             phase_model_beta.applyConfigToEngine(obj.Engine,candidate);
             obj.Engine.UIFigure.Visible = 'off';
@@ -209,10 +223,14 @@ classdef App < handle
             obj.SavedConfig = candidate;
             obj.MapPolygon = configPolygon(candidate);
             obj.IsDirty = false;
-            phase_model_beta.applyConfigToEngine(obj.Engine,candidate);
+            obj.applyDefaultPsBounds(false);
+            obj.refreshMapAoi(true);
+            phase_model_beta.applyConfigToEngine(obj.Engine,obj.Config);
             obj.Engine.UIFigure.Visible = 'off';
-            obj.Status = 'saved';
-            obj.StatusDetail = 'Configuration loaded';
+            obj.Status = ternary(obj.IsDirty,'idle','saved');
+            obj.StatusDetail = ternary(obj.IsDirty, ...
+                'Default PS extent detected; save before starting', ...
+                'Configuration loaded');
             obj.appendLog(['Loaded configuration: ' info.path]);
             obj.sendState();
         end
@@ -270,6 +288,7 @@ classdef App < handle
                     obj.StatusDetail = ME.message;
                     obj.Progress.phase = 'Processing failed';
                     obj.appendLog(['Processing failed [' ME.identifier ']: ' ME.message]);
+                    obj.appendLog(getReport(ME,'extended','hyperlinks','off'));
                     obj.showError('PHASE Model processing failed',ME.message);
                 end
                 obj.Progress.elapsedSeconds = elapsedSeconds(obj.RunStartedAt);
@@ -313,6 +332,12 @@ classdef App < handle
             end
             if isempty(selected), return; end
             obj.Config.(fieldName) = selected;
+            if strcmp(fieldName,'filepathIN')
+                obj.applyDefaultPsBounds(true);
+            elseif strcmp(fieldName,'filepathAOI')
+                obj.Config.flag_AOIbb = false;
+            end
+            obj.refreshMapAoi(true);
             obj.IsDirty = ~phase_model_beta.configsEqual(obj.Config,obj.SavedConfig);
             obj.Status = 'idle';
             obj.StatusDetail = 'Unsaved changes';
@@ -331,6 +356,7 @@ classdef App < handle
             candidate.aoi_polygon_lonlat = bboxPolygon(bounds);
             obj.Config = candidate;
             obj.MapPolygon = candidate.aoi_polygon_lonlat;
+            obj.MapAoiFootprints = struct([]);
             obj.IsDirty = ~phase_model_beta.configsEqual(candidate,obj.SavedConfig);
             obj.Status = 'idle';
             obj.StatusDetail = 'Full PS extent estimated; save before starting';
@@ -338,6 +364,80 @@ classdef App < handle
                 'AOI set to full PS extent: lon %.6f to %.6f, lat %.6f to %.6f.', ...
                 bounds(1),bounds(2),bounds(3),bounds(4)));
             obj.sendState();
+        end
+
+        function applyDefaultPsBounds(obj,force)
+            if nargin < 2, force = false; end
+            inputPath = char(string(obj.Config.filepathIN));
+            obj.MapPsExtent = zeros(0,2);
+            if isempty(strtrim(inputPath)) || ~isfile(inputPath)
+                obj.MapPolygon = configPolygon(obj.Config);
+                return
+            end
+            try
+                bounds = phase_model_beta.estimatePsBoundingBox(inputPath);
+                obj.MapPsExtent = bboxPolygon(bounds);
+                existingPolygon = configPolygon(obj.Config);
+                hasShapefile = ~obj.Config.flag_AOIbb && ...
+                    ~isempty(strtrim(char(string(obj.Config.filepathAOI))));
+                if ~isempty(existingPolygon) || hasShapefile
+                    obj.MapPolygon = existingPolygon;
+                    return
+                end
+                obj.Config.flag_AOIbb = true;
+                obj.Config.lonMinAOI = bounds(1);
+                obj.Config.lonMaxAOI = bounds(2);
+                obj.Config.latMinAOI = bounds(3);
+                obj.Config.latMaxAOI = bounds(4);
+                obj.Config.aoi_polygon_lonlat = bboxPolygon(bounds);
+                obj.MapPolygon = obj.Config.aoi_polygon_lonlat;
+                obj.IsDirty = ~phase_model_beta.configsEqual( ...
+                    obj.Config,obj.SavedConfig);
+                obj.appendLog(sprintf( ...
+                    ['Default AOI fitted to the PS extent: lon %.6f to %.6f, ' ...
+                     'lat %.6f to %.6f.'], ...
+                    bounds(1),bounds(2),bounds(3),bounds(4)));
+            catch ME
+                obj.appendLog(['Could not initialise the AOI from the PS file [' ...
+                    ME.identifier ']: ' ME.message]);
+            end
+        end
+
+        function refreshMapAoi(obj,logFailures)
+            if nargin < 2, logFailures = false; end
+            obj.MapAoiFootprints = struct([]);
+            if obj.Config.flag_AOIbb
+                obj.MapPolygon = configPolygon(obj.Config);
+                return
+            end
+            obj.MapPolygon = zeros(0,2);
+            shapefilePath = char(string(obj.Config.filepathAOI));
+            if isempty(strtrim(shapefilePath)) || ~isfile(shapefilePath), return; end
+            try
+                [~,segments,info] = phase_model_beta.readAoiShapefile( ...
+                    shapefilePath,obj.Config.filepathIN);
+                [~,shapefileName,extension] = fileparts(shapefilePath);
+                features = repmat(struct('id','','name','','source','', ...
+                    'selected',true,'coordinates',zeros(0,2)),1,numel(segments));
+                for partIndex = 1:numel(segments)
+                    features(partIndex).id = sprintf('aoi-shapefile-%d',partIndex);
+                    features(partIndex).name = sprintf('Selected AOI · part %d',partIndex);
+                    features(partIndex).source = [shapefileName extension];
+                    features(partIndex).selected = true;
+                    features(partIndex).coordinates = segments{partIndex};
+                end
+                obj.MapAoiFootprints = features;
+                if logFailures
+                    obj.appendLog(sprintf( ...
+                        'AOI shapefile displayed on map: %s (%d polygon part(s), %s coordinates).', ...
+                        shapefilePath,info.partCount,info.coordinateType));
+                end
+            catch ME
+                if logFailures
+                    obj.appendLog(['Could not display the selected AOI shapefile [' ...
+                        ME.identifier ']: ' ME.message]);
+                end
+            end
         end
 
         function requestHardStop(obj)
@@ -373,6 +473,7 @@ classdef App < handle
             end
             if ~isequal(polygon(1,:),polygon(end,:)), polygon(end+1,:)=polygon(1,:); end
             obj.MapPolygon = polygon;
+            obj.MapAoiFootprints = struct([]);
             obj.Config.flag_AOIbb = true;
             obj.Config.aoi_polygon_lonlat = polygon;
             obj.Config.lonMinAOI = values(1); obj.Config.lonMaxAOI = values(2);
@@ -446,11 +547,26 @@ classdef App < handle
 
         function sendState(obj)
             if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
+            if isempty(obj.MapPsExtent)
+                mapFootprints = struct([]);
+            else
+                mapFootprints = struct( ...
+                    'id','ps-extent','name','PS extent', ...
+                    'source','Selected displacement file','selected',false, ...
+                    'coordinates',obj.MapPsExtent);
+            end
+            if ~isempty(obj.MapAoiFootprints)
+                if isempty(mapFootprints)
+                    mapFootprints = obj.MapAoiFootprints;
+                else
+                    mapFootprints = [mapFootprints obj.MapAoiFootprints];
+                end
+            end
             mapState = struct('coastlines',{obj.MapBase}, ...
-                'footprints',{struct([])},'polygon',obj.MapPolygon);
+                'footprints',{mapFootprints},'polygon',obj.MapPolygon);
             state = struct( ...
                 'kind','state', ...
-                'version','0.2.0-beta', ...
+                'version','6.0.0', ...
                 'schema',phase_model_beta.schema(), ...
                 'config',phase_model_beta.configToUi(obj.Config), ...
                 'rootDir',obj.RootDir, ...

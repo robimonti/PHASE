@@ -42,7 +42,7 @@ Cecf_poly = Cecf;
 if length(eCovF) > 2 && eCovF(2) < 0
     x = [tauGrid_poly(2), tauGrid_poly(3)];
     y = [eCovF_poly(2), eCovF_poly(3)];
-    tau0_interp = interp1(x, y, 0, 'linear', 'extrap');
+    tau0_interp = interp1Unique(x, y, 0, 'linear', 'extrap');
     tau0_interp = max(tau0_interp, 0);
     
     tauGrid_poly = [tauGrid_poly(1); 0; tauGrid_poly(2:end)];
@@ -182,7 +182,8 @@ if length(Yo) < min_obs && length(tauGrid_used) > 1
     
     % Interpolate Q on fine grid
     len_Q = min(length(tauGrid), length(Cecf));
-    Q_fine = interp1(tauGrid(1:len_Q), Cecf(1:len_Q), tau_fine, 'linear', 'extrap');
+    Q_fine = interp1Unique(tauGrid(1:len_Q), Cecf(1:len_Q), ...
+        tau_fine, 'linear', 'extrap');
     
     tau = tau_fine(:);
     Yo = eCovF_smooth_fine(:);

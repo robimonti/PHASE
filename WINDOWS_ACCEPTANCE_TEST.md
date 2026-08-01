@@ -1,14 +1,14 @@
-# PHASE standalone beta — Windows acceptance test
+# PHASE 6.0 — Windows acceptance test
 
-This package contains the three standalone MATLAB applications and their
-editable backends. It intentionally excludes the legacy `.mlapp` files.
+PHASE 6.0 contains three standalone MATLAB applications and their editable
+backends. The legacy `.mlapp` files are not part of the installed runtime.
 
 ## 1. Clean test folder
 
 Extract the archive into a new local folder, for example:
 
 ```text
-E:\PHASE_beta_complete_test
+E:\PHASE_2_complete_test
 ```
 
 Do not copy only the launcher `.m` files: the package folders beside them are
@@ -21,7 +21,7 @@ Before real StaMPS processing, open PowerShell in the extracted package root
 and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\prepare-beta-test-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\prepare-windows-runtime.ps1
 ```
 
 The script reproduces the relevant installer work without touching datasets:
@@ -35,7 +35,7 @@ not required for the acceptance test.
 Open MATLAB, then run:
 
 ```matlab
-cd('E:\PHASE_beta_complete_test')
+cd('E:\PHASE_2_complete_test')
 addpath(genpath(pwd))
 
 phase_preprocessing_beta.selfTest
@@ -50,7 +50,7 @@ All three results must report `ok: 1`.
 Run:
 
 ```matlab
-PHASE_Preprocessing_beta
+PHASE_Preprocessing
 ```
 
 Use a disposable copy of a known dataset. Verify that preprocessing output is
@@ -75,7 +75,7 @@ PHASE's Run monitor/error dialog.
 From the package root run:
 
 ```matlab
-PHASE_Model_beta
+PHASE_Model
 ```
 
 The complete processing implementation is readable in
@@ -110,15 +110,14 @@ explicit value.
 
 ## 6. Installer source
 
-`installer\install-phase.ps1` is the beta installer source. It clones
-`codex/phase-stamps-beta`, validates that the complete standalone runtime is
+`installer\install-phase.ps1` is the production installer source. It clones
+`main`, validates that the complete standalone runtime is
 present, removes legacy/development files from the installed engine, creates
 the three visible MATLAB launch shortcuts and leaves the editable engine folder visible. The
 StaMPS shortcut asks for an explicit `ASC_*`/`DSC_*` dataset folder.
 
-Do not use the old `installer\install-phase.exe` from another checkout: an
-updated EXE must be compiled on Windows after the tested beta branch has been
-pushed:
+Do not use an installer executable from an older checkout. Compile the current
+release on Windows after pulling `main`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installer\compile-to-exe.ps1

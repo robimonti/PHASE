@@ -6,7 +6,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MLAPP = ROOT / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
+MLAPP = ROOT / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
 OLD = "'Range', 'E1:FZ500000'"
 OLD_WRAPPED = "'Range', 'D1:FZ500000'"
 

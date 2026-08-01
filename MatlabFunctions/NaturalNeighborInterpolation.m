@@ -130,8 +130,8 @@ switch projDim
             end
             % Perform 1D linear interpolation directly
             try
-                interp_values(:, t) = interp1(x, v, s, 'makima', NaN);
-                interp_std(:, t) = interp1(x, ss, s, 'makima', NaN);
+                interp_values(:, t) = interp1Unique(x, v, s, 'makima', NaN);
+                interp_std(:, t) = interp1Unique(x, ss, s, 'makima', NaN);
             catch e
                 warning('Epoch %d: Interpolation failed (%s). Setting to NaN.', t, e.message);
                 interp_values(:, t) = NaN;

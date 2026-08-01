@@ -8,7 +8,7 @@ def _text(path):
 
 
 def _stable_xml(phase_root):
-    with zipfile.ZipFile(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp") as app:
+    with zipfile.ZipFile(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp") as app:
         return app.read("matlab/document.xml").decode("utf-8")
 
 

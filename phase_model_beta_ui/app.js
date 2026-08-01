@@ -14,6 +14,7 @@ const ModelUI = {
   clockTimer: null,
   clockReceivedAt: Date.now(),
   aoiMap: null,
+  mapAoiSignature: "",
 };
 
 function setup(htmlComponent) {
@@ -59,6 +60,7 @@ function wireStaticControls() {
   listen("map-finish", "click", () => ModelUI.aoiMap.finishDrawing());
   listen("map-fit", "click", () => {
     if (ModelUI.aoiMap.polygon.length) ModelUI.aoiMap.fitBounds(ModelUI.aoiMap.polygon);
+    else ModelUI.aoiMap.fitToFootprints();
   });
   listen("map-rectangle", "click", useCoordinateRectangle);
   if (!ModelUI.clockTimer) {
@@ -106,7 +108,7 @@ function renderAll() {
   renderLogs();
   renderMap();
   byId("root-button").textContent = ModelUI.state?.rootDir || "PHASE project";
-  byId("version").textContent = `PHASE Model ${ModelUI.state?.version || "Beta"}`;
+  byId("version").textContent = `PHASE Model ${ModelUI.state?.version || "6.0.0"}`;
 }
 
 function visibleGroups() {
@@ -502,12 +504,24 @@ function renderMap() {
   const polygon = matrix(ModelUI.state.map.polygon?.length
     ? ModelUI.state.map.polygon
     : ModelUI.config.aoi_polygon_lonlat);
+  const footprints = asArray(ModelUI.state.map.footprints);
   ModelUI.aoiMap.setData({
     coastlines: asArray(ModelUI.state.map.coastlines),
-    footprints: [],
+    footprints,
     polygon,
   });
-  updateMapMeta(polygon);
+  const selectedFootprints = footprints.filter(item => Boolean(item?.selected));
+  const selectedPoints = selectedFootprints.flatMap(item => matrix(item?.coordinates));
+  const visibleAoi = polygon.length ? polygon : selectedPoints;
+  const signature = JSON.stringify(visibleAoi);
+  if (signature && signature !== "[]" && signature !== ModelUI.mapAoiSignature) {
+    ModelUI.mapAoiSignature = signature;
+    window.setTimeout(() => {
+      if (polygon.length) ModelUI.aoiMap?.fitBounds(polygon,false);
+      else ModelUI.aoiMap?.fitToFootprints(false);
+    },30);
+  }
+  updateMapMeta(visibleAoi, selectedFootprints.length);
 }
 
 function handleMapTilesReady(data) {
@@ -547,7 +561,7 @@ function useCoordinateRectangle() {
   handleMapPolygon(polygon);
 }
 
-function updateMapMeta(polygon) {
+function updateMapMeta(polygon, partCount = 1) {
   const points = matrix(polygon);
   if (!points.length) {
     byId("map-bbox").textContent = "No AOI drawn";
@@ -556,7 +570,9 @@ function updateMapMeta(polygon) {
   }
   const lons = points.map(point => point[0]), lats = points.map(point => point[1]);
   byId("map-bbox").textContent = `${Math.min(...lons).toFixed(6)}, ${Math.min(...lats).toFixed(6)} → ${Math.max(...lons).toFixed(6)}, ${Math.max(...lats).toFixed(6)}`;
-  byId("map-vertices").textContent = `${Math.max(0,points.length-1)} vertices`;
+  byId("map-vertices").textContent = partCount > 1
+    ? `${partCount} polygon parts`
+    : `${Math.max(0,points.length-1)} vertices`;
 }
 
 function renderProgress() {

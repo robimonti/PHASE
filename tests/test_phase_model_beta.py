@@ -8,7 +8,7 @@ def _text(path):
 
 
 def _stable_xml(phase_root):
-    with zipfile.ZipFile(phase_root / "PHASE_model.mlapp") as app:
+    with zipfile.ZipFile(phase_root / "legacy/PHASE_model.mlapp") as app:
         return app.read("matlab/document.xml").decode("utf-8")
 
 
@@ -77,7 +77,8 @@ def test_model_beta_has_modern_html_shell_and_live_monitor(phase_root):
     assert "diary on" in controller
     assert "liveLogUrl" in controller
     assert "Run monitor" in html
-    assert "Module 2 · Beta" in html
+    assert "Module 2" in html
+    assert "Module 2 · Beta" not in html
     assert "type = \"date\"" in js
     assert "pollLiveLog" in js
     assert 'id="stop-button"' in html
@@ -152,6 +153,98 @@ def test_model_beta_can_estimate_full_ps_extent(phase_root):
     assert "Select full PS extent" in js
 
 
+def test_model_beta_initialises_map_from_ps_extent(phase_root):
+    controller = _text(phase_root / "+phase_model_beta" / "App.m")
+
+    assert "obj.applyDefaultPsBounds(false);" in controller
+    assert "obj.applyDefaultPsBounds(true);" in controller
+    assert "Default AOI fitted to the PS extent" in controller
+    assert "obj.Config.aoi_polygon_lonlat = bboxPolygon(bounds)" in controller
+    assert "obj.MapPsExtent = bboxPolygon(bounds)" in controller
+    assert "'id','ps-extent','name','PS extent'" in controller
+    assert "footprints," in _text(
+        phase_root / "phase_model_beta_ui" / "app.js"
+    )
+
+
+def test_model_beta_displays_and_uses_the_same_shapefile_aoi(phase_root):
+    package = phase_root / "+phase_model_beta"
+    controller = _text(package / "App.m")
+    engine = _text(package / "LegacyEngine.m")
+    reader = _text(package / "readAoiShapefile.m")
+    js = _text(phase_root / "phase_model_beta_ui" / "app.js")
+
+    assert controller.count("phase_model_beta.readAoiShapefile") >= 1
+    assert "obj.MapAoiFootprints = features" in controller
+    assert "phase_model_beta.readAoiShapefile" in engine
+    assert "finitePair = isfinite(x) & isfinite(y)" in reader
+    assert "lonlat(end+1,:) = [NaN NaN]" in reader
+    assert "selectedFootprints.flatMap" in js
+    assert "fitToFootprints(false)" in js
+
+
+def test_model_beta_rejects_empty_aoi_and_never_reverse_geocodes_nan(phase_root):
+    engine = _text(phase_root / "+phase_model_beta" / "LegacyEngine.m")
+    reverse = _text(phase_root / "MatlabFunctions" / "get_place_from_coordinates.m")
+
+    assert "PHASE_Model_beta:noPsInsideAoi" in engine
+    assert "isfinite(query_lon) && isfinite(query_lat)" in engine
+    assert "~isfinite(lon) || ~isfinite(lat)" in reverse
+    assert "Reverse geocoding skipped" in reverse
+
+
+def test_model_beta_uses_stable_output_root_and_direct_geosplinter_runner(phase_root):
+    engine = _text(phase_root / "+phase_model_beta" / "LegacyEngine.m")
+    runner = _text(phase_root / "MatlabFunctions" / "runGeoSplinter.m")
+    model_files = [
+        phase_root / "MatlabFunctions" / "ModellingInTime.m",
+        phase_root / "MatlabFunctions" / "STmodel_DET1D.m",
+        phase_root / "MatlabFunctions" / "STmodel_DET2D.m",
+        phase_root / "MatlabFunctions" / "STmodel_STC1D.m",
+        phase_root / "MatlabFunctions" / "STmodel_STC2D.m",
+    ]
+
+    assert "outputRoot = fileparts(runtimeRoot)" in engine
+    assert "outputDir = fullfile('..',outputDir)" in engine
+    assert "app.outputDir = char(java.io.File(outputDir).getCanonicalPath())" in engine
+    assert "redirectInput(java.io.File(jobFile))" in runner
+    assert "endsWith(lower(executable),'.exe')" in runner
+    combined = "\n".join(_text(path) for path in model_files)
+    assert combined.count("runGeoSplinter(") == 13
+    assert "temp_bat" not in combined
+    assert "system(job_execution" not in combined
+
+    smoke_test = _text(
+        phase_root / "+phase_model_beta" / "geoSplinterSelfTest.m"
+    )
+    assert "runGeoSplinter(executable,jobPath)" in smoke_test
+    assert "outputName = 'PS_1_cub'" in smoke_test
+    assert "'.par.txt','.std.txt','.mat.txt'" in smoke_test
+    assert "PHASE Model geoSplinter native-runtime self-test passed." in smoke_test
+
+
+def test_temporal_interpolation_consolidates_duplicate_sample_points(phase_root):
+    helper = _text(phase_root / "MatlabFunctions" / "interp1Unique.m")
+    modelling = _text(phase_root / "MatlabFunctions" / "ModellingInTime.m")
+    fitters = "\n".join(
+        _text(phase_root / "MatlabFunctions" / name)
+        for name in (
+            "fit_exp_auto.m",
+            "fit_gaussian_auto.m",
+            "fit_gaussian_cosine_auto.m",
+        )
+    )
+
+    assert "[uniqueX,~,groups] = unique(x)" in helper
+    assert "accumarray(groups,y" in helper
+    assert "values = interp1(uniqueX,uniqueY" in helper
+    assert modelling.count("interp1Unique(") == 3
+    assert fitters.count("interp1Unique(") == 6
+    assert "obj.appendLog(getReport(ME,'extended','hyperlinks','off'))" in _text(
+        phase_root / "+phase_model_beta" / "App.m"
+    )
+
+
 def test_model_beta_supports_interactive_polygon_aoi(phase_root):
     package = phase_root / "+phase_model_beta"
     defaults = _text(package / "defaultConfig.m")
@@ -218,3 +311,23 @@ def test_model_beta_exposes_temporal_thresholds_to_modelling_backend(phase_root)
         assert f"addParameter(p, '{name}'" in modelling
     assert "NigNoiR >= min_coll_snr" in modelling
     assert "num_obs * spline_max_fraction" in modelling
+
+
+def test_model_beta_skips_unresolvable_temporal_covariance_before_fitting(phase_root):
+    modelling = _text(phase_root / "MatlabFunctions" / "ModellingInTime.m")
+    covariance_start = modelling.index("% -- 4) Covariance modelling")
+    empirical_fit = modelling.index("f1DEmpCovEst", covariance_start)
+    early_guard = modelling.index("n_obs_coll < 8 || n_epochs_coll < 8", covariance_start)
+
+    assert early_guard < empirical_fit
+    assert "The spline-only temporal result is retained." in modelling
+    assert "numel(tauGrid) < 3 || numel(unique(tauGrid)) < 3" in modelling
+    assert "isempty(eCovF_smooth) || isempty(tauGrid)" in modelling
+
+
+def test_geosplinter_runner_closes_process_output_stream(phase_root):
+    runner = _text(phase_root / "MatlabFunctions" / "runGeoSplinter.m")
+
+    assert "process.waitFor();" in runner
+    assert "reader.close();" in runner
+    assert runner.index("process.waitFor();") < runner.index("reader.close();")

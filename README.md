@@ -4,15 +4,11 @@
 
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interactive map interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
-> **Developer previews:** the standalone, text-based successors to all three
-> App Designer applications are documented in
-> [`PHASE_Preprocessing_beta.md`](PHASE_Preprocessing_beta.md) and
-> [`PHASE_Preprocessing/PHASE_StaMPS_beta.md`](PHASE_Preprocessing/PHASE_StaMPS_beta.md),
-> and [`PHASE_Model_beta.md`](PHASE_Model_beta.md).
-> They do not load the legacy `.mlapp` files at runtime.
-> The stable apps
-> remain the production default until Windows/MATLAB acceptance testing is
-> complete.
+> **PHASE 6.0:** preprocessing, StaMPS and geospatial modelling now run as
+> standalone, editable MATLAB applications with a shared modern interface.
+> The production entry points are `PHASE_Preprocessing`, `PHASE_StaMPS` and
+> `PHASE_Model`; none of them loads an `.mlapp` at runtime. The former App
+> Designer applications are retained only for provenance in [`legacy`](legacy/README.md).
 
 ![Logo](https://github.com/user-attachments/assets/5bf0b784-c5e6-4e6c-8df5-2da8808263d3)
 
@@ -21,11 +17,12 @@
 - Sentinel-1 (from European Space Agency)
 - COSMO-SkyMed (from Agenzia Spaziale Italiana - automatically supports both CSK and CSG generations)
 
-## Required Software
+## Required software
+
 - SNAP (version 13.x is recommended)
-- MATLAB (version 2026a is recommended)
+- MATLAB (R2026a is recommended)
 - StaMPS
-- Python 3.x with `requests`, `asf_search`, `shapely` (for the download module), and `openpyxl` (for geospatial module report generation)
+- Python 3.11 or newer with `requests`, `asf_search`, `shapely`, and `openpyxl`
 
 ## Required OS
 - *Linux*: supported end-to-end for the complete PSI pipeline.
@@ -36,15 +33,32 @@
   interpreter with StaMPS via `%APPDATA%\PHASE\python.txt` (thanks to Samuel and Matteo).
 - *macOS*: supports preprocessing and geospatial analysis modules.
 
-## Installation and Setup
+## Installation and setup
+
+> [!IMPORTANT]
+> **Windows users: use the PHASE installer. Do not clone the repository for a
+> normal installation.** [Download `install-phase.exe` from the latest GitHub
+> Release](https://github.com/robimonti/PHASE/releases/latest/download/install-phase.exe),
+> Release, run it, and launch PHASE from the three shortcuts it creates. The
+> installer supplies and configures the complete Windows runtime, including
+> StaMPS, TRAIN and their native executables; a plain repository clone does not.
+> Clone the repository on Windows only if you intend to develop PHASE itself.
 
 > [!NOTE]
 > A detailed, step-by-step guide is available in the provided user manual. <br>
 > Before using PHASE, please carefully read the entire manual!
 
-### Preliminary Steps
-0. **Windows Installer** <br>
-   Download the PHASE installer for Windows from the installer folder, execute it and follow the on-screen instructioon to automatically get everything configured and    set up. This should let you skip steps 3, 4, 5. SNAP must be still manually downloaded, while python can be downloaded by the installer, if missing.
+### Windows installation
+
+[Download `install-phase.exe`](https://github.com/robimonti/PHASE/releases/latest/download/install-phase.exe),
+run it, and follow the wizard.
+It configures PHASE, StaMPS, TRAIN, the required Windows binaries and Python,
+then creates three shortcuts in the selected PHASE folder. The `engine`
+directory remains visible and editable. See [installer/README.md](installer/README.md)
+for build and packaging instructions.
+
+### Manual installation (Linux, macOS, and developers only)
+
 1. **Install SNAP Software** <br>
    Download and install [SNAP 13.x](https://step.esa.int/main/download/snap-download/) from the European Space Agency website. <br> <br>
    Verify that the following mandatory SNAP plugin module is installed:
@@ -62,7 +76,8 @@
 2. **Install Required Python Modules:** <br>
    Install [Python 3.x](https://www.python.org/downloads/) on your machine. Ensure Python is added to your system's PATH. The PHASE suite utilizes standard built-in Python libraries, so you only need to install the external Excel library. Run the following command in your terminal:
    ```bash
-   pip install openpyxl
+   pip install openpyxl requests asf_search shapely
+   ```
 
 3. **Install xterm (only Linux Users):** <br>
    Install xterm by running `sudo apt-get install xterm` in the terminal.
@@ -70,16 +85,21 @@
 4. **Install StaMPS (only Linux Users):** <br>
    Install [StaMPS](https://homepages.see.leeds.ac.uk/~earahoo/stamps/) from the official GitHub repository.
    ```
-   git clone https://github.com/dbekaert/StaMPS/releases/tag/v4.1-beta
+   git clone https://github.com/dbekaert/StaMPS.git
    ```
 
 5. **Install PHASE suite**
    - Download the latest release of the PHASE suite repository.
    - Move or extract the downloaded folder into your desired project directory.
-   - Execute the PHASE_Preprocessing.mlapp MATLAB application.
+   - Add the repository to the MATLAB path with `addpath(genpath(pwd))`.
+   - Run `PHASE_Preprocessing` to open Module 1A immediately.
    - Tune the configurable parameters across the available tabs (including the interactive geographic map for AOI selection).
-   - Once the preprocessing is complete, execute the PHASE_StaMPS.mlapp MATLAB application (on Linux, it will open automatically upon completion).
-   - For geospatial analysis, run PHASE_model.mlapp to process the final displacement time series.
+   - At the preprocessing handoff, PHASE opens `PHASE_StaMPS` for the generated `ASC_*` or `DSC_*` dataset. It may also be launched manually with `PHASE_StaMPS(datasetFolder)`.
+   - Run `PHASE_Model` for geospatial analysis of the exported PS displacement time series.
+
+The three launcher files are small production wrappers around the validated
+editable engines. Internal package names retain the `_beta` suffix only for
+backward compatibility with configurations and existing installations.
 
 ### Processing Steps
 
@@ -88,7 +108,7 @@
 1.	**Automated SAR Images Download:** <br>
 Retrieve Sentinel-1 images via the integrated module through the Alaska SAR Facility APIs (thanks to Magnus and Johny). For COSMO-SkyMed, use the **Images** tab in the Cosmo-SkyMed panel to import your `.h5` files (they are copied into the `slaves` directory automatically).
 2.	**Interactive AOI & Automated Master Selection:** <br>
-Define your precise Area of Interest (AOI) by drawing a bounding box directly on the GUI's geographic map interface. Let PHASE automatically query the Open-Meteo historical weather API to select the optimal, driest master image for your stack.
+Define your Area of Interest (AOI) by drawing a polygon directly on the integrated map or by importing supported geometry. Let PHASE automatically query the Open-Meteo historical weather API to select the optimal, driest master image for your stack.
 3.	**Master & Slave Pre-Processing:** <br>
 Automated splitting, precise orbit correction, coregistration, and interferogram formation. For Sentinel-1, optimal swaths and bursts are dynamically calculated from your AOI. Includes StaMPS export, average scene intensity computation, and local incidence angle/coherence calculations.
 4.	**StaMPS Processing:** <br>
@@ -153,7 +173,7 @@ After the TRAIN Windows port, verify your install with these three checks.
 ### 1. Degradation path (TRAIN missing)
 
 1. Open MATLAB. Run `which('aps_linear')`. Expected: empty string.
-2. Launch `PHASE_StaMPS.mlapp`. Tick "TRAIN atmospheric correction". Press Save, then Start.
+2. Launch `PHASE_StaMPS`. Tick "TRAIN atmospheric correction". Press Save, then Start.
 3. Expected:
    - Warning id `StaMPS:phase:trainNotAvailable` in diary / `smoketest.log`.
    - The TRAIN checkbox STAYS TICKED (intentional — preserves intent for re-run).
@@ -166,7 +186,7 @@ After the TRAIN Windows port, verify your install with these three checks.
 1. Install TRAIN (Windows-patched fork): `git clone https://github.com/pyccino/TRAIN.git C:/TRAIN`.
 2. In MATLAB: `addpath(genpath('C:/TRAIN/matlab')); savepath`.
 3. Verify: `which('aps_linear')` returns `C:\TRAIN\matlab\aps_linear.m`.
-4. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_linear'`. Save, Start.
+4. Launch `PHASE_StaMPS`. Tick TRAIN. Set `tropo_method='a_linear'`. Save, Start.
 5. Expected:
    - No degradation warning.
    - `aps_linear` runs (console output contains "loading the data").
@@ -176,14 +196,14 @@ After the TRAIN Windows port, verify your install with these three checks.
 > **Note on the Windows fork.** `pyccino/TRAIN` (default branch `main`) is forked from `dbekaert/TRAIN` at the audited commit `6c93feb` plus the following Windows-specific additions:
 > - `get_gmt_version.m`: actionable error on Windows when GMT is not on PATH (the upstream loop manipulates Linux-only library env vars).
 > - `aps_gacos_files.m`: replaces Unix `&` background launch with synchronous `system()` call on Windows (cmd.exe parses `&` differently).
-> - `gacosDownloadDialog.m`: new helper that shows the GACOS request parameters in a copy-paste dialog (called from `PHASE_StaMPS.mlapp`).
+> - `gacosDownloadDialog.m`: helper that shows the GACOS request parameters in a copy-paste dialog (called from PHASE StaMPS).
 >
 > Unix/Mac behavior is unchanged. Use upstream `dbekaert/TRAIN` directly on Linux/macOS if preferred.
 
 ### 3. GACOS correction (`a_gacos`) — optional, requires gacos.net data request
 
 1. Same TRAIN install as above. Additionally install [GMT for Windows](https://www.generic-mapping-tools.org/download/) and ensure `C:\Program Files\GMT\bin` (or your install dir) is on PATH; verify with `gmt --version` in a fresh terminal.
-2. Launch `PHASE_StaMPS.mlapp`. Tick TRAIN. Set `tropo_method='a_gacos'`. Save, Start.
+2. Launch `PHASE_StaMPS`. Tick TRAIN. Set `tropo_method='a_gacos'`. Save, Start.
 3. Expected:
    - A "Download GACOS maps" window opens (the gacos.net site and the `GACOS/` folder open automatically). It shows the request parameters (UTC, bounding box, dates) ready to copy into the form at gacos.net — select **Binary grid** as the file type.
    - Download the `.tar.gz` files from gacos.net, place them in `GACOS/` (do not extract), then press **Continue** in the window.
@@ -191,6 +211,7 @@ After the TRAIN Windows port, verify your install with these three checks.
    - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
+- *August 2026 — PHASE 6.0*: Promoted the standalone editable applications for preprocessing, StaMPS and geospatial modelling to production. Added the unified modern interface, integrated satellite maps and AOI drawing/import, in-app download and run monitoring, configurable processing controls, robust Windows runtime discovery, and the new installer layout. Archived the former `.mlapp` applications under `legacy`. Windows users should install from the release executable rather than cloning the repository.
 - *June 2026*: Added the integrated download module for Sentinel-1. Completed the StaMPS porting to Windows; improved the StaMPS data export; created an installer for PHASE on Windows. Introduced the possibility to update the stack with newly available products abd update the pre-processing without re-starting from zero.
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.
 - *March 2026*: Introduced Module 2 for geospatial PSI data analysis with deterministic and stochastic modeling.

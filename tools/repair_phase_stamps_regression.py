@@ -29,8 +29,9 @@ sys.path.insert(0, str(TOOLS_DIR))
 from mlapp_roundtrip import edit_mlapp
 
 
-MLAPP_REL = Path("PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+MLAPP_REL = Path("legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
 MLAPP = REPO_ROOT / MLAPP_REL
+HISTORIC_MLAPP_REL = Path("PHASE_Preprocessing/PHASE_StaMPS.mlapp")
 GOOD_REVISION = "918a4caa481ebdd747c3e44caba7f574ff4d2059"
 
 REGRESSION_MARKERS = (
@@ -97,7 +98,7 @@ def main() -> None:
         )
 
     result = subprocess.run(
-        ["git", "show", f"{GOOD_REVISION}:{MLAPP_REL.as_posix()}"],
+        ["git", "show", f"{GOOD_REVISION}:{HISTORIC_MLAPP_REL.as_posix()}"],
         cwd=REPO_ROOT,
         check=True,
         stdout=subprocess.PIPE,

@@ -7,7 +7,7 @@ def _read_xml(path):
 
 
 def test_temporal_windows_have_independent_gui_controls_and_defaults(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     expected = {
         "weed_time_win": ("StaMPS3Tab", "730"),
@@ -23,7 +23,7 @@ def test_temporal_windows_have_independent_gui_controls_and_defaults(phase_root)
 
 
 def test_save_start_and_load_persist_all_three_windows(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     for name in ("weed_time_win", "unwrap_time_win", "scn_time_win"):
         assert f"{name} = app.{name}EditField.Value;" in xml
@@ -37,7 +37,7 @@ def test_save_start_and_load_persist_all_three_windows(phase_root):
 
 
 def test_old_mat_files_fall_back_to_dataset_span(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     start = xml.index("% begin independent StaMPS temporal windows")
     end = xml.index("% end independent StaMPS temporal windows", start)
     fallback = xml[start:end]
@@ -50,7 +50,7 @@ def test_old_mat_files_fall_back_to_dataset_span(phase_root):
 
 
 def test_runtime_no_longer_uses_dataset_span_as_processing_window(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     for name in ("weed_time_win", "unwrap_time_win", "scn_time_win"):
         assert f"setparm('{name}', {name});" in xml
@@ -61,7 +61,7 @@ def test_runtime_no_longer_uses_dataset_span_as_processing_window(phase_root):
 
 
 def test_unsaved_time_window_edits_are_guarded(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     guard_start = xml.index("% begin saved/visible tropospheric-configuration guard")
     guard_end = xml.index("% end saved/visible tropospheric-configuration guard")
     guard = xml[guard_start:guard_end]

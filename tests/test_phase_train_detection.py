@@ -13,7 +13,7 @@ def _read_xml(mlapp: Path) -> str:
 
 
 def test_change1_guard_inserted_at_correct_anchor(phase_root: Path):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     # Guard must sit directly after the load('input_StaMPS.mat', ...) block
     # (i.e. between 'ph_output'); and the 'Conversion of variables' comment).
     anchor = "'ref_radius_w', 'ph_output');"
@@ -33,7 +33,7 @@ def test_change1_guard_inserted_at_correct_anchor(phase_root: Path):
 
 
 def test_change1_multi_function_probe(phase_root: Path):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     # All three TRAIN symbols must be probed (defeats false positives)
     assert "~isempty(which('aps_linear'))" in xml
     assert "~isempty(which('aps_weather_model'))" in xml
@@ -41,7 +41,7 @@ def test_change1_multi_function_probe(phase_root: Path):
 
 
 def test_change1_warning_id_and_sprintf_safe_form(phase_root: Path):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     assert "'StaMPS:phase:trainNotAvailable'" in xml, "Canonical warning id missing"
     assert "'%s'" in xml, \
         "Change #1 must use warning(id, '%s', msg) to prevent %-mangling"
@@ -57,7 +57,7 @@ def test_change1_local_only_degradation(phase_root: Path):
     never applied. We guard against that with index()-based friendly
     assertions before slicing.
     """
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     assert "% begin TRAIN availability check" in xml, \
         "Change #1 not applied: begin sentinel missing"
     assert "% end TRAIN availability check" in xml, \
@@ -79,12 +79,12 @@ def test_change1_local_only_degradation(phase_root: Path):
 
 def test_change1_sentinel_comment(phase_root: Path):
     """The sentinel is consumed by Tier-2; don't rename without updating Tier-2."""
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     assert "% end TRAIN availability check" in xml
 
 
 def test_change2_misleading_stub_removed(phase_root: Path):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     assert "TRAIN is not available on Windows" not in xml
     assert "StaMPS:phase:trainUnavailable" not in xml
     # Structure preservation: the if/else/end block's trailing inline
@@ -93,6 +93,6 @@ def test_change2_misleading_stub_removed(phase_root: Path):
 
 
 def test_change3_stale_comment_updated(phase_root: Path):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing/PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing/PHASE_StaMPS.mlapp")
     assert "TRAIN not ported to Windows" not in xml
     assert "TRAIN on MATLABPATH, no shell config to source" in xml

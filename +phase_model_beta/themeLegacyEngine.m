@@ -8,7 +8,7 @@ graphite = [69 70 70] ./ 255;
 surface = [0.985 0.988 0.995];
 
 try
-    app.UIFigure.Name = 'PHASE · Geospatial Model Beta';
+    app.UIFigure.Name = 'PHASE · Geospatial Model';
     app.UIFigure.Color = surface;
 catch
 end

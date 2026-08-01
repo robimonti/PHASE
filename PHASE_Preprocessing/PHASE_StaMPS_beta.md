@@ -1,16 +1,17 @@
-# PHASE StaMPS Beta
+# PHASE StaMPS 6.0 — implementation notes
 
-`PHASE_StaMPS_beta` is the text-based successor to `PHASE_StaMPS.mlapp`.
-It uses the same `input_StaMPS.mat`, StaMPS folders and output products as the
-stable app, but it does not load or copy that app at runtime.
+`PHASE_StaMPS` is the production entry point. It wraps the validated
+`PHASE_StaMPS_beta` implementation, whose internal name is retained for
+backward compatibility. It uses the same `input_StaMPS.mat`, StaMPS folders
+and output products as the former app, but does not load or copy it at runtime.
 
-## Launch during beta testing
+## Launch
 
 In MATLAB:
 
 ```matlab
 addpath('C:\path\to\PHASE\PHASE_Preprocessing')
-PHASE_StaMPS_beta('C:\path\to\ASC_Jul25_May26')
+PHASE_StaMPS('C:\path\to\ASC_Jul25_May26')
 ```
 
 Before the first launch, the configuration layer can be checked without
@@ -23,7 +24,7 @@ phase_stamps_beta.selfTest
 If MATLAB's current folder already is the `ASC_*`/`DSC_*` processing folder:
 
 ```matlab
-PHASE_StaMPS_beta
+PHASE_StaMPS
 ```
 
 When no `input_StaMPS.mat` exists in the selected folder, the interface opens
@@ -38,8 +39,8 @@ the copied launcher resolves the canonical editable runtime from the sibling
 
 ## Safety model
 
-- The stable `PHASE_StaMPS.mlapp` remains untouched and usable.
-- The beta reads and writes the same MAT variables.
+- The former `PHASE_StaMPS.mlapp` is archived under `legacy` for provenance.
+- The standalone engine reads and writes the same MAT variables.
 - Saving is transactional: the previous MAT is copied to
   `input_StaMPS.mat.bak` before replacement.
 - **Start processing** is disabled while visible values are unsaved.
@@ -50,7 +51,7 @@ the copied launcher resolves the canonical editable runtime from the sibling
   a per-session diary, including messages printed below the PHASE layer.
 - The master date uses a native calendar control. The selected first/last
   StaMPS range is represented from both ends in the sidebar progress bar.
-- The first beta engine is mechanically extracted from the validated stable
+- The first standalone engine was mechanically extracted from the validated
   Start callback. A regression test proves that all `setparm`, `setparm_aps`
   and `stamps` calls remain identical.
 
@@ -77,21 +78,21 @@ PHASE_Preprocessing/
     └── app.js
 ```
 
-There is no beta `.mlapp` and no `document.xml` patch. Labels and parameter
+There is no production `.mlapp` and no `document.xml` patch. Labels and parameter
 metadata can be changed in `schema.m`; visual styling lives in `styles.css`;
-interactions live in `app.js`; processing remains in MATLAB. The stable
+interactions live in `app.js`; processing remains in MATLAB. The archived
 `PHASE_StaMPS.mlapp` is not loaded, copied or otherwise required at runtime.
 
 ## Windows acceptance test
 
 Use a copy of an already completed `ASC_*`/`DSC_*` folder.
 
-1. Launch the beta with the explicit folder path.
+1. Launch PHASE StaMPS with the explicit folder path.
 2. Confirm that all saved values load correctly, including the three temporal
    windows and first/last StaMPS steps.
 3. Change one harmless value, confirm the amber **Unsaved** state, then press
    **Load** and verify that the saved value returns.
-4. Change it again, press **Save**, close/reopen the beta and verify persistence.
+4. Change it again, press **Save**, close/reopen the app and verify persistence.
 5. Without TRAIN, run Steps 6 → 8 and confirm the sidebar bar begins at Step 6,
    the live log reports the selected range and completes Step 8 without
    opening CMD windows.
@@ -101,5 +102,5 @@ Use a copy of an already completed `ASC_*`/`DSC_*` folder.
 8. Compare the generated CSV/XLSX and principal MAT products with the stable
    app on the same input dataset.
 
-Only after these checks should the installer shortcut switch from the stable
-app to the beta.
+The complete release acceptance procedure is documented in
+`WINDOWS_ACCEPTANCE_TEST.md`.

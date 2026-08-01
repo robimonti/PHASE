@@ -35,7 +35,7 @@ classdef App < handle
             obj.IsDirty = ~phase_stamps_beta.configsEqual( ...
                 obj.Config, obj.SavedConfig) || ~info.exists;
 
-            obj.UIFigure = uifigure('Name', 'PHASE · StaMPS Beta', ...
+            obj.UIFigure = uifigure('Name', 'PHASE · StaMPS', ...
                 'Color', [0.025 0.039 0.075], ...
                 'Position', centeredPosition(1440, 900));
             % Keep the controller alive when the launcher is called without
@@ -165,7 +165,7 @@ classdef App < handle
                 obj.Status = 'error';
                 obj.StatusDetail = ME.message;
                 obj.appendLog(['Interface action failed [' ME.identifier ']: ' ME.message]);
-                obj.showError('PHASE StaMPS Beta', ME.message);
+                obj.showError('PHASE StaMPS', ME.message);
                 obj.sendState();
             end
         end
@@ -336,7 +336,7 @@ classdef App < handle
             if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
             state = struct();
             state.kind = 'state';
-            state.version = '0.1.0-beta';
+            state.version = '6.0.0';
             state.workDir = obj.WorkDir;
             state.configPath = fullfile(obj.WorkDir, 'input_StaMPS.mat');
             state.schema = phase_stamps_beta.schema();

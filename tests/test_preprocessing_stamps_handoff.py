@@ -7,7 +7,7 @@ def _read_xml(path):
 
 
 def test_canonical_stamps_app_is_copied_not_moved_or_recycled(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing.mlapp")
 
     assert xml.count("The installed app is the single source of truth.") == 2
     assert xml.count("copyfile(canonical_stamps_app, dest_mlapp, 'f');") == 2
@@ -19,7 +19,7 @@ def test_canonical_stamps_app_is_copied_not_moved_or_recycled(phase_root):
 
 
 def test_existing_dataset_input_configuration_is_preserved(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing.mlapp")
 
     assert xml.count("if isfile(dst_input_mat)") == 2
     assert xml.count("Preserved the existing dataset input_StaMPS.mat.") == 2
@@ -29,7 +29,7 @@ def test_existing_dataset_input_configuration_is_preserved(phase_root):
 
 
 def test_handoff_still_launches_from_the_dataset_folder(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing.mlapp")
+    xml = _read_xml(phase_root / "legacy/PHASE_Preprocessing.mlapp")
 
     assert xml.count("stamps_app_full = fullfile(project_parent_path_full, stamps_folder);") == 2
     assert xml.count("cd(stamps_app_full);") == 2

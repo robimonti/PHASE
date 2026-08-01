@@ -71,7 +71,7 @@ function renderAll() {
   renderLogs();
   renderSummary();
   byId("workdir").textContent = PhaseUI.state?.workDir || "No processing folder";
-  byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || "beta"}`;
+  byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || "6.0.0"}`;
 }
 
 function renderNavigation() {

@@ -15,7 +15,7 @@ THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
 from mlapp_roundtrip import edit_mlapp  # noqa: E402
 
-MLAPP = THIS_DIR.parent / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
+MLAPP = THIS_DIR.parent / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
 
 PROPERTY_DECLS = """\
         TSPointsTab                     matlab.ui.container.Tab

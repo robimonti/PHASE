@@ -1,6 +1,13 @@
 import re
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = pytest.mark.skip(
+    reason="The archived App Designer app is provenance only; production uses the standalone runner."
+)
+
 
 def test_xterm_guard_present(phase_root: Path):
     """xterm is Linux-only. Every `xterm` invocation must sit inside an
@@ -8,7 +15,7 @@ def test_xterm_guard_present(phase_root: Path):
     without referencing xterm or undefined vars.
     """
     import zipfile
-    with zipfile.ZipFile(phase_root / "PHASE_Preprocessing.mlapp") as z:
+    with zipfile.ZipFile(phase_root / "legacy/PHASE_Preprocessing.mlapp") as z:
         xml = z.read("matlab/document.xml").decode("utf-8")
 
     # No dangling references to variables that were never defined.

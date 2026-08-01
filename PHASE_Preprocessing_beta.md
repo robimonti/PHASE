@@ -1,7 +1,8 @@
-# PHASE Preprocessing Beta
+# PHASE Preprocessing 6.0 — implementation notes
 
-`PHASE_Preprocessing_beta.m` is an editable beta replacement for the App
-Designer preprocessing application. At runtime it neither loads nor copies
+`PHASE_Preprocessing.m` is the production entry point. It wraps the validated
+`PHASE_Preprocessing_beta.m` implementation, whose internal name is retained
+for backward compatibility. At runtime it neither loads nor copies
 `PHASE_Preprocessing.mlapp` or `PHASE_StaMPS.mlapp`.
 
 The formerly embedded class is generated as readable MATLAB source in

@@ -35,7 +35,7 @@ REPO_ROOT = TOOLS_DIR.parent
 sys.path.insert(0, str(TOOLS_DIR))
 from mlapp_roundtrip import edit_mlapp
 
-MLAPP = REPO_ROOT / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
+MLAPP = REPO_ROOT / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp"
 if not MLAPP.exists():
     raise SystemExit(
         f"Expected mlapp at {MLAPP}; is the script in the correct tools/ dir? "

@@ -7,7 +7,7 @@ def _read_xml(path):
 
 
 def test_gacos_output_is_validated_before_stamps_step_7(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     generation = xml.index("aps_weather_model('gacos', 3, 3);")
     guard = xml.index("% begin TRAIN/TCA handoff guard", generation)
@@ -24,7 +24,7 @@ def test_gacos_output_is_validated_before_stamps_step_7(phase_root):
 
 
 def test_resuming_step_7_rebuilds_missing_gacos_tca(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
 
     resume = xml.index("% begin resumed TRAIN/TCA handoff guard")
     resumed_stamps = xml.index("stamps(stamps_first_step, stamps_last_step);", resume)
@@ -38,7 +38,7 @@ def test_resuming_step_7_rebuilds_missing_gacos_tca(phase_root):
 
 
 def test_gacos_generation_is_pinned_to_processing_root(phase_root):
-    xml = _read_xml(phase_root / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
+    xml = _read_xml(phase_root / "legacy" / "PHASE_Preprocessing" / "PHASE_StaMPS.mlapp")
     call = "aps_weather_model('gacos', 3, 3);"
 
     for offset in (i for i in range(len(xml)) if xml.startswith(call, i)):

@@ -22,7 +22,7 @@
 [CmdletBinding()]
 param(
     [string]$DefaultInstallDir = "$env:USERPROFILE\Desktop",
-    [string]$PhaseBranch = 'codex/phase-stamps-beta',
+    [string]$PhaseBranch = 'main',
     [switch]$DryRun
 )
 
@@ -1645,9 +1645,9 @@ function Invoke-StampsBinariesDownload {
                         <TextBlock Text="PHASE folder" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,4"/>
                         <TextBlock x:Name="FinishPath" Text="" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="12" Margin="0,0,0,18" Foreground="#0F1430"/>
                         <TextBlock Text="Available MATLAB apps" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,8"/>
-                        <TextBlock Text="·  PHASE Preprocessing Beta — module 1 (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE StaMPS Beta — opens automatically for each ASC_/DES_ dataset" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE Model Beta — standalone geospatial analysis" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE Preprocessing — module 1A (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE StaMPS — module 1B, opens for each ASC_/DSC_ dataset" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  PHASE Model — module 2 geospatial analysis" Margin="0,3" Foreground="#4A5168"/>
                     </StackPanel>
                 </Border>
 
@@ -2000,7 +2000,7 @@ $Script:PipelineTasks = @(
     @{ Key = 'gmt';         Label = 'Install GMT (portable)' }
     @{ Key = 'env';         Label = 'Configure environment variables' }
     @{ Key = 'matlab';      Label = 'MATLAB savepath + precompile .mat files' }
-    @{ Key = 'runtime';     Label = 'Prepare clean standalone beta runtime' }
+    @{ Key = 'runtime';     Label = 'Prepare clean standalone runtime' }
 )
 
 # Tracks the start time of each running task so we can report elapsed time
@@ -2425,9 +2425,9 @@ function New-PhaseLauncherShortcuts {
     )
 
     $apps = @(
-        @{ Name = 'PHASE Preprocessing'; Launcher = 'PHASE_Preprocessing_beta.m'; Function = 'PHASE_Preprocessing_beta' }
-        @{ Name = 'PHASE StaMPS'; Launcher = 'PHASE_Preprocessing\PHASE_StaMPS_beta.m'; Function = 'PHASE_StaMPS_beta'; DatasetScoped = $true }
-        @{ Name = 'PHASE Model';         Launcher = 'PHASE_Model_beta.m'; Function = 'PHASE_Model_beta' }
+        @{ Name = 'PHASE Preprocessing'; Launcher = 'PHASE_Preprocessing.m'; Function = 'PHASE_Preprocessing' }
+        @{ Name = 'PHASE StaMPS'; Launcher = 'PHASE_Preprocessing\PHASE_StaMPS.m'; Function = 'PHASE_StaMPS'; DatasetScoped = $true }
+        @{ Name = 'PHASE Model';         Launcher = 'PHASE_Model.m'; Function = 'PHASE_Model' }
     )
 
     $wsh = New-Object -ComObject WScript.Shell
@@ -2472,8 +2472,8 @@ To START the application, double-click one of these shortcuts:
 PHASE StaMPS (module 1B)
 ------------------------
   Module 1 creates an ASC_<dates> or DSC_<dates> processing folder and opens
-  PHASE StaMPS Beta with that folder explicitly. No legacy MLAPP is copied.
-  To resume later, launch PHASE_StaMPS_beta from MATLAB and pass the dataset
+  PHASE StaMPS with that folder explicitly. No legacy MLAPP is copied.
+  To resume later, launch PHASE_StaMPS from MATLAB and pass the dataset
   folder, or reopen it from PHASE Preprocessing.
 
 DATA INPUT
@@ -2499,8 +2499,8 @@ modify the sources, but do not move, rename or delete the folder itself.
     & $StatusCallback "[OK] README: $readme"
 }
 
-# Remove development/provenance files from the installed runtime. The beta
-# branch is still cloned normally, so the exact tested revision is selected;
+# Remove development/provenance files from the installed runtime. The main
+# branch is cloned normally, so the exact released revision is selected;
 # only files that are not used at runtime are removed after configuration.
 function Remove-PhaseLegacyRuntimeFiles {
     param(
@@ -2509,9 +2509,7 @@ function Remove-PhaseLegacyRuntimeFiles {
     )
 
     $relativePaths = @(
-        'PHASE_Preprocessing.mlapp',
-        'PHASE_Preprocessing\PHASE_StaMPS.mlapp',
-        'PHASE_model.mlapp',
+        'legacy',
         'tests',
         'docs',
         '.github',
@@ -2552,13 +2550,16 @@ function Remove-PhaseLegacyRuntimeFiles {
         ForEach-Object {
             Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
         }
-    & $StatusCallback '[OK] Standalone beta runtime cleaned.'
+    & $StatusCallback '[OK] Standalone runtime cleaned.'
 }
 
 function Assert-PhaseStandaloneRuntime {
     param([Parameter(Mandatory)] [string]$PhaseDir)
 
     $required = @(
+        'PHASE_Preprocessing.m',
+        'PHASE_Model.m',
+        'PHASE_Preprocessing\PHASE_StaMPS.m',
         'PHASE_Preprocessing_beta.m',
         'PHASE_Model_beta.m',
         'PHASE_Preprocessing\PHASE_StaMPS_beta.m',
@@ -2570,6 +2571,12 @@ function Assert-PhaseStandaloneRuntime {
         '+phase_model_beta\exportFigure.m',
         '+phase_model_beta\throwIfStopped.m',
         '+phase_model_beta\mapBase.m',
+        '+phase_model_beta\geoSplinterSelfTest.m',
+        '+phase_model_beta\readAoiShapefile.m',
+        'MatlabFunctions\runGeoSplinter.m',
+        'MatlabFunctions\interp1Unique.m',
+        'geoSplinter\windows\geoSplinter_analysis.exe',
+        'geoSplinter\windows\geoSplinter_synthesis.exe',
         'PHASE_Preprocessing\phase_preprocessing_beta_ui\index.html',
         'PHASE_Preprocessing\phase_stamps_beta_ui\index.html',
         'phase_model_beta_ui\index.html',
@@ -2584,7 +2591,7 @@ function Assert-PhaseStandaloneRuntime {
         }
     }
     if ($missing.Count -gt 0) {
-        throw "The selected PHASE branch does not contain the complete standalone beta runtime: $($missing -join ', '). Nothing was cleaned; check that the tested beta branch was pushed before compiling/running this installer."
+        throw "The selected PHASE branch does not contain the complete standalone runtime: $($missing -join ', '). Nothing was cleaned; check that the released main branch was pushed before compiling/running this installer."
     }
 }
 
@@ -2759,7 +2766,7 @@ function Invoke-FullSetup {
     }
 
     # Legacy App Designer patching is retained below only as provenance and is
-    # deliberately unreachable in the standalone beta installer.
+    # deliberately unreachable in the standalone installer.
     if ($false) {
     Get-Process matlab -ErrorAction SilentlyContinue | ForEach-Object {
         try { $_ | Stop-Process -Force; Add-SetupLog "MATLAB closed (PID $($_.Id)) to avoid stale class cache" } catch {}
@@ -2775,7 +2782,7 @@ function Invoke-FullSetup {
     # anchor che non combacia perche' upstream ha cambiato lo startupFcn - NON
     # deve abortire l'intera installazione: degradiamo a warning e proseguiamo.
     try {
-    $stampsMlapp = Join-Path $phaseDir 'PHASE_Preprocessing\PHASE_StaMPS.mlapp'
+    $stampsMlapp = Join-Path $phaseDir 'legacy\PHASE_Preprocessing\PHASE_StaMPS.mlapp'
     [void](Invoke-MlappAutoLoadPatch -MlappPath $stampsMlapp `
         -MatFileRelative './input_StaMPS.mat' `
         -StatusCallback { param($m) Add-SetupLog $m })
@@ -2847,7 +2854,7 @@ function Invoke-FullSetup {
                 % non blocca lo startup se qualcosa fallisce
             end
 "@
-    $prepMlapp = Join-Path $phaseDir 'PHASE_Preprocessing.mlapp'
+    $prepMlapp = Join-Path $phaseDir 'legacy\PHASE_Preprocessing.mlapp'
     # Anchor specifico: l'ultima delle 4 righe di "Initially hide" (linea 479
     # del document.xml originale). Inserire qui assicura che la nostra
     # visibility='on' sui field Python non venga sovrascritta dalle 'off'
@@ -2881,7 +2888,7 @@ function Invoke-FullSetup {
             catch
             end
 "@
-    $modelMlapp = Join-Path $phaseDir 'PHASE_model.mlapp'
+    $modelMlapp = Join-Path $phaseDir 'legacy\PHASE_model.mlapp'
     # Anchor: prima riga dello startupFcn (IndexOf prende la prima delle 2
     # occorrenze, che e' quella in startupFcn - non quella nel callback Run).
     # NB: deve combaciare LETTERALMENTE col codice MATLAB embedded nel
