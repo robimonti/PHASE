@@ -8,6 +8,7 @@ cfg = base;
 
 cfg.stamps_preparation = double(~logicalValue(ui, 'prepare_data'));
 cfg.train_flag = double(~logicalValue(ui, 'train_enabled'));
+cfg.export_grid_diagnostics = logicalValue(ui, 'export_grid_diagnostics');
 
 textFields = {'installation_folder','project_path','master_date','export_name', ...
     'utc_time','filter_weighting','quick_est_gamma_flag','small_baseline_flag', ...

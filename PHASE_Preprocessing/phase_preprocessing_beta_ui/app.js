@@ -158,7 +158,7 @@ function renderAll() {
   renderRunProgress();
   renderMap();
   byId("workdir").textContent = PhaseUI.state?.workDir || "No preprocessing folder";
-  byId("version").textContent = `PHASE Preprocessing ${PhaseUI.state?.version || "6.0.0"}`;
+  byId("version").textContent = `PHASE Preprocessing ${PhaseUI.state?.version || "6.1.0"}`;
 }
 
 function renderNavigation() {

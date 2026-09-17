@@ -4,6 +4,7 @@ function ui = configToUi(cfg)
 ui = struct();
 ui.prepare_data = logical(cfg.stamps_preparation == 0);
 ui.train_enabled = logical(cfg.train_flag == 0);
+ui.export_grid_diagnostics = logical(cfg.export_grid_diagnostics);
 
 textFields = {'installation_folder','project_path','master_date','export_name', ...
     'utc_time','filter_weighting','quick_est_gamma_flag','small_baseline_flag', ...

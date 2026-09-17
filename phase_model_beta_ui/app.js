@@ -108,7 +108,7 @@ function renderAll() {
   renderLogs();
   renderMap();
   byId("root-button").textContent = ModelUI.state?.rootDir || "PHASE project";
-  byId("version").textContent = `PHASE Model ${ModelUI.state?.version || "6.0.0"}`;
+  byId("version").textContent = `PHASE Model ${ModelUI.state?.version || "6.1.0"}`;
 }
 
 function visibleGroups() {

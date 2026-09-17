@@ -90,6 +90,9 @@ items(end+1) = item('scn_time_win', 'Atmospheric temporal window', 'step8', 'num
 items(end+1) = item('scn_kriging_flag', 'SCN kriging', 'step8', 'choice', '', '', {'n','y'}, true);
 
 items(end+1) = item('ph_output', 'Phase output', 'export', 'choice', '', '', {'unwrapped','wrapped'}, false);
+items(end+1) = item('export_grid_diagnostics', 'Export radar-grid diagnostics', 'export', 'toggle', '', ...
+    ['Create satellite-map figures and a CSV showing amplitude dispersion and ', ...
+     'the StaMPS selection/weeding stage reached by every initial candidate.'], {}, false);
 items(end+1) = item('ref_centre_lon', 'Reference longitude', 'export', 'number', 'deg', '', {}, false);
 items(end+1) = item('ref_centre_lat', 'Reference latitude', 'export', 'number', 'deg', '', {}, false);
 items(end+1) = item('ref_radius', 'Reference radius', 'export', 'number', 'm', '', {}, false);

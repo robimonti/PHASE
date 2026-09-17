@@ -4,7 +4,7 @@
 
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interactive map interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
-> **PHASE 6.0:** preprocessing, StaMPS and geospatial modelling now run as
+> **PHASE 6.1:** preprocessing, StaMPS and geospatial modelling run as
 > standalone, editable MATLAB applications with a shared modern interface.
 > The production entry points are `PHASE_Preprocessing`, `PHASE_StaMPS` and
 > `PHASE_Model`; none of them loads an `.mlapp` at runtime. The former App
@@ -112,7 +112,7 @@ Define your Area of Interest (AOI) by drawing a polygon directly on the integrat
 3.	**Master & Slave Pre-Processing:** <br>
 Automated splitting, precise orbit correction, coregistration, and interferogram formation. For Sentinel-1, optimal swaths and bursts are dynamically calculated from your AOI. Includes StaMPS export, average scene intensity computation, and local incidence angle/coherence calculations.
 4.	**StaMPS Processing:** <br>
-Automated data preparation, parameter definition, metadata auto-detection, and StaMPS PS analysis. Includes integration with TRAIN for GACOS tropospheric corrections, exporting displacement time series in Excel format.
+Automated data preparation, parameter definition, metadata auto-detection, and StaMPS PS analysis. Includes integration with TRAIN for GACOS tropospheric corrections and displacement time-series export. The optional **Export radar-grid diagnostics** control in the Export panel creates satellite-map figures and a candidate-level CSV documenting amplitude dispersion and the last StaMPS selection/weeding stage reached. The displayed grid is the SLC/interferometric sampling grid, not the physical SAR resolution.
 
 ## Module 2: Geospatial PSI Data Analysis
 
@@ -211,6 +211,7 @@ After the TRAIN Windows port, verify your install with these three checks.
    - Output contains `Atmosphere_a_gacos_AOI_PS.mat` and `Atmosphere_a_gacos_*.csv`.
 
 ## Updates
+- *September 2026 — PHASE 6.1*: Added optional StaMPS radar-grid diagnostics: satellite-map figures of amplitude dispersion and candidate selection/weeding evolution, candidate-level CSV provenance, original SNAP lon/lat-grid geolocation, and multi-patch-safe reporting.
 - *August 2026 — PHASE 6.0*: Promoted the standalone editable applications for preprocessing, StaMPS and geospatial modelling to production. Added the unified modern interface, integrated satellite maps and AOI drawing/import, in-app download and run monitoring, configurable processing controls, robust Windows runtime discovery, and the new installer layout. Archived the former `.mlapp` applications under `legacy`. Windows users should install from the release executable rather than cloning the repository.
 - *June 2026*: Added the integrated download module for Sentinel-1. Completed the StaMPS porting to Windows; improved the StaMPS data export; created an installer for PHASE on Windows. Introduced the possibility to update the stack with newly available products abd update the pre-processing without re-starting from zero.
 - *April 2026*: Added interactive geographic map GUI for automatic AOI sub-setting. Introduced meteorologically-aware master image selection using Open-Meteo API. Automated parameter metadata detection for StaMPS. Dropped legacy Python 2.7 support.

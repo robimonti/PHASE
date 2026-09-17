@@ -157,6 +157,32 @@ def test_beta_exports_only_ps_time_series_not_atmospheric_delay(phase_root):
     assert "save(strcat('Atmosphere_'" not in backend
 
 
+def test_beta_optionally_exports_radar_grid_candidate_diagnostics(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
+    defaults = _text(package / "defaultConfig.m")
+    schema = _text(package / "schema.m")
+    controller = _text(package / "App.m")
+    exporter = _text(package / "exportGridDiagnostics.m")
+
+    assert "cfg.export_grid_diagnostics = false" in defaults
+    assert "item('export_grid_diagnostics', 'Export radar-grid diagnostics'" in schema
+    assert "candidate.export_grid_diagnostics" in controller
+    assert "phase_stamps_beta.exportGridDiagnostics" in controller
+    for source in ("ps1.mat", "da1.mat", "select1.mat", "weed1.mat"):
+        assert source in exporter
+    assert "psclonlat.in" in exporter
+    assert "original_grid" in exporter
+    assert "interpolated_from_ps1" in exporter
+    assert "selpsc.in" in exporter
+    assert "AzimuthPixel" in exporter
+    assert "RangePixel" in exporter
+    assert "Sopravvive al weeding (patch-local ps2)" in exporter
+    assert "DiagnosticaGriglia_DA_%s.png" in exporter
+    assert "DiagnosticaGriglia_Stadi_%s.png" in exporter
+    assert "DiagnosticaGriglia_Stadi_%s.csv" in exporter
+    assert "geobasemap(ax,'satellite')" in exporter
+
+
 def test_beta_run_monitor_streams_matlab_and_external_output_without_cmd_windows(phase_root):
     preprocessing = phase_root / "PHASE_Preprocessing"
     package = preprocessing / "+phase_stamps_beta"

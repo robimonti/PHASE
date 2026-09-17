@@ -1,6 +1,6 @@
-# PHASE 6.0 — Windows acceptance test
+# PHASE 6.1 — Windows acceptance test
 
-PHASE 6.0 contains three standalone MATLAB applications and their editable
+PHASE 6.1 contains three standalone MATLAB applications and their editable
 backends. The legacy `.mlapp` files are not part of the installed runtime.
 
 ## 1. Clean test folder

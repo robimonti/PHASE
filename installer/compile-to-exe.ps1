@@ -73,7 +73,7 @@ $ps2exeArgs = @{
     description = 'PHASE standalone installer - installs the current main release'
     company    = 'pyccino'
     product    = 'PHASE'
-    version    = '6.0.0.0'
+    version    = '6.1.0.0'
     noConsole  = $true
     requireAdmin = $false
     STA        = $true
@@ -93,7 +93,7 @@ if (Test-Path $Output) {
     Write-Host "  2. copy install-phase.exe phase-installer-package\"
     Write-Host "  3. mkdir phase-installer-package\installers"
     Write-Host "  4. copy F:\phase\installers\esa-snap_sentinel_windows-13.0.0.exe phase-installer-package\installers\"
-    Write-Host "  5. Compress-Archive phase-installer-package phase-installer-v6.0.0.zip"
+    Write-Host "  5. Compress-Archive phase-installer-package phase-installer-v6.1.0.zip"
 } else {
     throw "Compilazione fallita: $Output non creato."
 }

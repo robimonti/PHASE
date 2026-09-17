@@ -1,6 +1,6 @@
 ﻿# PHASE Windows Installer
 
-Wizard end-to-end (GUI WPF) che installa PHASE 6.0 e tutte le sue dipendenze su
+Wizard end-to-end (GUI WPF) che installa PHASE 6.1 e tutte le sue dipendenze su
 Windows: MATLAB detection, SNAP install, Python 3.11+ silent install, clone di
 PHASE/StaMPS/TRAIN, download verificato dei binari Triangle/snaphu, configurazione `MATLAB_EXE` +
 `python.txt` + `savepath`. Per default clona il branch `main`; il branch può essere sovrascritto con
@@ -54,13 +54,13 @@ accanto a sé. Per distribuirlo come pacchetto self-contained:
 
 ```powershell
 # Layout finale del pacchetto:
-phase-installer-v6.0.0\
+phase-installer-v6.1.0\
 ├── install-phase.exe
 └── installers\
     └── esa-snap_sentinel_windows-13.0.0.exe               # ~500 MB
 
 # Comprimi:
-Compress-Archive -Path phase-installer-v6.0.0 -DestinationPath phase-installer-v6.0.0.zip
+Compress-Archive -Path phase-installer-v6.1.0 -DestinationPath phase-installer-v6.1.0.zip
 ```
 
 L'utente finale estrae lo zip e fa doppio click su

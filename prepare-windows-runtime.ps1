@@ -10,7 +10,7 @@ $BinariesUrl = 'https://github.com/pyccino/StaMPS/releases/download/windows-port
 
 function Write-Step {
     param([string]$Message)
-    Write-Host "[PHASE 6.0] $Message" -ForegroundColor Cyan
+    Write-Host "[PHASE 6.1] $Message" -ForegroundColor Cyan
 }
 
 function Invoke-Git {
@@ -103,7 +103,7 @@ function Install-StampsBinaries {
 }
 
 if (-not (Test-Path (Join-Path $PhaseRoot 'PHASE_Preprocessing\PHASE_StaMPS.m'))) {
-    throw "PHASE 6.0 was not found in $PhaseRoot. Run this script from the repository root."
+    throw "PHASE 6.1 was not found in $PhaseRoot. Run this script from the repository root."
 }
 
 $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
@@ -133,7 +133,7 @@ if ($missingRequired.Count -gt 0) {
 }
 
 Write-Host ''
-Write-Host 'PHASE 6.0 dependencies are ready.' -ForegroundColor Green
+Write-Host 'PHASE 6.1 dependencies are ready.' -ForegroundColor Green
 Write-Host "StaMPS: $StampsRoot"
 Write-Host "TRAIN:  $TrainRoot"
 Write-Host ''

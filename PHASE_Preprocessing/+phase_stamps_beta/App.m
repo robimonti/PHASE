@@ -251,6 +251,23 @@ classdef App < handle
                 obj.appendLog(['Processing engine failed before its internal error handler [' ...
                     ME.identifier ']: ' ME.message]);
             end
+            if result.ok && candidate.export_grid_diagnostics
+                try
+                    obj.appendLog('Exporting radar-grid diagnostics...');
+                    diagnostic = phase_stamps_beta.exportGridDiagnostics( ...
+                        obj.WorkDir, candidate, @(message)obj.appendLog(message));
+                    obj.appendLog(sprintf( ...
+                        'Radar-grid diagnostics exported: %d candidates from %d patch(es).', ...
+                        diagnostic.candidateCount, diagnostic.patchCount));
+                catch ME
+                    result = struct('ok', false, ...
+                        'message', ['StaMPS completed, but the requested radar-grid ' ...
+                            'diagnostic export failed: ' ME.message], ...
+                        'identifier', ME.identifier);
+                    obj.appendLog(['Radar-grid diagnostic export failed [' ...
+                        ME.identifier ']: ' ME.message]);
+                end
+            end
             obj.IsRunning = false;
             if result.ok
                 obj.Status = 'success';
@@ -336,7 +353,7 @@ classdef App < handle
             if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
             state = struct();
             state.kind = 'state';
-            state.version = '6.0.0';
+            state.version = '6.1.0';
             state.workDir = obj.WorkDir;
             state.configPath = fullfile(obj.WorkDir, 'input_StaMPS.mat');
             state.schema = phase_stamps_beta.schema();

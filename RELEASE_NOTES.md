@@ -1,18 +1,18 @@
-# PHASE v6.0
+# PHASE v6.1
 
-PHASE v6.0 promotes the new standalone applications for preprocessing,
-StaMPS processing and geospatial modelling to the main production release.
-The complete workflow has been validated end-to-end on Windows with real data.
+PHASE v6.1 adds an optional, traceable diagnostic export for the StaMPS
+candidate-selection workflow while retaining the complete standalone PHASE 6
+application suite introduced in v6.0.
 
 ## Windows installation — important
 
 **Windows users should download and run `install-phase.exe` attached to this
 release. Do not clone the repository for a normal Windows installation.**
 
-The installer creates the complete working environment and the three PHASE
-shortcuts. It installs or configures PHASE, StaMPS, TRAIN, the required native
-Windows executables, Python and the MATLAB paths. A plain repository clone does
-not perform these operations and is intended only for PHASE development.
+The installer creates and configures the complete PHASE working environment,
+including StaMPS, TRAIN, the mandatory native Windows executables, Python,
+MATLAB paths, and shortcuts for all three applications. A repository clone is
+intended only for PHASE development and does not perform this setup.
 
 After installation, launch the applications using:
 
@@ -22,7 +22,32 @@ After installation, launch the applications using:
 
 The editable MATLAB source remains available in the visible `engine` folder.
 
-## Highlights
+## New in v6.1
+
+- Added **Export radar-grid diagnostics** to panel 11, Export, in PHASE StaMPS.
+- Added a satellite-map figure of initial candidates coloured by amplitude
+  dispersion `D_A`.
+- Added a second satellite-map figure showing whether each initial candidate
+  was rejected by `ps_select`, rejected during weeding, or survived patch-local
+  weeding.
+- Added a candidate-level CSV containing patch provenance, zero-based
+  azimuth/range indices, coordinates, `D_A`, the effective threshold and the
+  maximum processing stage reached.
+- Added JSON metadata documenting grid meaning, geolocation source, merge
+  resampling, class counts and grid decimation.
+- Uses the original full-resolution SNAP `.lon`/`.lat` grids already referenced
+  by `psclonlat.in`, with automatic byte-order and candidate-centre validation.
+- Supports multiple StaMPS patches without incorrectly equating patch-local
+  weeding survivors to the merged root `ps2` product.
+- Reads the effective candidate threshold from the run's `selpsc.in` rather
+  than relying on a possibly stale interface value.
+- Retains an explicitly reported local interpolation fallback when original
+  SNAP geolocation rasters are unavailable.
+
+The displayed radar grid is the SLC/interferometric sampling grid. It must not
+be interpreted as the physical SAR resolution or point-spread function.
+
+## PHASE 6 application suite
 
 - Three standalone, editable MATLAB applications with no runtime dependency on
   the former App Designer `.mlapp` files.
