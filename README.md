@@ -1,6 +1,14 @@
 # PHASE (Persistent scatterer Highly Automated Suite for Environmental monitoring)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19605360.svg)](https://doi.org/10.5281/zenodo.19605360)
+[![Download PHASE v6.1 for Windows](https://img.shields.io/badge/Windows-PHASE%20v6.1%20Installer-2965CC?logo=windows)](https://github.com/robimonti/PHASE/releases/download/v6.1/install-phase.exe)
+
+> [!IMPORTANT]
+> **Windows users should not clone or download the source repository.**
+> Download and run the ready-to-use
+> **[PHASE v6.1 Windows installer](https://github.com/robimonti/PHASE/releases/download/v6.1/install-phase.exe)**.
+> The installer creates a clean runtime installation and configures StaMPS,
+> TRAIN, native executables, Python, MATLAB paths and the three PHASE shortcuts.
 
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interactive map interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
@@ -43,6 +51,20 @@
 > installer supplies and configures the complete Windows runtime, including
 > StaMPS, TRAIN and their native executables; a plain repository clone does not.
 > Clone the repository on Windows only if you intend to develop PHASE itself.
+
+### Repository versus installed application
+
+The GitHub **Code** page is the complete development repository. It includes
+automated tests, release tooling, migration utilities and archived legacy files
+so that scientific changes remain reproducible and maintainable. These are not
+additional programs that a normal user needs to manage.
+
+The Windows installer removes development-only material (`tests`, `legacy`,
+CI configuration and installer sources) from the installed runtime. The folder
+presented to the user contains the three application shortcuts, while the
+editable MATLAB implementation remains grouped in the visible `engine` folder.
+The compiled installer is distributed as a GitHub **Release asset**, not
+committed as a binary inside the source tree.
 
 > [!NOTE]
 > A detailed, step-by-step guide is available in the provided user manual. <br>
