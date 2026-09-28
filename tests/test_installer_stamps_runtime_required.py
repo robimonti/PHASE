@@ -49,16 +49,24 @@ def test_installer_stages_git_locally_and_kills_timed_out_process_trees(phase_ro
     source = _installer(phase_root)
 
     assert "function Invoke-ProcessWithTimeout" in source
+    assert "System.Diagnostics.ProcessStartInfo" in source
+    assert "$psi.RedirectStandardOutput = $true" in source
+    assert "$psi.RedirectStandardError = $true" in source
+    assert "$proc.StandardOutput.ReadToEndAsync()" in source
     assert "$proc.WaitForExit($TimeoutSeconds * 1000)" in source
     assert "taskkill.exe /PID $proc.Id /T /F" in source
     assert "$env:GIT_TERMINAL_PROMPT = '0'" in source
     assert '"phase-git-stage-"' in source
     assert "Clone completed locally; copying to $Destination" in source
     assert "robocopy.exe" in source
-    assert "if ($copyExit -gt 7)" in source
+    assert "if ($copyResult.ExitCode -gt 7)" in source
     assert "Remove-Item -LiteralPath $stagingRoot" in source
     assert "Remove-Item -LiteralPath $Destination -Recurse -Force" in source
     assert "-TimeoutSeconds 600 -Description \"git clone for $Repo\"" in source
+    assert "function Get-GitHubBranchArchive" in source
+    assert "https://codeload.github.com/$owner/$repository/zip/refs/heads/$escapedBranch" in source
+    assert "Git clone failed; downloading the same branch as a GitHub archive" in source
+    assert "Write-ProcessDiagnostics -Result $cloneResult" in source
 
 
 def test_installer_cleans_legacy_runtime_and_keeps_engine_editable(phase_root):

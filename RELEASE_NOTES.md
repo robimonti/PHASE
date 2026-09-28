@@ -1,4 +1,23 @@
-# PHASE v6.1.1
+# PHASE v6.1.2
+
+PHASE v6.1.2 fixes the compiled Windows installer's repository downloader.
+
+## Installer hotfix
+
+- Replaced the unreliable `Start-Process` wrapper with a .NET process runner
+  that preserves the real exit code and captures Git/Robocopy diagnostics when
+  compiled with PS2EXE.
+- If anonymous `git clone` is rejected or interrupted by a proxy, credential
+  manager, antivirus, or HTTP transport issue, the installer automatically
+  downloads the identical public GitHub branch archive and continues.
+- Repository acquisition still happens in local temporary storage before the
+  completed files are copied to mapped, UNC, or SMB destinations.
+- Timeouts still terminate the entire process tree, preventing orphaned Git
+  processes.
+- Existing archive-based installations can now be refreshed even though they
+  intentionally do not contain a `.git` directory.
+
+## Previous v6.1.1 changes
 
 PHASE v6.1.1 fixes Windows installation on mapped and network drives and
 includes the optional, traceable diagnostic export introduced in v6.1.

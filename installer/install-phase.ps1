@@ -541,9 +541,33 @@ function Invoke-SnapInstaller {
     }
 }
 
-# Run a child process with a hard timeout and kill its complete Windows process
-# tree on expiry. Start-Process -Wait alone can leave git.exe / ssh.exe /
-# git-remote-https.exe alive when a mapped or UNC destination stalls.
+# Quote one argument using Windows command-line conventions. ProcessStartInfo's
+# ArgumentList is unavailable in Windows PowerShell 5.1 / .NET Framework.
+function ConvertTo-NativeProcessArgument {
+    param([AllowEmptyString()] [string]$Value)
+    if ($Value.Length -gt 0 -and $Value -notmatch '[\s"]') { return $Value }
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append('"')
+    $slashes = 0
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq '\') { $slashes++; continue }
+        if ($character -eq '"') {
+            [void]$builder.Append(('\' * (($slashes * 2) + 1)))
+            [void]$builder.Append('"')
+        } else {
+            if ($slashes -gt 0) { [void]$builder.Append(('\' * $slashes)) }
+            [void]$builder.Append($character)
+        }
+        $slashes = 0
+    }
+    if ($slashes -gt 0) { [void]$builder.Append(('\' * ($slashes * 2))) }
+    [void]$builder.Append('"')
+    return $builder.ToString()
+}
+
+# Run a child process with a hard timeout, captured diagnostics, and complete
+# process-tree cleanup. Start-Process is intentionally avoided: inside PS2EXE
+# its Process object can expose a blank ExitCode even after WaitForExit.
 function Invoke-ProcessWithTimeout {
     param(
         [Parameter(Mandatory)] [string]$FilePath,
@@ -552,8 +576,18 @@ function Invoke-ProcessWithTimeout {
         [Parameter(Mandatory)] [string]$Description
     )
 
-    $proc = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList `
-        -PassThru -NoNewWindow
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $FilePath
+    $psi.Arguments = (($ArgumentList | ForEach-Object { ConvertTo-NativeProcessArgument ([string]$_) }) -join ' ')
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+    if (-not $proc.Start()) { throw "Unable to start $Description ($FilePath)." }
+    $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
     if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
         try {
             & taskkill.exe /PID $proc.Id /T /F 2>&1 | Out-Null
@@ -562,8 +596,57 @@ function Invoke-ProcessWithTimeout {
         }
         throw "$Description timed out after $TimeoutSeconds seconds. The complete process tree was terminated."
     }
-    $proc.Refresh()
-    return $proc.ExitCode
+    $proc.WaitForExit()
+    $result = [pscustomobject]@{
+        ExitCode = [int]$proc.ExitCode
+        StdOut = [string]$stdoutTask.Result
+        StdErr = [string]$stderrTask.Result
+    }
+    $proc.Dispose()
+    return $result
+}
+
+function Write-ProcessDiagnostics {
+    param(
+        [Parameter(Mandatory)] $Result,
+        [Parameter(Mandatory)] [scriptblock]$StatusCallback,
+        [string]$Prefix = 'process'
+    )
+    $combined = @($Result.StdOut, $Result.StdErr) -join "`n"
+    $lines = @($combined -split "`r?`n" | Where-Object { $_.Trim() })
+    foreach ($line in ($lines | Select-Object -Last 12)) {
+        & $StatusCallback ("{0}: {1}" -f $Prefix, $line.Trim())
+    }
+}
+
+function Get-GitHubBranchArchive {
+    param(
+        [Parameter(Mandatory)] [string]$Repo,
+        [Parameter(Mandatory)] [string]$Branch,
+        [Parameter(Mandatory)] [string]$Destination,
+        [Parameter(Mandatory)] [string]$StagingRoot,
+        [Parameter(Mandatory)] [scriptblock]$StatusCallback
+    )
+    if ($Repo -notmatch '^https://github\.com/([^/]+)/([^/]+)$') {
+        throw "Archive fallback is supported only for public GitHub HTTPS repositories: $Repo"
+    }
+    $owner = $Matches[1]
+    $repository = $Matches[2] -replace '\.git$', ''
+    $escapedBranch = ([uri]::EscapeDataString($Branch)).Replace('%2F', '/')
+    $archiveUrl = "https://codeload.github.com/$owner/$repository/zip/refs/heads/$escapedBranch"
+    $archiveFile = Join-Path $StagingRoot 'repository.zip'
+    $extractDir = Join-Path $StagingRoot 'archive'
+    & $StatusCallback 'Git clone failed; downloading the same branch as a GitHub archive...'
+    Get-RemoteFile -Url $archiveUrl -OutFile $archiveFile | Out-Null
+    New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+    Expand-Archive -LiteralPath $archiveFile -DestinationPath $extractDir -Force
+    $archiveRoot = Get-ChildItem -LiteralPath $extractDir -Directory | Select-Object -First 1
+    if (-not $archiveRoot) { throw "GitHub archive for $Repo did not contain a repository folder." }
+    Move-Item -LiteralPath $archiveRoot.FullName -Destination $Destination
+    if (-not (Test-Path -LiteralPath $Destination)) {
+        throw "GitHub archive extraction did not create $Destination."
+    }
+    & $StatusCallback 'GitHub archive extracted successfully to local staging.'
 }
 
 # Clone into a local temporary folder first, then copy the completed repository
@@ -584,21 +667,26 @@ function Invoke-GitClone {
     $env:GCM_INTERACTIVE = 'Never'
     try {
     $destinationAlreadyExists = Test-Path -LiteralPath $Destination
-    if ($destinationAlreadyExists -and -not (Test-Path (Join-Path $Destination '.git'))) {
-        throw "Cartella $Destination esiste ma non e' un repo git. Spostala o cancellala manualmente."
-    }
-
     $stagingRoot = Join-Path $env:TEMP ("phase-git-stage-" + [guid]::NewGuid().ToString('N'))
     $stagedRepo = Join-Path $stagingRoot 'repo'
     New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
     try {
         & $StatusCallback "git clone $Repo (branch $Branch) to local staging..."
-        $cloneExit = Invoke-ProcessWithTimeout -FilePath $GitExe `
-            -ArgumentList @('clone', '--depth', '1', '--branch', $Branch,
-                '--single-branch', '--no-tags', $Repo, ('"{0}"' -f $stagedRepo)) `
-            -TimeoutSeconds 600 -Description "git clone for $Repo"
-        if ($cloneExit -ne 0) {
-            throw "git clone $Repo fallito con exit code $cloneExit"
+        $cloneResult = $null
+        try {
+            $cloneResult = Invoke-ProcessWithTimeout -FilePath $GitExe `
+                -ArgumentList @('clone', '--depth', '1', '--branch', $Branch,
+                    '--single-branch', '--no-tags', $Repo, $stagedRepo) `
+                -TimeoutSeconds 600 -Description "git clone for $Repo"
+            Write-ProcessDiagnostics -Result $cloneResult -StatusCallback $StatusCallback -Prefix 'git'
+        } catch {
+            & $StatusCallback "git clone could not complete: $($_.Exception.Message)"
+        }
+        if (-not $cloneResult -or $cloneResult.ExitCode -ne 0) {
+            if ($cloneResult) { & $StatusCallback "git clone returned exit code $($cloneResult.ExitCode)." }
+            Remove-Item -LiteralPath $stagedRepo -Recurse -Force -ErrorAction SilentlyContinue
+            Get-GitHubBranchArchive -Repo $Repo -Branch $Branch -Destination $stagedRepo `
+                -StagingRoot $stagingRoot -StatusCallback $StatusCallback
         }
 
         if ($destinationAlreadyExists) {
@@ -607,14 +695,15 @@ function Invoke-GitClone {
             & $StatusCallback "Clone completed locally; copying to $Destination..."
         }
         New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-        $copyExit = Invoke-ProcessWithTimeout -FilePath 'robocopy.exe' `
-            -ArgumentList @(('"{0}"' -f $stagedRepo), ('"{0}"' -f $Destination),
+        $copyResult = Invoke-ProcessWithTimeout -FilePath 'robocopy.exe' `
+            -ArgumentList @($stagedRepo, $Destination,
                 '/E', '/COPY:DAT', '/DCOPY:DAT', '/R:2', '/W:2',
                 '/NFL', '/NDL', '/NJH', '/NJS', '/NP') `
             -TimeoutSeconds 1200 -Description "repository copy to $Destination"
+        Write-ProcessDiagnostics -Result $copyResult -StatusCallback $StatusCallback -Prefix 'robocopy'
         # Robocopy exit codes 0..7 are success/non-fatal status combinations.
-        if ($copyExit -gt 7) {
-            throw "robocopy verso $Destination fallito con exit code $copyExit"
+        if ($copyResult.ExitCode -gt 7) {
+            throw "robocopy verso $Destination fallito con exit code $($copyResult.ExitCode)"
         }
         & $StatusCallback "Repository ready at $Destination"
     } catch {
