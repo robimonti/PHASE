@@ -45,6 +45,22 @@ def test_installer_clones_main_and_launches_production_m_files(phase_root):
     assert "Open $($a.Name) in MATLAB App Designer" not in source
 
 
+def test_installer_stages_git_locally_and_kills_timed_out_process_trees(phase_root):
+    source = _installer(phase_root)
+
+    assert "function Invoke-ProcessWithTimeout" in source
+    assert "$proc.WaitForExit($TimeoutSeconds * 1000)" in source
+    assert "taskkill.exe /PID $proc.Id /T /F" in source
+    assert "$env:GIT_TERMINAL_PROMPT = '0'" in source
+    assert '"phase-git-stage-"' in source
+    assert "Clone completed locally; copying to $Destination" in source
+    assert "robocopy.exe" in source
+    assert "if ($copyExit -gt 7)" in source
+    assert "Remove-Item -LiteralPath $stagingRoot" in source
+    assert "Remove-Item -LiteralPath $Destination -Recurse -Force" in source
+    assert "-TimeoutSeconds 600 -Description \"git clone for $Repo\"" in source
+
+
 def test_installer_cleans_legacy_runtime_and_keeps_engine_editable(phase_root):
     source = _installer(phase_root)
 

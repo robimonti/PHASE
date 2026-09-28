@@ -541,7 +541,35 @@ function Invoke-SnapInstaller {
     }
 }
 
-# git clone con progress callback (parse output di --progress).
+# Run a child process with a hard timeout and kill its complete Windows process
+# tree on expiry. Start-Process -Wait alone can leave git.exe / ssh.exe /
+# git-remote-https.exe alive when a mapped or UNC destination stalls.
+function Invoke-ProcessWithTimeout {
+    param(
+        [Parameter(Mandatory)] [string]$FilePath,
+        [Parameter(Mandatory)] [string[]]$ArgumentList,
+        [Parameter(Mandatory)] [int]$TimeoutSeconds,
+        [Parameter(Mandatory)] [string]$Description
+    )
+
+    $proc = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList `
+        -PassThru -NoNewWindow
+    if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+        try {
+            & taskkill.exe /PID $proc.Id /T /F 2>&1 | Out-Null
+        } catch {
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+        }
+        throw "$Description timed out after $TimeoutSeconds seconds. The complete process tree was terminated."
+    }
+    $proc.Refresh()
+    return $proc.ExitCode
+}
+
+# Clone into a local temporary folder first, then copy the completed repository
+# to the requested destination. Running git directly on S:/UNC/SMB locations
+# can block indefinitely inside filesystem operations and leave orphaned git
+# processes after the installer window is closed.
 function Invoke-GitClone {
     param(
         [Parameter(Mandatory)] [string]$GitExe,
@@ -550,49 +578,56 @@ function Invoke-GitClone {
         [Parameter(Mandatory)] [string]$Destination,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
-    if (Test-Path (Join-Path $Destination '.git')) {
-        # Repo gia' presente: forza l'allineamento al branch corretto del
-        # remote configurato. Usato sia per riprese di install interrotte
-        # sia per branch rinominati upstream (es. windows-port/main -> main).
-        # Strategia:
-        #   1. remote set-url origin <Repo>          (gestisce fork swap)
-        #   2. reset --hard HEAD                     (scarta modifiche locali
-        #                                             tracked - tipicamente
-        #                                             le patch .mlapp precedenti)
-        #   3. fetch origin <Branch>
-        #   4. checkout -B <Branch> FETCH_HEAD       (anche su storia divergente
-        #                                             - bypassa il ff-only)
-        # NB: Start-Process -ArgumentList unisce gli argomenti con spazi SENZA
-        # quotarli: i path con spazi (es. "D:\Baldurs Gate 3\PHASE") vanno
-        # quotati a mano o git li riceve spezzati (usage error, exit 129).
-        $destQuoted = '"{0}"' -f $Destination
-        & $StatusCallback "Repo already present at $Destination - updating to origin/$Branch..."
-        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'remote', 'set-url', 'origin', $Repo) -Wait -PassThru -NoNewWindow
-        $null = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'reset', '--hard', 'HEAD') -Wait -PassThru -NoNewWindow
-        $pFetch = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'fetch', 'origin', $Branch) -Wait -PassThru -NoNewWindow
-        if ($pFetch.ExitCode -ne 0) {
-            & $StatusCallback "git fetch fallito (exit $($pFetch.ExitCode)) - mantengo lo stato attuale"
-            return
-        }
-        $pCheckout = Start-Process -FilePath $GitExe -ArgumentList @('-C', $destQuoted, 'checkout', '-B', $Branch, 'FETCH_HEAD') -Wait -PassThru -NoNewWindow
-        if ($pCheckout.ExitCode -eq 0) {
-            & $StatusCallback "Repo allineato al branch $Branch (HEAD da remote)"
-        } else {
-            & $StatusCallback "git checkout fallito (exit $($pCheckout.ExitCode))"
-        }
-        return
-    }
-    if (Test-Path $Destination) {
+    $oldTerminalPrompt = $env:GIT_TERMINAL_PROMPT
+    $oldGcmInteractive = $env:GCM_INTERACTIVE
+    $env:GIT_TERMINAL_PROMPT = '0'
+    $env:GCM_INTERACTIVE = 'Never'
+    try {
+    $destinationAlreadyExists = Test-Path -LiteralPath $Destination
+    if ($destinationAlreadyExists -and -not (Test-Path (Join-Path $Destination '.git'))) {
         throw "Cartella $Destination esiste ma non e' un repo git. Spostala o cancellala manualmente."
     }
 
-    & $StatusCallback "git clone $Repo (branch $Branch)..."
-    # Destination quotata: -ArgumentList non quota gli argomenti con spazi.
-    $proc = Start-Process -FilePath $GitExe `
-        -ArgumentList 'clone', '--branch', $Branch, '--single-branch', $Repo, ('"{0}"' -f $Destination) `
-        -Wait -PassThru -NoNewWindow
-    if ($proc.ExitCode -ne 0) {
-        throw "git clone $Repo fallito con exit code $($proc.ExitCode)"
+    $stagingRoot = Join-Path $env:TEMP ("phase-git-stage-" + [guid]::NewGuid().ToString('N'))
+    $stagedRepo = Join-Path $stagingRoot 'repo'
+    New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
+    try {
+        & $StatusCallback "git clone $Repo (branch $Branch) to local staging..."
+        $cloneExit = Invoke-ProcessWithTimeout -FilePath $GitExe `
+            -ArgumentList @('clone', '--depth', '1', '--branch', $Branch,
+                '--single-branch', '--no-tags', $Repo, ('"{0}"' -f $stagedRepo)) `
+            -TimeoutSeconds 600 -Description "git clone for $Repo"
+        if ($cloneExit -ne 0) {
+            throw "git clone $Repo fallito con exit code $cloneExit"
+        }
+
+        if ($destinationAlreadyExists) {
+            & $StatusCallback "Fresh clone completed locally; safely refreshing $Destination without deleting untracked project data..."
+        } else {
+            & $StatusCallback "Clone completed locally; copying to $Destination..."
+        }
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+        $copyExit = Invoke-ProcessWithTimeout -FilePath 'robocopy.exe' `
+            -ArgumentList @(('"{0}"' -f $stagedRepo), ('"{0}"' -f $Destination),
+                '/E', '/COPY:DAT', '/DCOPY:DAT', '/R:2', '/W:2',
+                '/NFL', '/NDL', '/NJH', '/NJS', '/NP') `
+            -TimeoutSeconds 1200 -Description "repository copy to $Destination"
+        # Robocopy exit codes 0..7 are success/non-fatal status combinations.
+        if ($copyExit -gt 7) {
+            throw "robocopy verso $Destination fallito con exit code $copyExit"
+        }
+        & $StatusCallback "Repository ready at $Destination"
+    } catch {
+        if (-not $destinationAlreadyExists -and (Test-Path -LiteralPath $Destination)) {
+            Remove-Item -LiteralPath $Destination -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        throw
+    } finally {
+        Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    } finally {
+        $env:GIT_TERMINAL_PROMPT = $oldTerminalPrompt
+        $env:GCM_INTERACTIVE = $oldGcmInteractive
     }
 }
 

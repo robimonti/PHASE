@@ -54,13 +54,13 @@ accanto a sé. Per distribuirlo come pacchetto self-contained:
 
 ```powershell
 # Layout finale del pacchetto:
-phase-installer-v6.1.0\
+phase-installer-v6.1.1\
 ├── install-phase.exe
 └── installers\
     └── esa-snap_sentinel_windows-13.0.0.exe               # ~500 MB
 
 # Comprimi:
-Compress-Archive -Path phase-installer-v6.1.0 -DestinationPath phase-installer-v6.1.0.zip
+Compress-Archive -Path phase-installer-v6.1.1 -DestinationPath phase-installer-v6.1.1.zip
 ```
 
 L'utente finale estrae lo zip e fa doppio click su

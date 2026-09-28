@@ -1,12 +1,12 @@
 # PHASE (Persistent scatterer Highly Automated Suite for Environmental monitoring)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19605360.svg)](https://doi.org/10.5281/zenodo.19605360)
-[![Download PHASE v6.1 for Windows](https://img.shields.io/badge/Windows-PHASE%20v6.1%20Installer-2965CC?logo=windows)](https://github.com/robimonti/PHASE/releases/download/v6.1/install-phase.exe)
+[![Download PHASE v6.1.1 for Windows](https://img.shields.io/badge/Windows-PHASE%20v6.1.1%20Installer-2965CC?logo=windows)](https://github.com/robimonti/PHASE/releases/download/v6.1.1/install-phase.exe)
 
 > [!IMPORTANT]
 > **Windows users should not clone or download the source repository.**
 > Download and run the ready-to-use
-> **[PHASE v6.1 Windows installer](https://github.com/robimonti/PHASE/releases/download/v6.1/install-phase.exe)**.
+> **[PHASE v6.1.1 Windows installer](https://github.com/robimonti/PHASE/releases/download/v6.1.1/install-phase.exe)**.
 > The installer creates a clean runtime installation and configures StaMPS,
 > TRAIN, native executables, Python, MATLAB paths and the three PHASE shortcuts.
 

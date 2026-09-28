@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.1] - 2026-09-28
+### Fixed
+- Prevented the Windows installer from hanging or leaving orphaned Git
+  processes when installing to mapped or UNC network drives.
+- Clone repositories locally with bounded subprocesses, then copy them to the
+  chosen destination with retry-limited `robocopy`.
+
 ## [6.1.0] - 2026-09-17
 ### Added
 - Optional StaMPS radar-grid diagnostic figures for initial amplitude

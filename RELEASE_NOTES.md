@@ -1,6 +1,24 @@
-# PHASE v6.1
+# PHASE v6.1.1
 
-PHASE v6.1 adds an optional, traceable diagnostic export for the StaMPS
+PHASE v6.1.1 fixes Windows installation on mapped and network drives and
+includes the optional, traceable diagnostic export introduced in v6.1.
+
+## Installer reliability fix
+
+- Git repositories are cloned into a local temporary staging directory before
+  being copied to the selected installation path. Git no longer performs
+  checkout operations directly on mapped/UNC/SMB storage.
+- Every Git and copy subprocess has a hard timeout. On timeout PHASE terminates
+  the complete child process tree, including `git-remote-https.exe`, so closing
+  the installer cannot leave orphaned Git processes behind.
+- Repository downloads are shallow and non-interactive, reducing installation
+  time and preventing hidden credential prompts.
+- Completed installations can be refreshed from local staging without deleting
+  untracked PHASE project data already present below the engine folder.
+- Failed first-time copies remove their partial destination and local staging
+  data before returning an actionable error.
+
+PHASE v6.1 added an optional, traceable diagnostic export for the StaMPS
 candidate-selection workflow while retaining the complete standalone PHASE 6
 application suite introduced in v6.0.
 
