@@ -7,12 +7,13 @@ import os
 import re
 import sys
 import time
+import traceback
 from pathlib import Path
 
 
 CHUNK_SIZE = 1024 * 1024
 PROGRESS_INTERVAL = 0.25
-MAX_ATTEMPTS = 3
+MAX_ATTEMPTS = 5
 
 
 class StopRequested(Exception):
@@ -98,6 +99,7 @@ class Progress:
         self.current_total = 0
         self.completed_bytes = 0
         self.completed_files = 0
+        self.processed_files = 0
         self.skipped_files = 0
         self.failed_files = 0
         self.message = "Preparing download…"
@@ -106,13 +108,10 @@ class Progress:
         self.expected_total = sum(item["sizeBytes"] for item in entries)
 
     def percentage(self):
-        if self.expected_total > 0 and all(item["sizeBytes"] > 0 for item in self.entries):
-            value = 100 * (self.completed_bytes + self.current_bytes) / self.expected_total
-        else:
-            fraction = 0
-            if self.current_total > 0:
-                fraction = min(1, self.current_bytes / self.current_total)
-            value = 100 * (self.completed_files + fraction) / max(1, len(self.entries))
+        fraction = 0
+        if self.current_total > 0:
+            fraction = min(1, self.current_bytes / self.current_total)
+        value = 100 * (self.processed_files + fraction) / max(1, len(self.entries))
         return round(max(0, min(100, value)), 2)
 
     def payload(self):
@@ -129,6 +128,7 @@ class Progress:
             "completedBytes": self.completed_bytes,
             "expectedTotalBytes": self.expected_total,
             "completedFiles": self.completed_files,
+            "processedFiles": self.processed_files,
             "skippedFiles": self.skipped_files,
             "failedFiles": self.failed_files,
             "message": self.message,
@@ -159,7 +159,9 @@ def response_total(response, offset):
     return 0
 
 
-def download_one(session, entry, destination, stop_path, progress):
+def download_one(
+    session, entry, destination, stop_path, progress, session_factory=None
+):
     target = destination / entry["name"]
     partial = target.with_name(target.name + ".part")
     expected = entry["sizeBytes"]
@@ -167,13 +169,13 @@ def download_one(session, entry, destination, stop_path, progress):
     if target.is_file():
         actual = target.stat().st_size
         if expected == 0 or actual == expected:
-            return "skipped", actual
+            return "skipped", actual, session
         target.unlink()
     if partial.is_file() and expected:
         partial_size = partial.stat().st_size
         if partial_size == expected:
             os.replace(partial, target)
-            return "downloaded", partial_size
+            return "downloaded", partial_size, session
         if partial_size > expected:
             partial.unlink()
 
@@ -218,7 +220,7 @@ def download_one(session, entry, destination, stop_path, progress):
                     f"Incomplete file {entry['name']}: {actual} of {verified} bytes."
                 )
             os.replace(partial, target)
-            return "downloaded", actual
+            return "downloaded", actual, session
         except StopRequested:
             raise
         except Exception as exc:
@@ -226,13 +228,28 @@ def download_one(session, entry, destination, stop_path, progress):
                 raise RuntimeError(
                     f"{entry['name']} failed after {MAX_ATTEMPTS} attempts: {exc}"
                 ) from exc
+            retry_after = 0
+            response = getattr(exc, "response", None)
+            if response is not None:
+                try:
+                    retry_after = int(response.headers.get("Retry-After", "0"))
+                except (TypeError, ValueError):
+                    retry_after = 0
+            # Earthdata cookies/tokens and pooled HTTPS connections can expire
+            # during large (multi-hour) stacks. Re-authenticate before retrying
+            # instead of repeating every request on the same broken session.
+            if session_factory is not None:
+                try:
+                    session = session_factory()
+                except Exception:
+                    pass
             progress.phase = "retrying"
             progress.message = (
                 f"Retrying image {progress.current_index} of {len(progress.entries)} "
-                f"(attempt {attempt + 1}/{MAX_ATTEMPTS})"
+                f"(attempt {attempt + 1}/{MAX_ATTEMPTS}): {exc}"
             )
             progress.write(force=True)
-            time.sleep(min(2**attempt, 5))
+            time.sleep(max(retry_after, min(2**attempt, 20)))
     raise RuntimeError(f"Download failed for {entry['name']}.")
 
 
@@ -250,8 +267,10 @@ def run(args, session=None):
         "failed": [],
     }
     progress.write(force=True)
+    session_factory = None
     if session is None:
-        session = authenticated_session(args.credentials)
+        session_factory = lambda: authenticated_session(args.credentials)
+        session = session_factory()
 
     try:
         for index, entry in enumerate(entries, 1):
@@ -262,8 +281,9 @@ def run(args, session=None):
             progress.current_total = entry["sizeBytes"]
             progress.write(force=True)
             try:
-                status, size = download_one(
-                    session, entry, destination, args.stop, progress
+                status, size, session = download_one(
+                    session, entry, destination, args.stop, progress,
+                    session_factory=session_factory,
                 )
                 if status == "skipped":
                     progress.skipped_files += 1
@@ -271,6 +291,7 @@ def run(args, session=None):
                 else:
                     result["downloaded"].append(entry["name"])
                 progress.completed_files += 1
+                progress.processed_files += 1
                 progress.completed_bytes += size
                 progress.current_bytes = 0
                 progress.current_total = 0
@@ -282,6 +303,7 @@ def run(args, session=None):
                 raise
             except Exception as exc:
                 progress.failed_files += 1
+                progress.processed_files += 1
                 result["failed"].append(
                     {"name": entry["name"], "message": str(exc)}
                 )
@@ -306,6 +328,7 @@ def run(args, session=None):
         {
             "totalFiles": len(entries),
             "completedFiles": progress.completed_files,
+            "processedFiles": progress.processed_files,
             "downloadedCount": len(result["downloaded"]),
             "skippedCount": len(result["skipped"]),
             "failedCount": len(result["failed"]),
@@ -346,7 +369,7 @@ def main(argv=None):
                 "failedCount": 1,
             },
         )
-        print(str(exc), file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         return 1
     if result["status"] == "failed":
         return 1

@@ -497,6 +497,7 @@ def test_preprocessing_downloads_are_async_resumable_and_visible(phase_root):
         "download-transfer-progress",
         "download-transfer-count",
         "stop-download-transfer",
+        "retry-download-transfer",
         "update-sort-key",
         "update-sort-direction",
         "update-transfer-card",
@@ -504,6 +505,7 @@ def test_preprocessing_downloads_are_async_resumable_and_visible(phase_root):
         "update-transfer-progress",
         "update-transfer-count",
         "stop-update-transfer",
+        "retry-update-transfer",
     ):
         assert f'id="{element_id}"' in html
     assert "sortAsfResults" in js
@@ -516,7 +518,11 @@ def test_preprocessing_downloads_are_async_resumable_and_visible(phase_root):
     assert "os.replace(partial, target)" in manager
     assert '"Range": f"bytes={offset}-"' in manager
     assert "stop_if_requested" in manager
-    assert "MAX_ATTEMPTS = 3" in manager
+    assert "MAX_ATTEMPTS = 5" in manager
+    assert "case 'retrydownload', obj.retryLastDownload();" in controller
+    assert "last_download_result.json" in controller
+    assert "Download inventory refresh warning" in controller
+    assert 'send("RetryDownload"' in js
 
 
 def test_preprocessing_beta_has_matlab_side_smoke_test(phase_root):

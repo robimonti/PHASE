@@ -101,6 +101,7 @@ function wireStaticControls() {
     renderDownloader();
   });
   listen("stop-download-transfer", "click", () => send("StopDownload", {}));
+  listen("retry-download-transfer", "click", () => send("RetryDownload", {}));
   listen("refresh-update", "click", () => send("RefreshUpdate", {}));
   listen("search-update", "click", searchUpdate);
   listen("update-select-all", "change", event => selectAllUpdate(event.target.checked));
@@ -114,6 +115,7 @@ function wireStaticControls() {
     renderUpdate();
   });
   listen("stop-update-transfer", "click", () => send("StopDownload", {}));
+  listen("retry-update-transfer", "click", () => send("RetryDownload", {}));
   document.querySelectorAll(".filter-disclosure").forEach(disclosure => {
     disclosure.addEventListener("toggle", () => {
       window.setTimeout(() => PhaseUI.downloadMap?.queueRender(), 30);
@@ -881,6 +883,11 @@ function renderTransferCard(prefix, transfer, matches) {
   messageNode.textContent = transfer.message || "Download ready";
   const stopButton = byId(`stop-${prefix}-transfer`);
   stopButton.disabled = !transfer.canStop;
+  stopButton.classList.toggle("hidden", !transfer.canStop);
+  const retryButton = byId(`retry-${prefix}-transfer`);
+  const canRetry = !transfer.active && ["failed", "stopped"].includes(transfer.phase);
+  retryButton.classList.toggle("hidden", !canRetry);
+  retryButton.disabled = !canRetry;
   card.classList.toggle("complete", transfer.phase === "completed");
   card.classList.toggle("failed", transfer.phase === "failed");
   card.classList.toggle("stopped", transfer.phase === "stopped");

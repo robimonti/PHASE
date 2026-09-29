@@ -175,6 +175,7 @@ classdef App < handle
                     case 'downloadlogout', obj.logoutAsf();
                     case 'downloadselected', obj.downloadSelectedAsf(payload);
                     case 'stopdownload', obj.stopDownloadTransfer(false);
+                    case 'retrydownload', obj.retryLastDownload();
                     case 'refreshupdate', obj.refreshUpdateContext();
                     case 'searchupdate', obj.searchUpdateImages(payload);
                     case 'downloadupdate', obj.downloadUpdateImages(payload);
@@ -608,6 +609,8 @@ classdef App < handle
             stopPath = fullfile(obj.TransferDirectory,'stop.request');
             obj.TransferLogPath = fullfile(obj.TransferDirectory,'download.log');
             writeJson(manifestPath,struct('files',{entries}));
+            persistentManifest = fullfile(obj.RootDir,'downloadasf','last_download_manifest.json');
+            writeJson(persistentManifest,struct('kind',kind,'files',{entries}));
 
             script = fullfile(obj.RootDir,'pythonScripts','phase_download_manager.py');
             credentials = fullfile(obj.RootDir,'downloadasf','login_request.json');
@@ -670,9 +673,17 @@ classdef App < handle
                 end
             end
             if obj.Transfer.completedFiles ~= previousCompleted
-                obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.RootDir);
-                obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
-                obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+                % Inventory/footprint refresh must never prevent process
+                % finalisation. A malformed ZIP/metadata sidecar used to make
+                % this timer callback abort here and leave the UI permanently
+                % busy even though the Python downloader had already exited.
+                try
+                    obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.RootDir);
+                    obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
+                    obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+                catch ME
+                    obj.appendLog(['Download inventory refresh warning: ' ME.message]);
+                end
             end
             if strcmp(obj.Transfer.kind,'initial')
                 obj.Downloader.progress = obj.Transfer.percentage;
@@ -696,6 +707,7 @@ classdef App < handle
             if isfile(resultPath)
                 try, result = jsondecode(fileread(resultPath)); catch, end
             end
+            obj.preserveTransferDiagnostics();
             status = char(string(result.status));
             countFields = {'completedFiles','downloadedCount','skippedCount','failedCount'};
             targetFields = {'completedFiles','downloadedFiles','skippedFiles','failedFiles'};
@@ -718,7 +730,20 @@ classdef App < handle
                 failedCount = 1;
                 if isfield(result,'failedCount'), failedCount = double(result.failedCount); end
                 obj.Transfer.failedFiles = max(obj.Transfer.failedFiles,failedCount);
-                obj.Transfer.message = sprintf('%d image download(s) failed.',failedCount);
+                obj.Transfer.message = sprintf([ ...
+                    '%d image download(s) failed. Completed files were kept; ' ...
+                    'use Retry pending downloads to resume.'],failedCount);
+                if isfield(result,'failed') && ~isempty(result.failed)
+                    failures = result.failed;
+                    for failureIndex = 1:numel(failures)
+                        try
+                            obj.appendLog(sprintf('Downloader failed: %s — %s', ...
+                                char(string(failures(failureIndex).name)), ...
+                                char(string(failures(failureIndex).message))));
+                        catch
+                        end
+                    end
+                end
                 if isfile(obj.TransferLogPath)
                     try
                         logText = strtrim(fileread(obj.TransferLogPath));
@@ -738,10 +763,57 @@ classdef App < handle
             end
             obj.disposeTransferTimer();
             obj.TransferProcess = [];
-            obj.refreshLocalData(obj.Transfer.message);
+            try
+                obj.refreshLocalData(obj.Transfer.message);
+            catch ME
+                obj.appendLog(['Final download inventory refresh warning: ' ME.message]);
+                % The transfer state must still reach the UI even if one
+                % optional footprint/ZIP inspection fails.
+                obj.sendState();
+            end
             cleanupTransferDirectory(obj.TransferDirectory);
             obj.TransferDirectory = '';
             obj.TransferLogPath = '';
+        end
+
+        function retryLastDownload(obj)
+            if isstruct(obj.Transfer) && isfield(obj.Transfer,'active') && obj.Transfer.active
+                error('PHASE:DownloadAlreadyRunning','A download is already running.');
+            end
+            manifestPath = fullfile(obj.RootDir,'downloadasf','last_download_manifest.json');
+            if ~isfile(manifestPath)
+                error('PHASE:NoDownloadToRetry','No previous download manifest is available.');
+            end
+            manifest = jsondecode(fileread(manifestPath));
+            if ~isfield(manifest,'files') || isempty(manifest.files)
+                error('PHASE:NoDownloadToRetry','The previous download manifest is empty.');
+            end
+            kind = 'initial';
+            if isfield(manifest,'kind'), kind = char(string(manifest.kind)); end
+            obj.appendLog('Retrying pending downloads; completed ZIP files will be skipped.');
+            obj.startDownloadTransfer(kind,manifest.files);
+        end
+
+        function preserveTransferDiagnostics(obj)
+            diagnosticsDir = fullfile(obj.RootDir,'downloadasf');
+            if ~isfolder(diagnosticsDir), mkdir(diagnosticsDir); end
+            sources = { ...
+                fullfile(obj.TransferDirectory,'manifest.json'), ...
+                fullfile(obj.TransferDirectory,'progress.json'), ...
+                fullfile(obj.TransferDirectory,'result.json'), ...
+                obj.TransferLogPath};
+            names = {'last_download_manifest_runtime.json', ...
+                'last_download_progress.json','last_download_result.json', ...
+                'last_download.log'};
+            for diagnosticIndex = 1:numel(sources)
+                try
+                    if ~isempty(sources{diagnosticIndex}) && isfile(sources{diagnosticIndex})
+                        copyfile(sources{diagnosticIndex}, ...
+                            fullfile(diagnosticsDir,names{diagnosticIndex}),'f');
+                    end
+                catch
+                end
+            end
         end
 
         function stopDownloadTransfer(obj, closing)

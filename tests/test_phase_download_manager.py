@@ -42,7 +42,10 @@ class _Session:
 
     def get(self, url, **kwargs):
         self.requests.append((url, kwargs))
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
+            raise response
+        return response
 
 
 def _args(tmp_path, manifest, kind="initial"):
@@ -149,3 +152,31 @@ def test_download_manager_updates_progress_and_keeps_partial_on_mid_file_stop(
     assert result["status"] == "stopped"
     assert (tmp_path / "slaves" / "large.zip.part").read_bytes() == b"abc"
     assert not (tmp_path / "slaves" / "large.zip").exists()
+
+
+def test_failed_image_does_not_block_the_remaining_queue(phase_root, tmp_path, monkeypatch):
+    module = _module(phase_root)
+    monkeypatch.setattr(module, "MAX_ATTEMPTS", 2)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    args = _args(
+        tmp_path,
+        [
+            {"name": "bad.zip", "url": "https://example.test/bad.zip", "sizeBytes": 3},
+            {"name": "good.zip", "url": "https://example.test/good.zip", "sizeBytes": 3},
+        ],
+    )
+    session = _Session(
+        [OSError("temporary ASF failure"), OSError("temporary ASF failure"),
+         _Response([b"abc"], headers={"Content-Length": "3"})]
+    )
+
+    result = module.run(args, session=session)
+
+    assert result["status"] == "failed"
+    assert result["failedCount"] == 1
+    assert result["completedFiles"] == 1
+    assert result["processedFiles"] == 2
+    assert (tmp_path / "slaves" / "good.zip").read_bytes() == b"abc"
+    progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+    assert progress["percentage"] == 100
+    assert progress["currentIndex"] == 2

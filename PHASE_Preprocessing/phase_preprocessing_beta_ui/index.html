@@ -230,7 +230,10 @@
                   <div id="download-transfer-file" class="transfer-file">Waiting to start</div>
                   <div class="transfer-footer">
                     <span id="downloader-status">Downloader ready</span>
-                    <button id="stop-download-transfer" class="button danger" type="button">Force stop download</button>
+                    <div class="inline-actions">
+                      <button id="retry-download-transfer" class="button secondary hidden" type="button">Retry pending downloads</button>
+                      <button id="stop-download-transfer" class="button danger" type="button">Force stop download</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -270,7 +273,10 @@
               <div id="update-transfer-file" class="transfer-file">Waiting to start</div>
               <div class="transfer-footer">
                 <span id="update-transfer-message">Stack update ready</span>
-                <button id="stop-update-transfer" class="button danger" type="button">Force stop download</button>
+                <div class="inline-actions">
+                  <button id="retry-update-transfer" class="button secondary hidden" type="button">Retry pending downloads</button>
+                  <button id="stop-update-transfer" class="button danger" type="button">Force stop download</button>
+                </div>
               </div>
             </div>
           </article>

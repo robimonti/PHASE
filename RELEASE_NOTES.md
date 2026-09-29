@@ -1,4 +1,28 @@
-# PHASE v6.1.2
+# PHASE v6.1.3
+
+PHASE v6.1.3 makes long Sentinel-1 ASF download queues recoverable and prevents
+the preprocessing interface from remaining permanently busy after a failed
+image or an optional inventory-refresh error.
+
+## ASF downloader reliability
+
+- A failed image no longer blocks the remaining queue. PHASE records the
+  failure and continues with every subsequent selected acquisition.
+- Each image is retried up to five times with exponential backoff and support
+  for ASF `Retry-After` throttling responses.
+- Earthdata authentication and the HTTPS session are refreshed between retries
+  during long-running downloads.
+- Completed ZIP files and resumable `.part` files are preserved.
+- Failed or stopped transfers now expose a **Retry pending downloads** button;
+  already completed files are detected and skipped automatically.
+- Download manifest, progress, result and Python traceback are retained under
+  `engine/downloadasf/last_download*` for diagnosis instead of being deleted.
+- ZIP inventory and footprint-refresh failures can no longer interrupt transfer
+  finalisation or leave the UI controls disabled.
+- Queue progress reaches the end even when individual images fail, while the
+  final result still reports every failed scene explicitly.
+
+## Previous v6.1.2 changes
 
 PHASE v6.1.2 fixes the compiled Windows installer's repository downloader.
 
