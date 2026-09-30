@@ -58,7 +58,7 @@ items(end+1) = item('density_rand', 'Random density', 'step3', 'number', 'PS/km�
 
 items(end+1) = item('weed_time_win', 'Weeding temporal window', 'step4', 'number', 'days', '', {}, false);
 items(end+1) = item('weed_standard_dev', 'Weeding standard deviation', 'step4', 'number', '', ...
-    'Range 0–100; one decimal place.', {}, false);
+    'Range 0–100; up to two decimal places.', {}, false);
 items(end+1) = item('weed_neighbours', 'Weed neighbours', 'step4', 'choice', '', '', {'y','n'}, false);
 items(end+1) = item('weed_zero_elevation', 'Weed zero elevation', 'step4', 'choice', '', '', {'n','y'}, true);
 items(end+1) = item('weed_max_noise', 'Maximum noise', 'step4', 'number', '', 'Inf disables this threshold.', {}, true);

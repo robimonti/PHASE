@@ -23,7 +23,7 @@ def test_stable_weed_standard_dev_uses_range_and_one_decimal(phase_root):
     assert "app.weed_standard_devEditField.ValueDisplayFormat = '%.1f';" in xml
 
 
-def test_beta_weed_standard_dev_matches_stable_range_and_precision(phase_root):
+def test_beta_weed_standard_dev_supports_two_decimal_places(phase_root):
     package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
     schema = _text(package / "schema.m")
     conversion = _text(package / "uiToConfig.m")
@@ -33,11 +33,11 @@ def test_beta_weed_standard_dev_matches_stable_range_and_precision(phase_root):
         phase_root / "PHASE_Preprocessing" / "phase_stamps_beta_ui" / "app.js"
     )
 
-    assert "'Range 0–100; one decimal place.'" in schema
+    assert "'Range 0–100; up to two decimal places.'" in schema
     assert "'weed_standard_dev'" in conversion
     assert "cfg.weed_standard_dev < 0 || cfg.weed_standard_dev > 100" in validation
-    assert "cfg.weed_standard_dev * 10" in validation
-    assert "cfg.weed_standard_dev = 37.5" in self_test
+    assert "cfg.weed_standard_dev * 100" in validation
+    assert "cfg.weed_standard_dev = 37.55" in self_test
     assert 'item.id === "weed_standard_dev"' in ui
     assert 'control.max = "100"' in ui
-    assert 'control.step = "0.1"' in ui
+    assert 'control.step = "0.01"' in ui

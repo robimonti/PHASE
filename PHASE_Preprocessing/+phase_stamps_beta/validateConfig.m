@@ -35,8 +35,8 @@ if any([cfg.weed_time_win cfg.unwrap_time_win cfg.scn_time_win] < 0)
 end
 if cfg.weed_standard_dev < 0 || cfg.weed_standard_dev > 100
     errors{end+1} = 'Weeding standard deviation must be between 0 and 100.';
-elseif abs(cfg.weed_standard_dev * 10 - round(cfg.weed_standard_dev * 10)) > 1e-9
-    errors{end+1} = 'Weeding standard deviation accepts at most one decimal place.';
+elseif abs(cfg.weed_standard_dev * 100 - round(cfg.weed_standard_dev * 100)) > 1e-9
+    errors{end+1} = 'Weeding standard deviation accepts at most two decimal places.';
 end
 if cfg.n_cores < 1 || mod(cfg.n_cores, 1) ~= 0
     errors{end+1} = 'Number of cores must be a positive integer.';

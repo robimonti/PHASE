@@ -209,6 +209,18 @@ def test_beta_run_monitor_streams_matlab_and_external_output_without_cmd_windows
     assert "PHASE Run monitor" in backend
 
 
+def test_beta_repairs_known_upstream_ps_select_typo_before_processing(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
+    controller = _text(package / "App.m")
+    repair = _text(package / "repairStaMPSCompatibility.m")
+
+    assert "phase_stamps_beta.repairStaMPSCompatibility" in controller
+    assert "sfprintf(" in repair
+    assert "strrep(source, 'sfprintf(', 'sprintf(')" in repair
+    assert ".phase-original" in repair
+    assert "gamma_stdev_reject > 0" in repair
+
+
 def test_beta_range_calendar_and_ts_picker_are_native_to_the_new_app(phase_root):
     preprocessing = phase_root / "PHASE_Preprocessing"
     package = preprocessing / "+phase_stamps_beta"

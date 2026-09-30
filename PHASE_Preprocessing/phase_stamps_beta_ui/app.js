@@ -162,8 +162,8 @@ function createField(item) {
       control.type = "number";
       control.min = "0";
       control.max = "100";
-      control.step = "0.1";
-      control.value = Number(PhaseUI.config[item.id]).toFixed(1);
+      control.step = "0.01";
+      control.value = Number(PhaseUI.config[item.id]).toFixed(2);
     } else {
       control.type = item.type === "date" ? "date" : "text";
       control.value = textValue(PhaseUI.config[item.id]);

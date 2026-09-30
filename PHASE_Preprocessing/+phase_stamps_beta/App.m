@@ -227,6 +227,11 @@ classdef App < handle
             end
 
             runtimeMessages = phase_stamps_beta.prepareRuntime(candidate);
+            compatibility = phase_stamps_beta.repairStaMPSCompatibility( ...
+                candidate.installation_folder);
+            if compatibility.changed
+                runtimeMessages{end+1} = compatibility.message;
+            end
             obj.Config = candidate;
             obj.IsRunning = true;
             obj.Status = 'running';

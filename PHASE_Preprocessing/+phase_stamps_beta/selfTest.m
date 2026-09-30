@@ -12,7 +12,7 @@ cleanup = onCleanup(@() removeTemporary(temporaryDir)); %#ok<NASGU>
 cfg = phase_stamps_beta.defaultConfig();
 cfg.installation_folder = temporaryDir;
 cfg.project_path = temporaryDir;
-cfg.weed_standard_dev = 37.5;
+cfg.weed_standard_dev = 37.55;
 [initial, missingInfo] = phase_stamps_beta.loadConfig(temporaryDir);
 assert(~missingInfo.exists, ...
     'A new StaMPS dataset should start without input_StaMPS.mat.');

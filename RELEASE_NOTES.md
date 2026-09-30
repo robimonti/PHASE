@@ -1,4 +1,21 @@
-# PHASE v6.1.3
+# PHASE v6.1.4
+
+PHASE v6.1.4 fixes an upstream StaMPS Step 3 defect exposed by non-zero
+`gamma_stdev_reject` and preserves two decimal places in the weeding standard
+deviation field.
+
+## StaMPS candidate-selection hotfix
+
+- PHASE detects and repairs the known `sfprintf` typo in the locally installed
+  `StaMPS/matlab/ps_select.m` before processing begins. The original is saved
+  once as `ps_select.m.phase-original`.
+- The failure affected only configurations with `gamma_stdev_reject > 0`; it
+  was not caused by Sentinel-1 data, preprocessing output, or parameter type
+  conversion.
+- `weed_standard_dev` now supports and preserves up to two decimal places, so
+  values such as `0.95` reach StaMPS unchanged.
+
+## Previous v6.1.3 changes
 
 PHASE v6.1.3 makes long Sentinel-1 ASF download queues recoverable and prevents
 the preprocessing interface from remaining permanently busy after a failed
