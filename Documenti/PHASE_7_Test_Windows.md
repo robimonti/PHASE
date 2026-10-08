@@ -14,12 +14,17 @@ incorporato nel wizard, quindi non servono parametri da terminale. Il pacchetto
 non è una release pubblica e può mostrare un avviso SmartScreen perché non è
 firmato.
 
+Per aggiornare una precedente installazione di test, chiudere PHASE/MATLAB e
+rieseguire l'EXE scegliendo la stessa destinazione. L'installer aggiorna il
+codice nell'installazione condivisa senza rimuovere le cartelle dei progetti;
+rinomina il proprio collegamento desktop da `PHASE 7` a `PHASE`.
+
 ## Preparazione
 
 1. Verificare MATLAB, licenza, ESA SNAP 13 e accesso a GitHub.
 2. Lanciare il nuovo installer Windows. Scegliere una destinazione utente
    (predefinita `%LOCALAPPDATA%\Programs\PHASE`).
-3. Verificare `PHASE 7.lnk` sul desktop con il logo PHASE,
+3. Verificare `PHASE.lnk` sul desktop con il logo PHASE,
    `PHASE\PHASE.lnk`, `PHASE\install.json`,
    `PHASE\engine\PHASE_Hub.m`, `PHASE\engine\StaMPS` e `PHASE\engine\TRAIN`.
 4. Avviare PHASE dal collegamento, non da una vecchia scorciatoia 6.1.

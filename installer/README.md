@@ -57,7 +57,7 @@ dei file non equivalgono a una verifica end-to-end del processing.
 
 - **Windows:** compilare `install-phase.exe` su Windows con
   `compile-to-exe.ps1`. Il wizard scarica le dipendenze Windows che gestisce
-  già e crea `PHASE 7.lnk` sul desktop e `PHASE.lnk` nella cartella installata,
+  già e crea `PHASE.lnk` sia sul desktop sia nella cartella installata,
   usando `Logo_square.png` convertito in `PHASE.ico`. Il `.exe` non incorpora
   MATLAB o la licenza. Non è ancora stato compilato o provato su Windows per
   PHASE 7.

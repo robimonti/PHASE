@@ -12,6 +12,7 @@ classdef App < handle
         UpdateButton
         HomeTitle
         HomeDetails
+        HomeStatus
         PreprocessingHost
         StampsHost
         ModelHost
@@ -60,7 +61,7 @@ classdef App < handle
 
         function refreshDatasets(obj)
             if isempty(obj.ProjectRoot)
-                names = {'Nessun progetto'};
+                names = {'No project open'};
                 paths = {''};
             else
                 p = phase_project.paths(obj.ProjectRoot);
@@ -72,7 +73,7 @@ classdef App < handle
                 paths = cellfun(@(name) fullfile(p.stamps,name),names, ...
                     'UniformOutput',false);
                 if isempty(names)
-                    names = {'Nessun dataset — completa il Preprocessing'};
+                    names = {'No dataset — complete Preprocessing first'};
                     paths = {''};
                 end
             end
@@ -127,43 +128,53 @@ classdef App < handle
     methods (Access = private)
         function buildWindow(obj)
             obj.UIFigure = uifigure('Name','PHASE · Workspace', ...
-                'Color',[0.965 0.973 0.99], ...
+                'Color',[1 1 1], ...
                 'Position',centeredPosition(1540,960));
             obj.UIFigure.UserData = obj;
             obj.UIFigure.CloseRequestFcn = @(~,~) obj.requestClose();
 
             shell = uigridlayout(obj.UIFigure,[2 1]);
-            shell.RowHeight = {60,'1x'};
+            shell.RowHeight = {72,'1x'};
             shell.Padding = [0 0 0 0];
             shell.RowSpacing = 0;
-            toolbar = uigridlayout(shell,[1 5]);
+            toolbar = uigridlayout(shell,[1 6]);
             toolbar.Layout.Row = 1;
-            toolbar.ColumnWidth = {180,'1x',138,138,138};
-            toolbar.Padding = [18 10 18 10];
-            toolbar.BackgroundColor = [0.09 0.15 0.29];
+            toolbar.ColumnWidth = {42,145,'1x',150,150,150};
+            toolbar.Padding = [24 12 24 12];
+            toolbar.ColumnSpacing = 10;
+            toolbar.BackgroundColor = [1 1 1];
+            logoPath = fullfile(obj.InstallRoot,'Logo_square.png');
+            if isfile(logoPath)
+                logo = uiimage(toolbar,'ImageSource',logoPath, ...
+                    'ScaleMethod','fit');
+                logo.Layout.Column = 1;
+            end
             title = uilabel(toolbar,'Text','PHASE', ...
-                'FontSize',25,'FontWeight','bold','FontColor',[1 1 1]);
-            title.Layout.Column = 1;
-            obj.ProjectLabel = uilabel(toolbar,'Text','Nessun progetto aperto', ...
-                'FontSize',13,'FontColor',[0.84 0.9 1]);
-            obj.ProjectLabel.Layout.Column = 2;
-            openButton = uibutton(toolbar,'push','Text','Apri progetto', ...
+                'FontSize',25,'FontWeight','bold','FontColor',[53 101 207]/255);
+            title.Layout.Column = 2;
+            obj.ProjectLabel = uilabel(toolbar,'Text','No project open', ...
+                'FontSize',13,'FontColor',[0.31 0.36 0.45]);
+            obj.ProjectLabel.Layout.Column = 3;
+            openButton = uibutton(toolbar,'push','Text','Open project', ...
                 'ButtonPushedFcn',@(~,~) obj.chooseProject());
-            openButton.Layout.Column = 3;
-            newButton = uibutton(toolbar,'push','Text','Nuovo progetto', ...
+            openButton.Layout.Column = 4;
+            styleButton(openButton,false);
+            newButton = uibutton(toolbar,'push','Text','New project', ...
                 'ButtonPushedFcn',@(~,~) obj.createProject());
-            newButton.Layout.Column = 4;
-            obj.UpdateButton = uibutton(toolbar,'push','Text','Cerca update', ...
+            newButton.Layout.Column = 5;
+            styleButton(newButton,true);
+            obj.UpdateButton = uibutton(toolbar,'push','Text','Check for updates', ...
                 'ButtonPushedFcn',@(~,~) obj.checkForUpdates());
-            obj.UpdateButton.Layout.Column = 5;
+            obj.UpdateButton.Layout.Column = 6;
+            styleButton(obj.UpdateButton,false);
             if ~isfile(fullfile(fileparts(obj.InstallRoot),'install.json'))
                 obj.UpdateButton.Enable = 'off';
-                obj.UpdateButton.Tooltip = 'Disponibile nelle installazioni PHASE 7.';
+                obj.UpdateButton.Tooltip = 'Available in managed PHASE installations.';
             end
 
             obj.TabGroup = uitabgroup(shell);
             obj.TabGroup.Layout.Row = 2;
-            obj.HomeTab = uitab(obj.TabGroup,'Title','Progetto');
+            obj.HomeTab = uitab(obj.TabGroup,'Title','Project');
             obj.PreprocessingTab = uitab(obj.TabGroup,'Title','1 · Preprocessing');
             obj.StampsTab = uitab(obj.TabGroup,'Title','2 · StaMPS');
             obj.ModelTab = uitab(obj.TabGroup,'Title','3 · Model');
@@ -181,35 +192,94 @@ classdef App < handle
         end
 
         function buildHome(obj)
-            layout = uigridlayout(obj.HomeTab,[4 1]);
-            layout.RowHeight = {65,105,80,'1x'};
-            layout.Padding = [38 36 38 36];
-            layout.RowSpacing = 15;
-            layout.BackgroundColor = [0.965 0.973 0.99];
-            obj.HomeTitle = uilabel(layout,'Text','Il tuo workspace PHASE', ...
-                'FontSize',29,'FontWeight','bold','FontColor',[0.08 0.16 0.3]);
+            layout = uigridlayout(obj.HomeTab,[5 1]);
+            layout.RowHeight = {132,26,238,118,'1x'};
+            layout.Padding = [28 28 28 28];
+            layout.RowSpacing = 16;
+            layout.BackgroundColor = [0.975 0.978 0.985];
+
+            welcome = uipanel(layout,'BorderType','none', ...
+                'BackgroundColor',[0.92 0.945 1]);
+            welcome.Layout.Row = 1;
+            welcomeGrid = uigridlayout(welcome,[2 1]);
+            welcomeGrid.RowHeight = {48,'1x'};
+            welcomeGrid.Padding = [26 20 26 20];
+            welcomeGrid.RowSpacing = 0;
+            welcomeGrid.BackgroundColor = welcome.BackgroundColor;
+            obj.HomeTitle = uilabel(welcomeGrid,'Text','Your PHASE workspace', ...
+                'FontSize',28,'FontWeight','bold', ...
+                'FontColor',[0.08 0.16 0.3]);
             obj.HomeTitle.Layout.Row = 1;
-            obj.HomeDetails = uilabel(layout, ...
-                'Text','Apri o crea un progetto per iniziare.', ...
+            obj.HomeDetails = uilabel(welcomeGrid, ...
+                'Text','Create a project or open an existing one to get started.', ...
                 'FontSize',15,'FontColor',[0.2 0.28 0.4]);
             obj.HomeDetails.Layout.Row = 2;
-            actions = uigridlayout(layout,[1 3]);
-            actions.Layout.Row = 3;
-            actions.ColumnWidth = {'1x','1x','1x'};
-            actions.Padding = [0 0 0 0];
-            names = {'1 · Preprocessing','2 · StaMPS','3 · Model'};
-            tabs = {obj.PreprocessingTab,obj.StampsTab,obj.ModelTab};
-            for k = 1:3
-                target = tabs{k};
-                button = uibutton(actions,'push','Text',names{k}, ...
-                    'FontSize',14,'ButtonPushedFcn',@(~,~) obj.goToTab(target));
-                button.Layout.Column = k;
-            end
-            note = uilabel(layout, ...
-                'Text',['Un solo progetto per tutte le sezioni. I file di lavoro e i ' ...
-                'risultati restano nel progetto; il codice resta nell’installazione.'], ...
-                'FontSize',13,'FontColor',[0.37 0.43 0.52]);
-            note.Layout.Row = 4;
+
+            workflow = uilabel(layout,'Text','WORKFLOW', ...
+                'FontSize',11,'FontWeight','bold', ...
+                'FontColor',[0.35 0.43 0.56]);
+            workflow.Layout.Row = 2;
+            cards = uigridlayout(layout,[1 3]);
+            cards.Layout.Row = 3;
+            cards.ColumnWidth = {'1x','1x','1x'};
+            cards.ColumnSpacing = 14;
+            cards.Padding = [0 0 0 0];
+            cards.BackgroundColor = layout.BackgroundColor;
+            obj.addWorkflowCard(cards,1,'01  PREPROCESSING', ...
+                'Prepare SAR data', ...
+                'Set your area of interest, process the image stack and export StaMPS inputs.', ...
+                'Open Preprocessing',obj.PreprocessingTab);
+            obj.addWorkflowCard(cards,2,'02  STAMPS', ...
+                'Run PSI analysis', ...
+                'Select a processed dataset, run StaMPS and export displacement results.', ...
+                'Open StaMPS',obj.StampsTab);
+            obj.addWorkflowCard(cards,3,'03  MODEL', ...
+                'Explore results', ...
+                'Build spatial and temporal models, figures and GIS-ready outputs.', ...
+                'Open Model',obj.ModelTab);
+
+            statusPanel = uipanel(layout,'BorderType','none', ...
+                'BackgroundColor',[1 1 1]);
+            statusPanel.Layout.Row = 4;
+            statusGrid = uigridlayout(statusPanel,[2 1]);
+            statusGrid.RowHeight = {28,'1x'};
+            statusGrid.Padding = [22 17 22 17];
+            statusGrid.RowSpacing = 2;
+            statusGrid.BackgroundColor = [1 1 1];
+            statusTitle = uilabel(statusGrid,'Text','PROJECT STATUS', ...
+                'FontSize',11,'FontWeight','bold', ...
+                'FontColor',[0.35 0.43 0.56]);
+            statusTitle.Layout.Row = 1;
+            obj.HomeStatus = uilabel(statusGrid, ...
+                'Text','No project open. Your processing files and results will stay in the project folder.', ...
+                'FontSize',14,'WordWrap','on', ...
+                'FontColor',[0.2 0.28 0.4]);
+            obj.HomeStatus.Layout.Row = 2;
+        end
+
+        function addWorkflowCard(obj,parent,column,step,heading,description,action,tab)
+            card = uipanel(parent,'BorderType','line', ...
+                'BackgroundColor',[1 1 1]);
+            card.Layout.Column = column;
+            grid = uigridlayout(card,[4 1]);
+            grid.RowHeight = {23,37,'1x',42};
+            grid.Padding = [22 20 22 18];
+            grid.RowSpacing = 4;
+            grid.BackgroundColor = [1 1 1];
+            tag = uilabel(grid,'Text',step,'FontSize',11, ...
+                'FontWeight','bold','FontColor',[53 101 207]/255);
+            tag.Layout.Row = 1;
+            headingLabel = uilabel(grid,'Text',heading,'FontSize',19, ...
+                'FontWeight','bold','FontColor',[0.08 0.16 0.3]);
+            headingLabel.Layout.Row = 2;
+            descriptionLabel = uilabel(grid,'Text',description, ...
+                'FontSize',13,'WordWrap','on', ...
+                'FontColor',[0.31 0.36 0.45]);
+            descriptionLabel.Layout.Row = 3;
+            button = uibutton(grid,'push','Text',action, ...
+                'ButtonPushedFcn',@(~,~) obj.goToTab(tab));
+            button.Layout.Row = 4;
+            styleButton(button,false);
         end
 
         function buildStampsTab(obj)
@@ -226,17 +296,18 @@ classdef App < handle
                 'FontWeight','bold');
             label.Layout.Column = 1;
             obj.StampsSelector = uidropdown(bar, ...
-                'Items',{'Nessun progetto'},'ItemsData',{''}, ...
+                'Items',{'No project open'},'ItemsData',{''}, ...
                 'ValueChangedFcn',@(~,~) obj.loadStamps());
             obj.StampsSelector.Layout.Column = 2;
-            refresh = uibutton(bar,'push','Text','Aggiorna', ...
+            refresh = uibutton(bar,'push','Text','Refresh', ...
                 'ButtonPushedFcn',@(~,~) obj.refreshDatasets());
             refresh.Layout.Column = 3;
+            styleButton(refresh,false);
             obj.StampsHost = uipanel(layout,'BorderType','none', ...
                 'BackgroundColor',[1 1 1]);
             obj.StampsHost.Layout.Row = 2;
             obj.StampsPlaceholder = uilabel(obj.StampsHost, ...
-                'Text','Apri un progetto e scegli un dataset StaMPS.', ...
+                'Text','Open a project and select a StaMPS dataset.', ...
                 'FontSize',17,'HorizontalAlignment','center', ...
                 'FontColor',[0.28 0.34 0.45], ...
                 'Position',[260 330 900 90]);
@@ -253,8 +324,8 @@ classdef App < handle
         function activateTab(obj, tab)
             if isempty(obj.ProjectRoot) && tab ~= obj.HomeTab
                 obj.TabGroup.SelectedTab = obj.HomeTab;
-                uialert(obj.UIFigure,'Apri o crea prima un progetto PHASE.', ...
-                    'Progetto richiesto');
+                uialert(obj.UIFigure,'Open or create a PHASE project first.', ...
+                    'Project required');
                 return
             end
             try
@@ -275,7 +346,7 @@ classdef App < handle
                     obj.updateHome();
                 end
             catch ME
-                uialert(obj.UIFigure,ME.message,'Impossibile aprire la sezione');
+                uialert(obj.UIFigure,ME.message,'Cannot open section');
             end
         end
 
@@ -294,8 +365,8 @@ classdef App < handle
                 if obj.StampsApp.IsRunning
                     obj.StampsSelector.Value = obj.CurrentStampsDir;
                     uialert(obj.UIFigure, ...
-                        'Attendi che l’elaborazione StaMPS termini prima di cambiare dataset.', ...
-                        'Elaborazione in corso');
+                        'Wait for StaMPS processing to finish before switching datasets.', ...
+                        'Processing in progress');
                     return
                 end
                 delete(obj.StampsApp);
@@ -308,7 +379,7 @@ classdef App < handle
                 obj.CurrentStampsDir = selected;
             catch ME
                 obj.CurrentStampsDir = '';
-                obj.StampsPlaceholder.Text = ['Dataset non apribile: ' ME.message];
+                obj.StampsPlaceholder.Text = ['Cannot open dataset: ' ME.message];
                 obj.StampsPlaceholder.Visible = 'on';
                 rethrow(ME)
             end
@@ -316,28 +387,27 @@ classdef App < handle
 
         function goToTab(obj,tab)
             obj.TabGroup.SelectedTab = tab;
-            obj.activateTab(tab);
         end
 
         function chooseProject(obj)
-            selected = uigetdir(pwd,'Seleziona un progetto PHASE');
+            selected = uigetdir(pwd,'Select a PHASE project');
             if isequal(selected,0), return; end
             try
                 obj.openProject(selected);
             catch ME
-                uialert(obj.UIFigure,ME.message,'Impossibile aprire il progetto');
+                uialert(obj.UIFigure,ME.message,'Cannot open project');
             end
         end
 
         function createProject(obj)
-            selected = uigetdir(pwd,'Seleziona una cartella vuota per il progetto');
+            selected = uigetdir(pwd,'Select an empty folder for the new project');
             if isequal(selected,0), return; end
             try
                 obj.assertCanSwitchProject();
                 [~,paths] = phase_project.create(selected);
                 obj.openProject(paths.root);
             catch ME
-                uialert(obj.UIFigure,ME.message,'Impossibile creare il progetto');
+                uialert(obj.UIFigure,ME.message,'Cannot create project');
             end
         end
 
@@ -346,26 +416,26 @@ classdef App < handle
                 result = obj.runUpdater('check');
                 if ~logical(result.updateAvailable)
                     uialert(obj.UIFigure, ...
-                        sprintf('Versione installata: %s. Nessun aggiornamento disponibile.', ...
-                        char(string(result.current))), 'PHASE aggiornato');
+                        sprintf('Installed version: %s. No updates available.', ...
+                        char(string(result.current))), 'PHASE is up to date');
                     return
                 end
                 if obj.hasActiveWork()
                     uialert(obj.UIFigure, ...
-                        'Termina le elaborazioni prima di preparare un aggiornamento.', ...
-                        'Elaborazione in corso');
+                        'Finish current processing before preparing an update.', ...
+                        'Processing in progress');
                     return
                 end
                 choice = uiconfirm(obj.UIFigure, ...
-                    sprintf('È disponibile PHASE %s. Scaricarlo ora? Verrà installato al prossimo avvio.', ...
+                    sprintf('PHASE %s is available. Download it now? It will be installed at the next launch.', ...
                     char(string(result.available))), ...
-                    'Aggiornamento PHASE', ...
-                    'Options',{'Scarica','Annulla'}, ...
-                    'DefaultOption','Scarica','CancelOption','Annulla');
-                if ~strcmp(choice,'Scarica'), return; end
+                    'PHASE update', ...
+                    'Options',{'Download','Cancel'}, ...
+                    'DefaultOption','Download','CancelOption','Cancel');
+                if ~strcmp(choice,'Download'), return; end
                 progress = uiprogressdlg(obj.UIFigure, ...
-                    'Title','Aggiornamento PHASE', ...
-                    'Message','Download e verifica della release...', ...
+                    'Title','PHASE update', ...
+                    'Message','Downloading and verifying the release...', ...
                     'Indeterminate','on');
                 try
                     prepared = obj.runUpdater('prepare');
@@ -376,12 +446,12 @@ classdef App < handle
                 end
                 if logical(prepared.prepared)
                     uialert(obj.UIFigure, ...
-                        ['Aggiornamento pronto. Chiudi MATLAB e riapri PHASE ' ...
-                        'dal collegamento dell’applicazione per applicarlo.'], ...
-                        'Riavvio richiesto');
+                        ['Update ready. Close MATLAB and relaunch PHASE ' ...
+                        'from the application shortcut to install it.'], ...
+                        'Restart required');
                 end
             catch ME
-                uialert(obj.UIFigure,ME.message,'Aggiornamento non disponibile');
+                uialert(obj.UIFigure,ME.message,'Update unavailable');
             end
         end
 
@@ -397,7 +467,7 @@ classdef App < handle
             end
             script = fullfile(obj.InstallRoot,'phase_update.py');
             if ~isfile(script)
-                error('PHASE:UpdaterMissing','Updater PHASE non trovato nell’installazione.');
+                error('PHASE:UpdaterMissing','PHASE updater was not found in this installation.');
             end
             command = sprintf('"%s" "%s" %s --prefix "%s"', ...
                 python,script,action,prefix);
@@ -405,21 +475,23 @@ classdef App < handle
             try
                 result = jsondecode(strtrim(output));
             catch
-                error('PHASE:UpdaterResponse','Risposta inattesa dell’updater: %s',output);
+                error('PHASE:UpdaterResponse','Unexpected updater response: %s',output);
             end
             if status ~= 0
                 if isfield(result,'error')
                     error('PHASE:UpdaterFailed','%s',char(string(result.error)));
                 end
-                error('PHASE:UpdaterFailed','Aggiornamento non riuscito.');
+                error('PHASE:UpdaterFailed','Update failed.');
             end
         end
 
         function updateHome(obj)
             if isempty(obj.HomeTitle) || ~isvalid(obj.HomeTitle), return; end
             if isempty(obj.ProjectRoot)
-                obj.HomeTitle.Text = 'Il tuo workspace PHASE';
-                obj.HomeDetails.Text = 'Apri o crea un progetto per iniziare.';
+                obj.HomeTitle.Text = 'Your PHASE workspace';
+                obj.HomeDetails.Text = 'Create a project or open an existing one to get started.';
+                obj.HomeStatus.Text = [ ...
+                    'No project open. Your processing files and results will stay in the project folder.'];
             else
                 obj.HomeTitle.Text = char(string(obj.Project.name));
                 p = phase_project.paths(obj.ProjectRoot);
@@ -427,24 +499,25 @@ classdef App < handle
                     dir(fullfile(p.stamps,'DSC_*')); ...
                     dir(fullfile(p.stamps,'DES_*'))];
                 count = nnz([datasets.isdir]);
-                obj.HomeDetails.Text = sprintf('Cartella: %s\nDataset StaMPS: %d', ...
+                obj.HomeDetails.Text = 'One project for Preprocessing, StaMPS and Model.';
+                obj.HomeStatus.Text = sprintf('Folder: %s    |    StaMPS datasets: %d', ...
                     obj.ProjectRoot,count);
             end
         end
 
         function textValue = stampsHelpText(obj)
             if isempty(obj.ProjectRoot)
-                textValue = 'Apri o crea un progetto PHASE.';
+                textValue = 'Open or create a PHASE project.';
             else
-                textValue = ['Nessun dataset StaMPS disponibile. Completa il ' ...
-                    'Preprocessing e premi Aggiorna.'];
+                textValue = ['No StaMPS dataset is available yet. Complete ' ...
+                    'Preprocessing, then press Refresh.'];
             end
         end
 
         function assertCanSwitchProject(obj)
             if obj.hasActiveWork()
                 error('PHASE:HubBusy', ...
-                    'Un’elaborazione è in corso. Termina o arresta il lavoro prima di cambiare progetto.');
+                    'Processing is in progress. Finish or stop it before switching projects.');
             end
         end
 
@@ -483,10 +556,10 @@ classdef App < handle
         function requestClose(obj)
             if obj.hasActiveWork()
                 choice = uiconfirm(obj.UIFigure, ...
-                    'Un’elaborazione è ancora in corso. Chiudere PHASE e interromperla?', ...
-                    'Lavoro in corso','Options',{'Annulla','Chiudi PHASE'}, ...
-                    'DefaultOption','Annulla','CancelOption','Annulla');
-                if ~strcmp(choice,'Chiudi PHASE'), return; end
+                    'Processing is still running. Close PHASE and stop it?', ...
+                    'Processing in progress','Options',{'Cancel','Close PHASE'}, ...
+                    'DefaultOption','Cancel','CancelOption','Cancel');
+                if ~strcmp(choice,'Close PHASE'), return; end
             end
             delete(obj);
         end
@@ -503,4 +576,17 @@ end
 
 function value = ternary(condition,yesValue,noValue)
 if condition, value = yesValue; else, value = noValue; end
+end
+
+function styleButton(button,isPrimary)
+button.FontSize = 13;
+button.FontWeight = 'bold';
+if ispc, button.FontName = 'Segoe UI'; end
+if isPrimary
+    button.BackgroundColor = [53 101 207]/255;
+    button.FontColor = [1 1 1];
+else
+    button.BackgroundColor = [0.92 0.945 1];
+    button.FontColor = [53 101 207]/255;
+end
 end

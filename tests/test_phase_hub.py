@@ -15,6 +15,19 @@ def test_hub_has_one_project_scoped_window_and_lazy_modules(phase_root):
     assert "obj.StampsApp.IsRunning" in hub
 
 
+def test_hub_home_uses_english_and_phase_visual_style(phase_root):
+    hub = (phase_root / "+phase_hub" / "App.m").read_text(encoding="utf-8")
+    assert "'Your PHASE workspace'" in hub
+    assert "'Open project'" in hub
+    assert "'New project'" in hub
+    assert "'Check for updates'" in hub
+    assert "'Title','Project'" in hub
+    assert "'ImageSource',logoPath" in hub
+    assert "styleButton(newButton,true)" in hub
+    assert "'Il tuo workspace PHASE'" not in hub
+    assert "'Cerca update'" not in hub
+
+
 def test_modules_can_embed_without_taking_ownership_of_hub_figure(phase_root):
     files = [
         phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta" / "App.m",

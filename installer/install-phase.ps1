@@ -2606,12 +2606,27 @@ try {
             & $StatusCallback "[OK] Shortcut: $lnkPath"
             $desktop = [Environment]::GetFolderPath('Desktop')
             if ($desktop -and (Test-Path -LiteralPath $desktop)) {
-                $desktopLink = Join-Path $desktop 'PHASE 7.lnk'
-                if (-not (Test-Path -LiteralPath $desktopLink)) {
-                    Copy-Item -LiteralPath $lnkPath -Destination $desktopLink
+                $desktopLink = Join-Path $desktop 'PHASE.lnk'
+                $mayWriteDesktopLink = $true
+                if (Test-Path -LiteralPath $desktopLink) {
+                    $existing = $wsh.CreateShortcut($desktopLink)
+                    $mayWriteDesktopLink = ($existing.WorkingDirectory -eq $InstallDir -and
+                        $existing.Arguments.Contains($bootstrap))
+                }
+                if ($mayWriteDesktopLink) {
+                    Copy-Item -LiteralPath $lnkPath -Destination $desktopLink -Force
                     & $StatusCallback "[OK] Desktop shortcut: $desktopLink"
                 } else {
-                    & $StatusCallback "[!] Desktop shortcut already exists: $desktopLink"
+                    & $StatusCallback "[!] Desktop PHASE shortcut belongs to another installation: $desktopLink"
+                }
+                $legacyDesktopLink = Join-Path $desktop 'PHASE 7.lnk'
+                if (Test-Path -LiteralPath $legacyDesktopLink) {
+                    $legacy = $wsh.CreateShortcut($legacyDesktopLink)
+                    if ($legacy.WorkingDirectory -eq $InstallDir -and
+                            $legacy.Arguments.Contains($bootstrap)) {
+                        Remove-Item -LiteralPath $legacyDesktopLink
+                        & $StatusCallback "[OK] Removed old PHASE 7 desktop shortcut: $legacyDesktopLink"
+                    }
                 }
             }
         }

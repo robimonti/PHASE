@@ -63,3 +63,6 @@ def test_windows_installer_has_one_hub_shortcut(phase_root):
     assert "@{ Name = 'PHASE StaMPS'" not in script
     assert "@{ Name = 'PHASE Model'" not in script
     assert "Set-PhaseGptEnvVar -SnapGpt" in script
+    assert "Join-Path $desktop 'PHASE.lnk'" in script
+    assert "Join-Path $desktop 'PHASE 7.lnk'" in script
+    assert "Removed old PHASE 7 desktop shortcut" in script
