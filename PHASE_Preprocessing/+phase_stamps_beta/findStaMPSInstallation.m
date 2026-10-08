@@ -5,6 +5,9 @@ candidates = {};
 if isfield(cfg,'installation_folder') && ~isempty(cfg.installation_folder)
     candidates{end+1} = cfg.installation_folder;
 end
+installation = phase_project.installationRoot();
+candidates{end+1} = fullfile(installation,'StaMPS');
+candidates{end+1} = fullfile(fileparts(installation),'StaMPS');
 if isfield(cfg,'project_path') && ~isempty(cfg.project_path)
     candidates{end+1} = fullfile(cfg.project_path,'StaMPS');
     candidates{end+1} = fullfile(cfg.project_path,'engine','StaMPS');

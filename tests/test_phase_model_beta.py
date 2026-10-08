@@ -205,7 +205,9 @@ def test_model_beta_uses_stable_output_root_and_direct_geosplinter_runner(phase_
     ]
 
     assert "outputRoot = fileparts(runtimeRoot)" in engine
-    assert "outputDir = fullfile('..',outputDir)" in engine
+    assert "outputDir = fullfile(outputRoot,outputDir)" in engine
+    assert "if ~isempty(app.OutputRoot)" in engine
+    assert "modelConfig = phase_model_beta.loadConfig(app.ConfigRoot)" in engine
     assert "app.outputDir = char(java.io.File(outputDir).getCanonicalPath())" in engine
     assert "redirectInput(java.io.File(jobFile))" in runner
     assert "endsWith(lower(executable),'.exe')" in runner

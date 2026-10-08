@@ -294,7 +294,7 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         else
             stamps_path = which('StaMPS_CONFIG.ps1');
         end
-        s2s_export_path = strcat(project_path, '/PHASE_Preprocessing/INSAR_', master_date);
+        s2s_export_path = phase_stamps_beta.exportPath(project_path, master_date);
         mt_prep_snap = ('mt_prep_snap');
         source = ('source');
         space = (' ');

@@ -5,7 +5,7 @@ template = struct('id', '', 'name', '', 'source', '', ...
     'selected', false, 'coordinates', zeros(0, 2));
 footprints = repmat(template, 0, 1);
 
-slavesFolder = fullfile(rootDir, 'PHASE_Preprocessing', 'slaves');
+slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(rootDir), 'slaves');
 senFiles = dir(fullfile(slavesFolder, '**', '*.zip'));
 for k = 1:numel(senFiles)
     try

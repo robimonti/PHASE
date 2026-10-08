@@ -4,7 +4,7 @@ function files = scanSlaves(rootDir)
 template = struct('name','','relativePath','','date','','type','', ...
     'status','','sizeBytes',0);
 files = repmat(template, 0, 1);
-projectFolder = fullfile(rootDir, 'PHASE_Preprocessing');
+projectFolder = phase_preprocessing_beta.dataFolder(rootDir);
 slavesFolder = fullfile(projectFolder, 'slaves');
 if ~isfolder(slavesFolder), return; end
 

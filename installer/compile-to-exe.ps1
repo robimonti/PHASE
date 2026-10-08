@@ -22,6 +22,7 @@ param(
     [string]$Source,
     [string]$Output,
     [string]$IconFile,
+    [string]$DefaultPhaseBranch,
     [switch]$Force
 )
 
@@ -43,6 +44,9 @@ if ([string]::IsNullOrWhiteSpace($Source)) {
 }
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $Output = Join-Path $scriptDir 'install-phase.exe'
+}
+if ([string]::IsNullOrWhiteSpace($IconFile)) {
+    $IconFile = Join-Path $scriptDir 'PHASE.ico'
 }
 
 if (-not (Test-Path $Source)) {
@@ -70,10 +74,10 @@ $ps2exeArgs = @{
     inputFile  = $Source
     outputFile = $Output
     title      = 'PHASE Installer'
-    description = 'PHASE standalone installer - installs the current main release'
+    description = 'PHASE 7 unified hub installer'
     company    = 'pyccino'
     product    = 'PHASE'
-    version    = '6.1.4.0'
+    version    = '7.0.0.0'
     noConsole  = $true
     requireAdmin = $false
     STA        = $true
@@ -82,7 +86,29 @@ if ($IconFile -and (Test-Path $IconFile)) {
     $ps2exeArgs.iconFile = $IconFile
 }
 
-Invoke-PS2EXE @ps2exeArgs
+$temporarySource = $null
+try {
+    if (-not [string]::IsNullOrWhiteSpace($DefaultPhaseBranch)) {
+        if ($DefaultPhaseBranch -notmatch '^[A-Za-z0-9_./-]+$') {
+            throw "Branch name is not safe for embedding: $DefaultPhaseBranch"
+        }
+        $marker = "[string]`$PhaseBranch = 'main'"
+        $scriptText = Get-Content -LiteralPath $Source -Raw
+        if (-not $scriptText.Contains($marker)) {
+            throw "Expected default branch declaration not found in $Source"
+        }
+        $temporarySource = Join-Path $env:TEMP ("phase-installer-" + [guid]::NewGuid().ToString('N') + '.ps1')
+        Set-Content -LiteralPath $temporarySource -Value $scriptText.Replace(
+            $marker, "[string]`$PhaseBranch = '$DefaultPhaseBranch'") -Encoding UTF8
+        $ps2exeArgs.inputFile = $temporarySource
+        Write-Host "Embedded PHASE branch: $DefaultPhaseBranch"
+    }
+    Invoke-PS2EXE @ps2exeArgs
+} finally {
+    if ($temporarySource -and (Test-Path -LiteralPath $temporarySource)) {
+        Remove-Item -LiteralPath $temporarySource -Force
+    }
+}
 
 if (Test-Path $Output) {
     $size = (Get-Item $Output).Length / 1MB
@@ -93,7 +119,7 @@ if (Test-Path $Output) {
     Write-Host "  2. copy install-phase.exe phase-installer-package\"
     Write-Host "  3. mkdir phase-installer-package\installers"
     Write-Host "  4. copy F:\phase\installers\esa-snap_sentinel_windows-13.0.0.exe phase-installer-package\installers\"
-    Write-Host "  5. Compress-Archive phase-installer-package phase-installer-v6.1.4.zip"
+    Write-Host "  5. Compress-Archive phase-installer-package phase-installer-v7.zip"
 } else {
     throw "Compilazione fallita: $Output non creato."
 }

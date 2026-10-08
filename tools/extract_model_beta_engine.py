@@ -69,6 +69,9 @@ def extract(xml: str) -> str:
                 runFolderCleanup = onCleanup(@() cd(previousRunFolder)); %#ok<NASGU>
                 cd(runtimeRoot);
                 outputRoot = fileparts(runtimeRoot);
+                if ~isempty(app.OutputRoot)
+                    outputRoot = app.OutputRoot;
+                end
 
                 % --- 0. Prepare the environment ---
 """,
@@ -116,9 +119,8 @@ def extract(xml: str) -> str:
     code = code.replace(
         output_create_anchor,
         """\
-                % Keep relative paths compatible with the scientific helpers,
-                % while placing the actual result beside the PHASE shortcuts.
-                outputDir = fullfile('..',outputDir);
+                % Use the explicit project result root when one is selected.
+                outputDir = fullfile(outputRoot,outputDir);
                 [created,createMessage] = mkdir(outputDir);
                 if ~created
                     error('PHASE_Model_beta:outputCreateFailed', ...
@@ -155,7 +157,9 @@ def extract(xml: str) -> str:
         "        ExternalLogCallback = []\n"
         "        ExternalProgressCallback = []\n"
         "        StopRequested = false\n"
-        "        aoi_polygon_lonlat = zeros(0,2)\n\n"
+        "        aoi_polygon_lonlat = zeros(0,2)\n"
+        "        ConfigRoot = phase_model_beta.projectRoot()\n"
+        "        OutputRoot = ''\n\n"
         + property_anchor,
         1,
     )
@@ -560,8 +564,7 @@ def extract(xml: str) -> str:
         raise RuntimeError("Could not locate temporal threshold injection anchor")
     threshold_block = threshold_anchor + """\
                     if ismember(procType, {'temporal', 'temporal&NNI'})
-                        modelConfig = phase_model_beta.loadConfig( ...
-                            phase_model_beta.projectRoot());
+                        modelConfig = phase_model_beta.loadConfig(app.ConfigRoot);
                         thresholdOptions = {
                             'min_period_days_method', 'min_period_days'
                             'min_coll_snr_method', 'min_coll_snr'

@@ -12,6 +12,11 @@ sources = {};
 
 isGeneric = any(strcmpi(configured, ...
     {'','python','python2','python2.7','python3','python3.11'}));
+environmentPython = stripOuterQuotes(strtrim(getenv('PHASE_PYTHON')));
+if isGeneric && ~isempty(environmentPython)
+    [candidates, sources] = addCandidate(candidates, sources, ...
+        environmentPython, 'PHASE_PYTHON environment');
+end
 if ~isGeneric
     [candidates, sources] = addCandidate(candidates, sources, configured, 'configured value');
 end

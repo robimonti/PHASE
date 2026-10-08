@@ -8,6 +8,12 @@ classdef ProcessingEngine < phase_preprocessing_beta.LegacyEngine
     end
 
     methods
+        function app = ProcessingEngine(projectRoot, installRoot)
+            if nargin < 1, projectRoot = []; end
+            if nargin < 2, installRoot = []; end
+            app@phase_preprocessing_beta.LegacyEngine(projectRoot,installRoot);
+        end
+
         function reprojectGeoTiffIfGeographic(app, filePath, epsgCode, bandIndex)
             % Reproject by inverse-mapping every target pixel and resampling
             % the source raster. The stable helper only changed the raster

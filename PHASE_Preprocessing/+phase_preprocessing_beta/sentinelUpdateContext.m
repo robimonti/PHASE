@@ -1,7 +1,7 @@
 function context = sentinelUpdateContext(rootDir)
 %SENTINELUPDATECONTEXT Find the reference and dates used by stack update.
 
-projectFolder = fullfile(rootDir,'PHASE_Preprocessing');
+projectFolder = phase_preprocessing_beta.dataFolder(rootDir);
 slavesFolder = fullfile(projectFolder,'slaves');
 reference = ''; dates = {};
 

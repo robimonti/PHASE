@@ -1,6 +1,129 @@
-﻿# PHASE Windows Installer
+﻿# Installer PHASE
 
-Wizard end-to-end (GUI WPF) che installa PHASE 6.1 e tutte le sue dipendenze su
+> **Stato:** queste istruzioni per l'hub PHASE 7 descrivono il branch di sviluppo.
+> La release pubblica 6.1.4 usa ancora i tre launcher precedenti. Non è ancora
+> stata pubblicata una release PHASE 7 né validata una pipeline PSI completa su
+> ciascun sistema operativo.
+
+## Installazione dell'hub PHASE 7
+
+Una sola installazione del codice serve più progetti. L'hub crea/apre cartelle
+di progetto separate, con dati e output nel progetto; il motore MATLAB resta
+nell'installazione. MATLAB e ESA SNAP devono essere già installati e licenziati
+se necessario. Per il calcolo PSI servono inoltre runtime StaMPS e, se usato,
+TRAIN funzionanti sul sistema: l'installer macOS/Linux può incorporare copie
+**già preparate**, ma non le compila o ne certifica il funzionamento.
+
+### macOS Apple Silicon e Linux
+
+Richiede Python 3.10+ e `git` per il download da GitHub. Da un checkout di
+sviluppo si può installare esattamente il codice locale (incluse modifiche non
+ancora pubblicate) usando `--source`:
+
+```bash
+# macOS Apple Silicon
+./installer/install-phase-macos.command --source "$PWD" \
+  --matlab /Applications/MATLAB_R2026a.app/bin/matlab \
+  --gpt /Applications/esa-snap/bin/gpt
+
+# Linux: adattare i due percorsi alla propria installazione
+./installer/install-phase-linux.sh --source "$PWD" \
+  --matlab /path/to/matlab/bin/matlab --gpt /path/to/esa-snap/bin/gpt
+```
+
+Senza `--source`, lo script clona il branch `main` da GitHub, che deve già
+contenere l'hub. Per vedere destinazioni e dipendenze senza scrivere file,
+aggiungere `--dry-run`. `--stamps /path/to/StaMPS` e `--train /path/to/TRAIN`
+incorporano runtime preparati; `--python` sceglie l'interprete con cui creare
+l'ambiente isolato. `--skip-python-deps` è solo per sviluppo/test e non prepara
+le librerie Python necessarie al processing.
+
+La destinazione predefinita è `~/Library/Application Support/PHASE` su macOS e
+`~/.local/share/PHASE` su Linux; `--prefix` permette un'altra cartella utente.
+Lo script copia un runtime ripulito dai file di sviluppo, crea un ambiente
+Python e installa `openpyxl`, `requests`, `asf_search`, `shapely`. Su macOS crea
+`~/Applications/PHASE.app`; su Linux un launcher nel menu applicazioni e, se
+libero, `~/.local/bin/phase`. In entrambi i casi l'avvio reale è
+`<prefix>/launch-phase.sh`. In caso di aggiornamento, i componenti precedenti
+sono conservati in `<prefix>/backups/`; le cartelle dei progetti non vengono
+toccate. Se esiste già un collegamento `PHASE.app` o `phase.desktop` non gestito,
+l'installer lo lascia intatto e indica il launcher diretto.
+
+L'installer macOS rifiuta Apple Intel. Linux non è ancora stato testato con
+un'installazione completa su una macchina Linux; il wrapper e la preparazione
+dei file non equivalgono a una verifica end-to-end del processing.
+
+### Pacchetti grafici da distribuire
+
+- **Windows:** compilare `install-phase.exe` su Windows con
+  `compile-to-exe.ps1`. Il wizard scarica le dipendenze Windows che gestisce
+  già e crea `PHASE 7.lnk` sul desktop e `PHASE.lnk` nella cartella installata,
+  usando `Logo_square.png` convertito in `PHASE.ico`. Il `.exe` non incorpora
+  MATLAB o la licenza. Non è ancora stato compilato o provato su Windows per
+  PHASE 7.
+  Per una prova del branch prima della release, il workflow
+  `Build PHASE 7 Windows test installer` produce un artefatto EXE con
+  `codex/phase-stamps-beta` incorporato. Lo ZIP degli artefatti GitHub contiene
+  un solo EXE; non serve passare argomenti a riga di comando all'utente.
+- **macOS Apple Silicon:** costruire `PHASE-7-macos-arm64.dmg` con
+  `python3 installer/build-macos-dmg.py --output /path/PHASE-7-macos-arm64.dmg`.
+  Il DMG contiene un'app installer con finestre native e una copia del motore;
+  crea poi `~/Applications/PHASE.app` con icona PHASE. MATLAB, SNAP e Python 3.10+
+  con `venv` sono prerequisiti esterni. Per una distribuzione senza avvisi di
+  Gatekeeper, usare `--sign-identity` e `--notary-profile` con credenziali
+  Apple Developer ID configurate. Il DMG costruito senza queste opzioni è
+  solo una preview locale.
+- **Linux:** su Linux x86_64 o aarch64, con `appimagetool`, costruire
+  `PHASE-7-linux.AppImage` tramite
+  `python3 installer/build-linux-appimage.py --output /path/PHASE-7-linux.AppImage`.
+  All'avvio mostra un'interfaccia con `zenity` o `kdialog` e installa il motore
+  nel profilo utente. Richiede Python 3 con `venv`, MATLAB e SNAP; StaMPS/TRAIN
+  vanno forniti come runtime già preparati. Builder e AppImage richiedono ancora
+  una prova su Linux.
+
+I pacchetti macOS/Linux includono il codice PHASE al momento della build, per
+evitare che un aggiornamento successivo di `main` cambi ciò che installano.
+Nessun pacchetto PHASE 7 è ancora allegato a una release pubblica.
+
+### Aggiornamenti dall'hub
+
+Il pulsante **Cerca update** interroga l'ultima release stabile GitHub di
+`robimonti/PHASE`. Richiede un asset `phase7-engine.zip` della serie v7 e una
+impronta SHA-256 negli asset della release. L'hub scarica, verifica e prepara
+l'archivio; il launcher applica l'aggiornamento al successivo avvio, prima di
+caricare MATLAB. La versione precedente viene conservata in `backups`. StaMPS,
+TRAIN e i file di configurazione creati dall'installer restano nell'installazione.
+I progetti esterni non vengono modificati. Per applicare l'update occorre
+chiudere MATLAB e avviare PHASE dal collegamento installato, non digitare
+`PHASE_Hub` in una sessione MATLAB già aperta.
+
+Finché la prima release v7 con l'asset dedicato non è pubblicata, il pulsante
+non proporrà aggiornamenti. Per preparare quell'asset da un checkout di release:
+
+```bash
+python3 installer/build-update-package.py --tag v7.0.0 \
+  --output /path/outside/repository/phase7-engine.zip
+```
+
+Il builder richiede un checkout pulito esattamente sul tag indicato; `--dev-build`
+serve solo per prove locali. L'archivio va allegato alla release GitHub con il medesimo tag. Il pacchetto
+contiene solo il motore PHASE, non StaMPS, TRAIN, MATLAB, SNAP o dati di progetto.
+L'aggiornamento non installa nuove dipendenze esterne: se una release ne richiede,
+le istruzioni di release devono indicarle e l'installer va aggiornato.
+
+### Windows
+
+Il wizard PowerShell continua a rilevare/installare le dipendenze Windows già
+supportate, ma ora propone `%LOCALAPPDATA%\Programs\PHASE` e crea un solo
+collegamento `PHASE.lnk` per l'hub. Chi aggiorna un'installazione precedente
+può ancora vedere i vecchi collegamenti: non vengono cancellati automaticamente.
+Per provarlo dal sorgente, vedere la sezione seguente. La compilazione dell'EXE
+e il test effettivo del wizard richiedono Windows; non sono stati eseguiti su
+questo host macOS.
+
+## Installer Windows storico e packaging
+
+Wizard end-to-end (GUI WPF) del branch di sviluppo che installa PHASE 7 e le sue dipendenze su
 Windows: MATLAB detection, SNAP install, Python 3.11+ silent install, clone di
 PHASE/StaMPS/TRAIN, download verificato dei binari Triangle/snaphu, configurazione `MATLAB_EXE` +
 `python.txt` + `savepath`. Per default clona il branch `main`; il branch può essere sovrascritto con
@@ -116,7 +239,7 @@ install-phase.ps1
    Se assente: download da python.org + silent install per-user (`/quiet
    InstallAllUsers=0 PrependPath=1`) con progress bar. Poi
    `pip install openpyxl requests asf_search shapely`.
-5. **Cartella destinazione** — default `%USERPROFILE%\Desktop\PHASE`.
+5. **Cartella destinazione** — default `%LOCALAPPDATA%\Programs\PHASE`.
    Validazione: scrivibile, no OneDrive (warning, non blocco), no caratteri
    non-ASCII.
 6. **Installazione** — clona il branch `main` di PHASE + StaMPS + TRAIN, scarica e verifica i nove
@@ -127,14 +250,9 @@ install-phase.ps1
    file di sviluppo. Log live in console scrollabile.
 7. **Fine** — riepilogo + bottoni "Apri cartella PHASE" e "Apri log".
 
-La cartella visibile `PHASE` contiene i collegamenti a PHASE Preprocessing,
-PHASE StaMPS e PHASE Model, oltre al README. Il collegamento StaMPS chiede
-esplicitamente la cartella dataset `ASC_*`/`DSC_*` prima di aprire l'app. Il motore
-standalone è nella sottocartella visibile `engine`, così i sorgenti MATLAB restano
-ispezionabili e modificabili. StaMPS non viene comunque avviato accidentalmente
-nella root e può anche essere aperto automaticamente dal preprocessing. Nessuna
-dei tre moduli carica un `.mlapp` a runtime; tutti usano lo stesso shell HTML
-chiaro e motori MATLAB testuali espliciti.
+La cartella `PHASE` contiene `PHASE.lnk` e il motore nella sottocartella
+`engine`. I tre moduli sono sezioni dell'hub; i launcher standalone restano nel
+motore per compatibilità durante la migrazione.
 
 ## Path configurati automaticamente
 
@@ -147,7 +265,7 @@ Dopo che l'installer ha finito, l'utente trova:
 | MATLAB path permanente (`pathdef.m`) | `matlab.exe -batch savepath` | `StaMPS\matlab` + `matlab_compat` + `TRAIN\matlab` |
 | Template config dataset | `<dest>\PHASE\engine\project.conf.template` | `GPTBIN_PATH` precompilato + AOI placeholder |
 
-L'utente avvia PHASE dai tre collegamenti visibili. Il collegamento apre MATLAB,
+L'utente avvia PHASE dal collegamento dell'hub. Il collegamento apre MATLAB,
 aggiunge il motore al path ed esegue immediatamente la funzione standalone;
 non apre il file nell'Editor.
 
@@ -174,7 +292,7 @@ L'installer non scrive un uninstaller. Per pulire:
 
 ```powershell
 # 1. Cancella cartella PHASE
-Remove-Item -Recurse -Force "$env:USERPROFILE\Desktop\PHASE"
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Programs\PHASE"
 
 # 2. Rimuovi env var
 [Environment]::SetEnvironmentVariable('MATLAB_EXE', $null, 'User')

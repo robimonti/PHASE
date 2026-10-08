@@ -3,7 +3,8 @@ function cfg = defaultConfig()
 
 cfg = struct();
 cfg.constellation = 'SEN';
-cfg.python = 'python';
+cfg.python = strtrim(getenv('PHASE_PYTHON'));
+if isempty(cfg.python), cfg.python = 'python'; end
 cfg.update_processed_data = false;
 cfg.master_date = '20200722';
 cfg.auto_master = true;
@@ -27,7 +28,10 @@ cfg.auto_epsg = true;
 cfg.epsg_code = 32631;
 cfg.generate_coherence = true;
 cfg.generate_lia = true;
-cfg.gptbin_path = 'C:\Program Files\snap\bin\gpt';
+cfg.gptbin_path = strtrim(getenv('PHASE_GPTBIN'));
+if isempty(cfg.gptbin_path)
+    cfg.gptbin_path = 'C:\Program Files\snap\bin\gpt';
+end
 cfg.cpu = 8;
 cfg.cache = '26G';
 cfg.num_gcp = 10000;

@@ -10,6 +10,10 @@
 > The installer creates a clean runtime installation and configures StaMPS,
 > TRAIN, native executables, Python, MATLAB paths and the three PHASE shortcuts.
 
+> [!NOTE]
+> The PHASE 7 unified hub and per-user installers described below are currently
+> development work, not part of the published 6.1.4 installer linked above.
+
 **PHASE** (**P**ersistent scatterer **H**ighly **A**utomated **S**uite for **E**nvironmental monitoring) is a MATLAB-based software suite for automated InSAR Persistent Scatterer Interferometry (PSI) processing and advanced geospatial analysis. Built on the foundation of *snap2stamps* and *StaMPS*, PHASE introduces enhanced automation, user-friendly interactive map interfaces, and a powerful geospatial modeling module to interpret and visualize displacement time series, making it ideal for environmental and infrastructure monitoring.
 
 > **PHASE 6.1:** preprocessing, StaMPS and geospatial modelling run as
@@ -52,6 +56,34 @@
 > StaMPS, TRAIN and their native executables; a plain repository clone does not.
 > Clone the repository on Windows only if you intend to develop PHASE itself.
 
+### PHASE 7 project layout (development preview)
+
+The repository now includes a first, data-only project contract and an
+assisted importer for final results from older PHASE workspaces. The Model
+module can use it with `PHASE_Model(projectRoot)`, storing its configuration and
+results in the project. StaMPS can open a project-scoped dataset and publish
+its final exports there. `PHASE_Preprocessing_beta(projectRoot)` now keeps its
+data, generated SNAP configuration and downloader files in the project while
+using Python scripts from the installation. This project mode is a development
+preview, not yet validated with a real end-to-end PSI stack or on every OS. See
+[PHASE 7 project architecture](Documenti/PHASE_7_Architettura_Progetti.md)
+for the layout, migration boundary, commands, and integration gates.
+
+Run `PHASE_Hub` in MATLAB to open the unified project workspace, or
+`PHASE_Hub(projectRoot)` to open a specific PHASE 7 project. Preprocessing,
+StaMPS and Model appear as sections of one window and load only when selected.
+The three standalone beta launchers remain available during migration.
+
+For a development installation of this hub, use the OS-specific installer in
+[installer/README.md](installer/README.md). It installs one copy of the engine
+outside project directories. Each PHASE 7 project then contains only its data,
+configuration and outputs. The macOS installer targets Apple Silicon; Intel
+Macs are outside the supported scope. A successful installation does not yet
+imply a validated scientific PSI run on that OS.
+Managed PHASE 7 installations can prepare a stable v7 GitHub release from the
+hub's **Cerca update** button; the installed launcher applies it at the next
+start. The first compatible release asset has not been published yet.
+
 ### Repository versus installed application
 
 The GitHub **Code** page is the complete development repository. It includes
@@ -59,10 +91,11 @@ automated tests, release tooling, migration utilities and archived legacy files
 so that scientific changes remain reproducible and maintainable. These are not
 additional programs that a normal user needs to manage.
 
-The Windows installer removes development-only material (`tests`, `legacy`,
-CI configuration and installer sources) from the installed runtime. The folder
-presented to the user contains the three application shortcuts, while the
-editable MATLAB implementation remains grouped in the visible `engine` folder.
+The current PHASE 7 installer sources remove development-only material
+(`tests`, `legacy`, CI configuration and installer sources) from the installed
+runtime. The installed hub launcher starts the editable MATLAB implementation
+in the `engine` folder; projects live elsewhere. The published Windows 6.1.4
+installer still presents three application shortcuts.
 The compiled installer is distributed as a GitHub **Release asset**, not
 committed as a binary inside the source tree.
 

@@ -4,8 +4,13 @@ classdef App < handle
     properties (SetAccess = private)
         UIFigure
         HTML
+        HostContainer
+        ContentGrid
+        OwnsFigure = true
         Engine
         RootDir
+        ProjectDir
+        UiDir
         Config
         SavedConfig
         Logs = {}
@@ -28,12 +33,20 @@ classdef App < handle
     end
 
     methods
-        function obj = App(rootDir)
+        function obj = App(rootDir,projectDir,parent)
             if nargin < 1 || isempty(rootDir)
                 rootDir = phase_model_beta.projectRoot();
             end
             obj.RootDir = char(java.io.File(rootDir).getCanonicalPath());
-            [obj.Config,info] = phase_model_beta.loadConfig(obj.RootDir);
+            obj.UiDir = phase_project.uiRuntime( ...
+                fullfile(obj.RootDir,'phase_model_beta_ui'),'model');
+            if nargin < 2 || isempty(projectDir)
+                obj.ProjectDir = obj.RootDir;
+            else
+                [~,projectPaths] = phase_project.open(projectDir);
+                obj.ProjectDir = projectPaths.root;
+            end
+            [obj.Config,info] = phase_model_beta.loadConfig(obj.ProjectDir);
             obj.SavedConfig = obj.Config;
             obj.IsDirty = ~info.exists;
             obj.MapBase = phase_model_beta.mapBase();
@@ -43,15 +56,23 @@ classdef App < handle
             obj.configureLiveLog();
             obj.ensureAssets();
 
-            obj.UIFigure = uifigure( ...
-                'Name','PHASE · Geospatial Model', ...
-                'Color',[1 1 1], ...
-                'Position',centeredPosition(1500,920));
-            obj.UIFigure.UserData = obj;
-            obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
-            grid = uigridlayout(obj.UIFigure,[1 1]);
+            if nargin >= 3 && ~isempty(parent)
+                obj.OwnsFigure = false;
+                obj.HostContainer = parent;
+                obj.UIFigure = ancestor(parent,'figure');
+            else
+                obj.UIFigure = uifigure( ...
+                    'Name','PHASE · Geospatial Model', ...
+                    'Color',[1 1 1], ...
+                    'Position',centeredPosition(1500,920));
+                obj.UIFigure.UserData = obj;
+                obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
+                obj.HostContainer = obj.UIFigure;
+            end
+            grid = uigridlayout(obj.HostContainer,[1 1]);
+            obj.ContentGrid = grid;
             grid.Padding = [0 0 0 0];
-            uiPath = fullfile(obj.RootDir,'phase_model_beta_ui','index.html');
+            uiPath = fullfile(obj.UiDir,'index.html');
             obj.HTML = uihtml(grid,'HTMLSource',uiPath);
             obj.HTML.HTMLEventReceivedFcn = @(~,event) obj.onHtmlEvent(event);
             drawnow;
@@ -60,6 +81,11 @@ classdef App < handle
             try
                 obj.appendLog('Initialising the standalone PHASE Model engine…');
                 obj.Engine = phase_model_beta.LegacyEngine();
+                obj.Engine.ConfigRoot = obj.ProjectDir;
+                if ~strcmp(obj.ProjectDir,obj.RootDir)
+                    projectPaths = phase_project.paths(obj.ProjectDir);
+                    obj.Engine.OutputRoot = projectPaths.model;
+                end
                 obj.Engine.ExternalLogCallback = @(message) obj.appendLog(message);
                 obj.Engine.ExternalProgressCallback = @(progress) obj.onProgress(progress);
                 obj.Engine.UIFigure.CloseRequestFcn = @(~,~) obj.hideEngine();
@@ -118,10 +144,12 @@ classdef App < handle
             catch
             end
             try
-                if ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
+                if obj.OwnsFigure && ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
                     obj.UIFigure.CloseRequestFcn = [];
                     obj.UIFigure.UserData = [];
                     delete(obj.UIFigure);
+                elseif ~obj.OwnsFigure && ~isempty(obj.ContentGrid) && isvalid(obj.ContentGrid)
+                    delete(obj.ContentGrid);
                 end
             catch
             end
@@ -155,7 +183,7 @@ classdef App < handle
                     case 'maptilesrequested'
                         obj.cacheMapTiles(payload);
                     case 'openroot'
-                        openFolder(obj.RootDir);
+                        openFolder(obj.ProjectDir);
                     case 'clearlog'
                         obj.Logs = {};
                         obj.sendState();
@@ -198,7 +226,7 @@ classdef App < handle
             if ~isempty(errors)
                 error('PHASE_Model_beta:invalidConfiguration','%s',strjoin(errors,newline));
             end
-            pathValue = phase_model_beta.saveConfig(obj.RootDir,candidate);
+            pathValue = phase_model_beta.saveConfig(obj.ProjectDir,candidate);
             obj.Config = candidate;
             obj.SavedConfig = candidate;
             obj.refreshMapAoi(true);
@@ -214,7 +242,7 @@ classdef App < handle
 
         function loadFromDisk(obj)
             if obj.IsRunning, return; end
-            [candidate,info] = phase_model_beta.loadConfig(obj.RootDir);
+            [candidate,info] = phase_model_beta.loadConfig(obj.ProjectDir);
             if ~info.exists
                 error('PHASE_Model_beta:configMissing', ...
                     'No input_model.mat exists yet. Review the settings and press Save.');
@@ -308,8 +336,13 @@ classdef App < handle
             selected = '';
             switch fieldName
                 case 'filepathIN'
+                    startFolder = obj.ProjectDir;
+                    if ~strcmp(obj.ProjectDir,obj.RootDir)
+                        projectPaths = phase_project.paths(obj.ProjectDir);
+                        startFolder = projectPaths.exports;
+                    end
                     [file,path] = uigetfile({'*.xlsx;*.csv','Time-series files (*.xlsx, *.csv)'}, ...
-                        'Select displacement time series');
+                        'Select displacement time series',startFolder);
                     if ~isequal(file,0), selected = fullfile(path,file); end
                 case 'pythonPath'
                     [file,path] = uigetfile({'*','Python executable'}, ...
@@ -317,14 +350,14 @@ classdef App < handle
                     if ~isequal(file,0), selected = fullfile(path,file); end
                 case 'filepathAOI'
                     [file,path] = uigetfile({'*.shp','Shapefile (*.shp)'}, ...
-                        'Select AOI shapefile');
+                        'Select AOI shapefile',obj.ProjectDir);
                     if ~isequal(file,0), selected = fullfile(path,file); end
                 case 'filepath_EXTR'
                     [file,path] = uigetfile({'*.txt;*.csv','Query-point files (*.txt, *.csv)'}, ...
-                        'Select query-points file');
+                        'Select query-points file',obj.ProjectDir);
                     if ~isequal(file,0), selected = fullfile(path,file); end
                 case 'coherence_dir'
-                    value = uigetdir(obj.RootDir,'Select coherence folder');
+                    value = uigetdir(obj.ProjectDir,'Select coherence folder');
                     if ~isequal(value,0), selected = value; end
                 otherwise
                     error('PHASE_Model_beta:invalidBrowseField', ...
@@ -499,7 +532,7 @@ classdef App < handle
             cleanup = onCleanup(@() cleanupFiles({requestPath,outputPath})); %#ok<NASGU>
             try
                 writeJson(requestPath,struct('requests',{requests}));
-                cacheRoot = fullfile(obj.RootDir,'phase_model_beta_ui','map_tiles');
+                cacheRoot = fullfile(obj.UiDir,'map_tiles');
                 if ~isfolder(cacheRoot), mkdir(cacheRoot); end
                 script = fullfile(obj.RootDir,'pythonScripts','cache_phase_map_tiles.py');
                 parts = {phase_model_beta.resolvePythonPath(obj.Config.pythonPath),script, ...
@@ -569,7 +602,7 @@ classdef App < handle
                 'version','6.1.0', ...
                 'schema',phase_model_beta.schema(), ...
                 'config',phase_model_beta.configToUi(obj.Config), ...
-                'rootDir',obj.RootDir, ...
+                'rootDir',obj.ProjectDir, ...
                 'status',obj.Status, ...
                 'statusDetail',obj.StatusDetail, ...
                 'dirty',obj.IsDirty, ...
@@ -597,7 +630,7 @@ classdef App < handle
         end
 
         function configureLiveLog(obj)
-            runtimeDir = fullfile(obj.RootDir,'phase_model_beta_ui','runtime_logs');
+            runtimeDir = fullfile(obj.UiDir,'runtime_logs');
             if ~isfolder(runtimeDir), mkdir(runtimeDir); end
             fileName = ['model_' char(datetime('now','Format','yyyyMMdd_HHmmss_SSS')) '.log'];
             obj.LiveLogFile = fullfile(runtimeDir,fileName);
@@ -620,10 +653,20 @@ classdef App < handle
             if ~obj.DiaryActive, return; end
             try, diary off; catch, end
             obj.DiaryActive = false;
+            if ~strcmp(obj.ProjectDir,obj.RootDir) && isfile(obj.LiveLogFile)
+                try
+                    projectPaths = phase_project.paths(obj.ProjectDir);
+                    [~,name,extension] = fileparts(obj.LiveLogFile);
+                    copyfile(obj.LiveLogFile, ...
+                        fullfile(projectPaths.logs,[name extension]),'f');
+                catch ME
+                    obj.appendLog(['Could not save project log: ' ME.message]);
+                end
+            end
         end
 
         function ensureAssets(obj)
-            assetsDir = fullfile(obj.RootDir,'phase_model_beta_ui','assets');
+            assetsDir = fullfile(obj.UiDir,'assets');
             if ~isfolder(assetsDir), mkdir(assetsDir); end
             assets = {
                 fullfile(obj.RootDir,'PHASE_logo.png'), fullfile(assetsDir,'PHASE_logo.png')
@@ -641,7 +684,7 @@ classdef App < handle
             % the Model page before the HTML component is constructed.
             mapSource = fullfile(obj.RootDir,'PHASE_Preprocessing', ...
                 'phase_preprocessing_beta_ui','map.js');
-            mapTarget = fullfile(obj.RootDir,'phase_model_beta_ui','map.js');
+            mapTarget = fullfile(obj.UiDir,'map.js');
             if ~isfile(mapSource)
                 error('PHASE_Model_beta:mapRuntimeMissing', ...
                     'The shared PHASE map runtime is missing: %s', mapSource);

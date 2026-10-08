@@ -16,6 +16,35 @@ if ~isfolder(workDir)
     error('PHASE_StaMPS_beta:workDirMissing', ...
         'StaMPS processing folder does not exist: %s',workDir);
 end
+if isfile(fullfile(workDir,'phase-project.json'))
+    [~,projectPaths] = phase_project.open(workDir);
+    datasets = [dir(fullfile(projectPaths.stamps,'ASC_*')); ...
+        dir(fullfile(projectPaths.stamps,'DSC_*')); ...
+        dir(fullfile(projectPaths.stamps,'DES_*'))];
+    datasets = datasets([datasets.isdir]);
+    if isempty(datasets)
+        error('PHASE_StaMPS_beta:datasetMissing', ...
+            'No StaMPS dataset exists yet in %s.',projectPaths.stamps);
+    elseif numel(datasets) == 1
+        workDir = fullfile(projectPaths.stamps,datasets(1).name);
+    else
+        selected = uigetdir(projectPaths.stamps,'Select a StaMPS dataset');
+        if isequal(selected,0), app = []; return; end
+        selected = char(java.io.File(selected).getCanonicalPath());
+        valid = cellfun(@(name) fullfile(projectPaths.stamps,name), ...
+            {datasets.name},'UniformOutput',false);
+        if ispc
+            isValid = any(strcmpi(selected,valid));
+        else
+            isValid = any(strcmp(selected,valid));
+        end
+        if ~isValid
+            error('PHASE_StaMPS_beta:invalidDatasetSelection', ...
+                'Select one of the StaMPS datasets in %s.',projectPaths.stamps);
+        end
+        workDir = selected;
+    end
+end
 
 invocationDir = fileparts(mfilename('fullpath'));
 launcherDir = resolveLauncherDir(invocationDir,workDir);

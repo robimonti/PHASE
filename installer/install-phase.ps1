@@ -6,12 +6,11 @@
 #   2. Verifica MATLAB (auto-detect + override).
 #   3. Verifica SNAP   (auto-detect + override + lancio installer bundled).
 #   4. Verifica/installa Python 3.11+ (silent install da python.org se assente).
-#   5. Sceglie cartella destinazione (default: Desktop\PHASE).
+#   5. Sceglie cartella destinazione (default: LocalAppData\Programs\PHASE).
 #   6. Clona PHASE, StaMPS, TRAIN sotto <dest>\engine\ (sorgenti visibili).
 #   7. Scarica i binari nativi StaMPS precompilati (stamps-win64-binaries.zip).
 #   8. Configura tutto: MATLAB_EXE, %APPDATA%\PHASE\python.txt, savepath MATLAB.
-#   9. Crea nella root <dest> i collegamenti ai moduli globali + un README;
-#      PHASE StaMPS viene invece aperto dalla cartella dataset ASC_/DES_.
+#   9. Crea un solo collegamento PHASE Hub + un README.
 #
 # Usage (sorgente):
 #   powershell -ExecutionPolicy Bypass -File install-phase.ps1
@@ -21,7 +20,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$DefaultInstallDir = "$env:USERPROFILE\Desktop",
+    [string]$DefaultInstallDir = "$env:LOCALAPPDATA\Programs",
     [string]$PhaseBranch = 'main',
     [switch]$DryRun
 )
@@ -734,6 +733,12 @@ function Set-PhasePythonConfig {
 function Set-MatlabEnvVar {
     param([Parameter(Mandatory)] [string]$MatlabExe)
     [Environment]::SetEnvironmentVariable('MATLAB_EXE', $MatlabExe, 'User')
+}
+
+function Set-PhaseGptEnvVar {
+    param([Parameter(Mandatory)] [string]$SnapGpt)
+    [Environment]::SetEnvironmentVariable('PHASE_GPTBIN', $SnapGpt, 'User')
+    $env:PHASE_GPTBIN = $SnapGpt
 }
 
 # Lancia MATLAB in batch per:
@@ -2536,28 +2541,50 @@ function Set-SetupProgress {
 })
 
 # -----------------------------------------------------------------------------
-# Create root shortcuts for all three standalone launchers plus a README.
+# Create one hub shortcut plus a README. Standalone MATLAB entry points remain
+# available for diagnostics, but are not separate installed applications.
 # The shortcut starts MATLAB and executes the .m launcher immediately; a plain
-# .m file association would only open the MATLAB editor. StaMPS remains
-# dataset-scoped: its shortcut asks for ASC_*/DSC_* and passes it explicitly.
+# .m file association would only open the MATLAB editor.
 # -----------------------------------------------------------------------------
 function New-PhaseLauncherShortcuts {
     param(
         [Parameter(Mandatory)] [string]$InstallDir,
         [Parameter(Mandatory)] [string]$PhaseDir,
         [Parameter(Mandatory)] [string]$MatlabExe,
+        [Parameter(Mandatory)] [string]$PythonExe,
+        [Parameter(Mandatory)] [string]$SnapGpt,
         [scriptblock]$StatusCallback = { param($m) }
     )
 
     $apps = @(
-        @{ Name = 'PHASE Preprocessing'; Launcher = 'PHASE_Preprocessing.m'; Function = 'PHASE_Preprocessing' }
-        @{ Name = 'PHASE StaMPS'; Launcher = 'PHASE_Preprocessing\PHASE_StaMPS.m'; Function = 'PHASE_StaMPS'; DatasetScoped = $true }
-        @{ Name = 'PHASE Model';         Launcher = 'PHASE_Model.m'; Function = 'PHASE_Model' }
+        @{ Name = 'PHASE'; Launcher = 'PHASE_Hub.m'; Function = 'PHASE_Hub' }
     )
+
+    $phaseM = $PhaseDir.Replace('\','/').Replace("'","''")
+    $appQuoted = $InstallDir.Replace("'","''")
+    $phaseQuoted = $PhaseDir.Replace("'","''")
+    $pythonQuoted = $PythonExe.Replace("'","''")
+    $snapQuoted = $SnapGpt.Replace("'","''")
+    $matlabQuoted = $MatlabExe.Replace("'","''")
+    $bootstrap = Join-Path $InstallDir 'launch-phase.ps1'
+    $iconPath = Join-Path $InstallDir 'PHASE.ico'
+    $bootstrapText = @"
+`$ErrorActionPreference = 'Stop'
+`$env:PHASE_PYTHON = '$pythonQuoted'
+`$env:PHASE_GPTBIN = '$snapQuoted'
+try {
+    & '$pythonQuoted' '$phaseQuoted\phase_update.py' apply --prefix '$appQuoted' | Out-Null
+    if (`$LASTEXITCODE -ne 0) { throw 'PHASE update could not be applied. Check pending-update and backups.' }
+    & '$matlabQuoted' -r "try, cd('$phaseM'); addpath(genpath('$phaseM')); PHASE_Hub; catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end"
+} catch {
+    Add-Type -AssemblyName PresentationFramework
+    [System.Windows.MessageBox]::Show(`$_.Exception.Message, 'PHASE startup error') | Out-Null
+}
+"@
+    Set-Content -LiteralPath $bootstrap -Value $bootstrapText -Encoding UTF8
 
     $wsh = New-Object -ComObject WScript.Shell
     try {
-        $phaseM = $PhaseDir.Replace('\','/').Replace("'","''")
         foreach ($a in $apps) {
             $launcherPath = Join-Path $PhaseDir $a.Launcher
             if (-not (Test-Path $launcherPath)) {
@@ -2566,18 +2593,27 @@ function New-PhaseLauncherShortcuts {
             }
             $lnkPath = Join-Path $InstallDir ($a.Name + '.lnk')
             $sc = $wsh.CreateShortcut($lnkPath)
-            $sc.TargetPath = $MatlabExe
-            if ($a.DatasetScoped) {
-                $launchCommand = "datasetDir = uigetdir('$phaseM','Select the ASC_* or DSC_* StaMPS dataset folder'); if ~isequal(datasetDir,0), $($a.Function)(datasetDir); end"
-            } else {
-                $launchCommand = "$($a.Function)"
-            }
-            $sc.Arguments = "-r `"try, cd('$phaseM'); addpath(genpath('$phaseM')); $launchCommand; catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end`""
-            $sc.WorkingDirectory = $PhaseDir
+            $sc.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+            $sc.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$bootstrap`""
+            $sc.WorkingDirectory = $InstallDir
             $sc.Description = "Launch $($a.Name)"
-            $sc.IconLocation = "$MatlabExe,0"
+            if (Test-Path -LiteralPath $iconPath) {
+                $sc.IconLocation = "$iconPath,0"
+            } else {
+                $sc.IconLocation = "$MatlabExe,0"
+            }
             $sc.Save()
             & $StatusCallback "[OK] Shortcut: $lnkPath"
+            $desktop = [Environment]::GetFolderPath('Desktop')
+            if ($desktop -and (Test-Path -LiteralPath $desktop)) {
+                $desktopLink = Join-Path $desktop 'PHASE 7.lnk'
+                if (-not (Test-Path -LiteralPath $desktopLink)) {
+                    Copy-Item -LiteralPath $lnkPath -Destination $desktopLink
+                    & $StatusCallback "[OK] Desktop shortcut: $desktopLink"
+                } else {
+                    & $StatusCallback "[!] Desktop shortcut already exists: $desktopLink"
+                }
+            }
         }
     } finally {
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wsh) | Out-Null
@@ -2588,18 +2624,14 @@ function New-PhaseLauncherShortcuts {
 PHASE - InSAR PSI suite
 =======================
 
-To START the application, double-click one of these shortcuts:
-
-  - "PHASE Preprocessing.lnk"  ->  SNAP data preparation (module 1)
-  - "PHASE StaMPS.lnk"         ->  select and process an ASC_*/DSC_* dataset
-  - "PHASE Model.lnk"          ->  geospatial modelling
+To START the application, double-click "PHASE.lnk". The hub lets you create
+or open a PHASE project and use Preprocessing, StaMPS and Model as tabs in
+one window. Projects contain data and results; engine is the shared install.
 
 PHASE StaMPS (module 1B)
 ------------------------
-  Module 1 creates an ASC_<dates> or DSC_<dates> processing folder and opens
-  PHASE StaMPS with that folder explicitly. No legacy MLAPP is copied.
-  To resume later, launch PHASE_StaMPS from MATLAB and pass the dataset
-  folder, or reopen it from PHASE Preprocessing.
+  Module 1 creates an ASC_<dates> or DSC_<dates> processing folder under the
+  project. Select it in the StaMPS tab to resume. No MLAPP is copied.
 
 DATA INPUT
 ----------
@@ -2682,6 +2714,11 @@ function Assert-PhaseStandaloneRuntime {
     param([Parameter(Mandatory)] [string]$PhaseDir)
 
     $required = @(
+        'PHASE_Hub.m',
+        'phase_update.py',
+        '+phase_hub\App.m',
+        '+phase_project\open.m',
+        '+phase_project\create.m',
         'PHASE_Preprocessing.m',
         'PHASE_Model.m',
         'PHASE_Preprocessing\PHASE_StaMPS.m',
@@ -2834,6 +2871,8 @@ function Invoke-FullSetup {
     Update-Task -Key 'env' -Status 'running' -Detail 'writing env vars and config files...'
     Set-MatlabEnvVar -MatlabExe $Script:State.MatlabExe
     Add-SetupLog "[OK] MATLAB_EXE set (user env var)"
+    Set-PhaseGptEnvVar -SnapGpt $Script:State.SnapGpt
+    Add-SetupLog "[OK] PHASE_GPTBIN set (user env var)"
     Set-PhasePythonConfig -PythonExe $Script:State.PythonExe
     Add-SetupLog "[OK] %APPDATA%\PHASE\python.txt written"
     Write-ProjectConfTemplate -InstallDir $phaseDir -SnapGpt $Script:State.SnapGpt
@@ -3038,15 +3077,30 @@ function Invoke-FullSetup {
     Set-SetupProgress 95 'preparing standalone runtime'
     Update-Task -Key 'runtime' -Status 'running' -Detail "validating branch $Script:PhaseBranch..."
     Assert-PhaseStandaloneRuntime -PhaseDir $phaseDir
+    $iconSource = Join-Path $phaseDir 'installer\PHASE.ico'
+    if (Test-Path -LiteralPath $iconSource) {
+        Copy-Item -LiteralPath $iconSource -Destination (Join-Path $appDir 'PHASE.ico') -Force
+    }
     Set-TaskDetail -Key 'runtime' -Detail "cleaning branch $Script:PhaseBranch..."
     Remove-PhaseLegacyRuntimeFiles -PhaseDir $phaseDir `
         -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'runtime' -Detail $m }
     Update-Task -Key 'runtime' -Status 'done'
 
-    # Standalone launch shortcuts + README in the visible project folder.
+    $installationInfo = @{
+        updateSchema = 1
+        version = 'dev'
+        system = 'windows'
+        source = "$($Script:PhaseRepo)#$($Script:PhaseBranch)"
+        installedAt = [DateTime]::UtcNow.ToString('o')
+    } | ConvertTo-Json -Depth 4
+    Set-Content -LiteralPath (Join-Path $appDir 'install.json') `
+        -Value $installationInfo -Encoding UTF8
+
+    # One hub launch shortcut + README in the visible application folder.
     try {
         New-PhaseLauncherShortcuts -InstallDir $appDir -PhaseDir $phaseDir `
             -MatlabExe $Script:State.MatlabExe `
+            -PythonExe $Script:State.PythonExe -SnapGpt $Script:State.SnapGpt `
             -StatusCallback { param($m) Add-SetupLog $m }
     } catch {
         Add-SetupLog "[!] Could not create root shortcuts/README: $($_.Exception.Message)"
@@ -3059,10 +3113,8 @@ function Invoke-FullSetup {
     Add-SetupLog ""
     Add-SetupLog "=== Installation complete ==="
     Add-SetupLog "Launch the app from the shortcuts in $($appDir):"
-    Add-SetupLog "  PHASE Preprocessing.lnk"
-    Add-SetupLog "  PHASE StaMPS.lnk"
-    Add-SetupLog "  PHASE Model.lnk"
-    Add-SetupLog "PHASE StaMPS can be opened by preprocessing or from its shortcut by selecting ASC_/DSC_."
+    Add-SetupLog "  PHASE.lnk"
+    Add-SetupLog "Open or create a data-only project in PHASE Hub."
     Add-SetupLog "The editable MATLAB sources live in the visible folder: $phaseDir"
 }
 

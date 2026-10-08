@@ -166,6 +166,8 @@ classdef LegacyEngine < matlab.apps.AppBase
         ExternalProgressCallback = []
         StopRequested = false
         aoi_polygon_lonlat = zeros(0,2)
+        ConfigRoot = phase_model_beta.projectRoot()
+        OutputRoot = ''
 
         % Input Files Tab
         filepathIN = ''; % string for .xlsx/.csv path
@@ -1742,6 +1744,9 @@ classdef LegacyEngine < matlab.apps.AppBase
                 runFolderCleanup = onCleanup(@() cd(previousRunFolder)); %#ok<NASGU>
                 cd(runtimeRoot);
                 outputRoot = fileparts(runtimeRoot);
+                if ~isempty(app.OutputRoot)
+                    outputRoot = app.OutputRoot;
+                end
 
                 % --- 0. Prepare the environment ---
 
@@ -2109,9 +2114,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                     end
                 end
 
-                % Keep relative paths compatible with the scientific helpers,
-                % while placing the actual result beside the PHASE shortcuts.
-                outputDir = fullfile('..',outputDir);
+                % Use the explicit project result root when one is selected.
+                outputDir = fullfile(outputRoot,outputDir);
                 [created,createMessage] = mkdir(outputDir);
                 if ~created
                     error('PHASE_Model_beta:outputCreateFailed', ...
@@ -2422,8 +2426,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         OptionalArgs = [OptionalArgs, {'coll_step_est', coll_step_est}];
                     end
                     if ismember(procType, {'temporal', 'temporal&NNI'})
-                        modelConfig = phase_model_beta.loadConfig( ...
-                            phase_model_beta.projectRoot());
+                        modelConfig = phase_model_beta.loadConfig(app.ConfigRoot);
                         thresholdOptions = {
                             'min_period_days_method', 'min_period_days'
                             'min_coll_snr_method', 'min_coll_snr'

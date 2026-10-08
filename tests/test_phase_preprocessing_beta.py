@@ -17,6 +17,30 @@ def test_preprocessing_beta_has_text_launcher_and_preserves_stable_app(phase_roo
     assert (phase_root / "PHASE_Preprocessing_beta.m").is_file()
     assert not (phase_root / "PHASE_Preprocessing_beta.mlapp").exists()
     assert "phase_preprocessing_beta.App" in _text(phase_root / "PHASE_Preprocessing_beta.m")
+    assert "phase_project.open(projectRoot)" in _text(phase_root / "PHASE_Preprocessing_beta.m")
+
+
+def test_preprocessing_project_engine_separates_code_from_generated_data(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta"
+    controller = _text(package / "App.m")
+    engine = _text(package / "LegacyEngine.m")
+    extractor = _text(phase_root / "tools" / "extract_preprocessing_beta_engine.py")
+    command = _text(package / "scriptCommand.m")
+    assert "obj.ProjectDir,obj.RootDir" in controller
+    assert "app@phase_preprocessing_beta.LegacyEngine(projectRoot,installRoot)" in _text(package / "ProcessingEngine.m")
+    assert "app.ProjectRoot = char(string(projectRoot))" in engine
+    assert "cd(obj.ProjectDir)" in controller
+    assert "phase_preprocessing_beta.dataFolder(app.ProjectRoot)" in engine
+    assert "phase_preprocessing_beta.stampsFolder(app.ProjectRoot)" in engine
+    assert engine.count("phase_preprocessing_beta.scriptCommand(python,") == 16
+    assert "project_path_full, par, 'snap2stamps', par, 'graphs'" not in engine
+    assert "stamps_app_file = fullfile(app.InstallRoot" in engine
+    assert "set -e\\n" in engine
+    assert "system(chmod);" not in engine[engine.index("function StartButtonPushed"):]
+    assert "_replace_checked" in extractor
+    assert "exit /b 1" in command
+    assert "PHASE_ASF_DATA_DIR" in controller
+    assert "PHASE_ASF_DATA_DIR" in _text(phase_root / "downloadasf" / "functionality.py")
 
 
 def test_preprocessing_engine_is_reproducibly_extracted_from_mlapp(phase_root):
@@ -40,7 +64,8 @@ def test_preprocessing_engine_exposes_every_stable_callback_as_text(phase_root):
     )
     stable_functions = re.findall(r"^\s*function\s+(?:\[[^]]+\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*\(", stable, re.M)
     engine_functions = re.findall(r"^\s*function\s+(?:\[[^]]+\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*\(", engine, re.M)
-    assert len(stable_functions) == len(engine_functions)
+    # The beta constructor now accepts a project root before startup runs.
+    assert len(engine_functions) == len(stable_functions) + 1
     for callback in (
         "StartButtonPushed",
         "SearchASFButtonPushed",
@@ -219,7 +244,7 @@ def test_preprocessing_beta_map_is_embedded_and_updates_both_aoi_contracts(phase
     assert "obj.Engine.DownloaderAOICorners = []" in controller
     assert "search_summary.json" not in footprints
     assert "downloadasf" not in footprints
-    assert "fullfile(rootDir, 'PHASE_Preprocessing', 'slaves')" in footprints
+    assert "phase_preprocessing_beta.dataFolder(rootDir)" in footprints
     assert "manifest.safe" in footprints
     assert "Estimated Top Left Geodetic Coordinates" in footprints
     assert "load('coastlines')" in map_base

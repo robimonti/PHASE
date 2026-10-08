@@ -15,6 +15,15 @@ if ~isempty(installationFolder) && ...
 end
 
 candidates = {};
+modernRoot = phase_project.findRoot(workDir);
+if ~isempty(modernRoot)
+    modernPaths = phase_project.paths(modernRoot);
+    candidates{end+1} = modernPaths.preprocessing;
+    if ~isfield(cfg,'project_path') || ~samePath(cfg.project_path,modernRoot)
+        cfg.project_path = modernRoot;
+        detected{end+1} = 'project_path';
+    end
+end
 if isfield(cfg, 'project_path') && ~isempty(cfg.project_path)
     candidates{end+1} = fullfile(cfg.project_path, 'PHASE_Preprocessing');
 end
@@ -39,7 +48,11 @@ if isempty(preprocFolder)
     return
 end
 
-projectFolder = char(java.io.File(fileparts(preprocFolder)).getCanonicalPath());
+if isempty(modernRoot)
+    projectFolder = char(java.io.File(fileparts(preprocFolder)).getCanonicalPath());
+else
+    projectFolder = modernRoot;
+end
 if ~isfield(cfg, 'project_path') || ~samePath(cfg.project_path, projectFolder)
     cfg.project_path = projectFolder;
     detected{end+1} = 'project_path';

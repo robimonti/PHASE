@@ -4,8 +4,13 @@ classdef App < handle
     properties (SetAccess = private)
         UIFigure
         HTML
+        HostContainer
+        ContentGrid
+        OwnsFigure = true
         Engine
         RootDir
+        ProjectDir
+        UiDir
         Config
         SavedConfig
         Logs = {}
@@ -36,9 +41,16 @@ classdef App < handle
     end
 
     methods
-        function obj = App(rootDir)
+        function obj = App(rootDir, projectDir, parent)
+            previousFolder = pwd;
+            restoreFolder = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
             obj.RootDir = char(java.io.File(rootDir).getCanonicalPath());
-            [loadedConfig, info] = phase_preprocessing_beta.loadConfig(obj.RootDir);
+            if nargin < 2 || isempty(projectDir), projectDir = rootDir; end
+            obj.ProjectDir = char(java.io.File(projectDir).getCanonicalPath());
+            obj.UiDir = phase_project.uiRuntime( ...
+                fullfile(obj.RootDir,'PHASE_Preprocessing', ...
+                'phase_preprocessing_beta_ui'),'preprocessing');
+            [loadedConfig, info] = phase_preprocessing_beta.loadConfig(obj.ProjectDir);
             obj.Config = loadedConfig;
             obj.SavedConfig = loadedConfig;
             pythonNotice = '';
@@ -70,23 +82,30 @@ classdef App < handle
             end
             obj.IsDirty = ~info.exists || pythonChanged || gptChanged;
             obj.MapBase = phase_preprocessing_beta.mapBase();
-            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
+            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.ProjectDir);
             if info.exists, obj.MapPolygon = bboxPolygon(obj.Config);
             else, obj.MapPolygon = zeros(0, 2); end
-            obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.RootDir);
-            obj.Downloader = phase_preprocessing_beta.defaultDownloader(obj.RootDir, obj.MapPolygon);
-            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+            obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.ProjectDir);
+            obj.Downloader = phase_preprocessing_beta.defaultDownloader(obj.ProjectDir, obj.MapPolygon);
+            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.ProjectDir);
             obj.UpdateStatus = obj.UpdateContext.message;
             obj.Transfer = defaultTransfer();
 
-            obj.UIFigure = uifigure('Name', 'PHASE · Preprocessing', ...
-                'Color', [1 1 1], 'Position', centeredPosition(1500, 920));
-            obj.UIFigure.UserData = obj;
-            obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
-            grid = uigridlayout(obj.UIFigure, [1 1]);
+            if nargin >= 3 && ~isempty(parent)
+                obj.OwnsFigure = false;
+                obj.HostContainer = parent;
+                obj.UIFigure = ancestor(parent,'figure');
+            else
+                obj.UIFigure = uifigure('Name', 'PHASE · Preprocessing', ...
+                    'Color', [1 1 1], 'Position', centeredPosition(1500, 920));
+                obj.UIFigure.UserData = obj;
+                obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
+                obj.HostContainer = obj.UIFigure;
+            end
+            grid = uigridlayout(obj.HostContainer, [1 1]);
+            obj.ContentGrid = grid;
             grid.Padding = [0 0 0 0];
-            uiPath = fullfile(obj.RootDir, 'PHASE_Preprocessing', ...
-                'phase_preprocessing_beta_ui', 'index.html');
+            uiPath = fullfile(obj.UiDir,'index.html');
             obj.HTML = uihtml(grid, 'HTMLSource', uiPath);
             obj.HTML.Layout.Row = 1; obj.HTML.Layout.Column = 1;
             obj.HTML.HTMLEventReceivedFcn = @(~,event) obj.onHtmlEvent(event);
@@ -97,7 +116,8 @@ classdef App < handle
                 obj.appendLog(pythonNotice);
                 obj.appendLog(gptNotice);
                 obj.appendLog('Initialising the proven preprocessing engine and map services…');
-                obj.Engine = phase_preprocessing_beta.ProcessingEngine();
+                obj.Engine = phase_preprocessing_beta.ProcessingEngine( ...
+                    obj.ProjectDir,obj.RootDir);
                 obj.Engine.ExternalLogCallback = @(message) obj.appendLog(message);
                 obj.Engine.ExternalProgressCallback = @(progress) obj.onEngineProgress(progress);
                 obj.Engine.UIFigure.CloseRequestFcn = @(~,~) obj.hideEngine();
@@ -140,10 +160,12 @@ classdef App < handle
             catch
             end
             try
-                if ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
+                if obj.OwnsFigure && ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
                     obj.UIFigure.CloseRequestFcn = [];
                     obj.UIFigure.UserData = [];
                     delete(obj.UIFigure);
+                elseif ~obj.OwnsFigure && ~isempty(obj.ContentGrid) && isvalid(obj.ContentGrid)
+                    delete(obj.ContentGrid);
                 end
             catch
             end
@@ -162,7 +184,7 @@ classdef App < handle
                     case 'start', obj.startFromPayload(payload);
                     case 'stop', obj.stopProcessing();
                     case 'browse', obj.browseFromPayload(payload);
-                    case 'openworkdir', openFolder(fullfile(obj.RootDir, 'PHASE_Preprocessing'));
+                    case 'openworkdir', openFolder(phase_preprocessing_beta.dataFolder(obj.ProjectDir));
                     case 'importimages', obj.updateFromPayload(payload); obj.importImages();
                     case 'openslavesfolder', obj.updateFromPayload(payload); obj.openSlavesFolder();
                     case 'refreshslaves', obj.refreshLocalData('Local image inventory refreshed.');
@@ -192,7 +214,7 @@ classdef App < handle
 
         function loadFromDisk(obj)
             if obj.IsRunning, return; end
-            [cfg, info] = phase_preprocessing_beta.loadConfig(obj.RootDir);
+            [cfg, info] = phase_preprocessing_beta.loadConfig(obj.ProjectDir);
             if ~info.exists
                 error('PHASE_Preprocessing_beta:configMissing', ...
                     'No PHASE_Preprocessing/input_preprocessing.mat file exists yet.');
@@ -230,7 +252,7 @@ classdef App < handle
                 error('PHASE_Preprocessing_beta:invalidConfiguration', '%s', strjoin(errors, newline));
             end
             if bboxChanged(obj.Config, candidate), obj.MapPolygon = bboxPolygon(candidate); end
-            pathValue = phase_preprocessing_beta.saveConfig(obj.RootDir, candidate);
+            pathValue = phase_preprocessing_beta.saveConfig(obj.ProjectDir, candidate);
             obj.Config = candidate; obj.SavedConfig = candidate; obj.IsDirty = false;
             obj.applyToEngine();
             obj.Status = 'saved'; obj.StatusDetail = 'Configuration saved and ready';
@@ -270,13 +292,13 @@ classdef App < handle
             for k = 1:numel(warnings), obj.appendLog(['Warning: ' warnings{k}]); end
             obj.appendLog(['Starting ' constellationLabel(candidate) ' preprocessing.']);
             previous = pwd; cleanup = onCleanup(@() cd(previous)); %#ok<NASGU>
-            cd(obj.RootDir); drawnow;
+            cd(obj.ProjectDir); drawnow;
             mkdirWarning = warning('off','MATLAB:MKDIR:DirectoryExists');
             warningCleanup = onCleanup(@() warning(mkdirWarning)); %#ok<NASGU>
             try
                 obj.Engine.StartButtonPushed([]);
                 obj.IsRunning = false;
-                phase_preprocessing_beta.saveConfig(obj.RootDir,candidate);
+                phase_preprocessing_beta.saveConfig(obj.ProjectDir,candidate);
                 if obj.StopRequested
                     obj.Status = 'idle';
                     obj.StatusDetail = 'Preprocessing stopped; cleanup was skipped';
@@ -289,7 +311,7 @@ classdef App < handle
                     obj.finishRunProgress('Preprocessing completed',100);
                 end
             catch ME
-                try, phase_preprocessing_beta.saveConfig(obj.RootDir,candidate); catch, end
+                try, phase_preprocessing_beta.saveConfig(obj.ProjectDir,candidate); catch, end
                 obj.IsRunning = false;
                 if obj.StopRequested || strcmp(ME.identifier,'PHASE:ProcessingStopped')
                     obj.Status = 'idle';
@@ -406,15 +428,15 @@ classdef App < handle
         end
 
         function refreshLocalData(obj, message)
-            obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.RootDir);
-            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
-            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+            obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.ProjectDir);
+            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.ProjectDir);
+            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.ProjectDir);
             if nargin > 1 && ~isempty(message), obj.appendLog(message); end
             obj.sendState();
         end
 
         function folder = slavesFolder(obj)
-            folder = fullfile(obj.RootDir,'PHASE_Preprocessing','slaves');
+            folder = fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),'slaves');
         end
 
         function downloadAoiChanged(obj, payload)
@@ -445,7 +467,7 @@ classdef App < handle
             obj.Downloader.busy = true; obj.Downloader.progress = 0;
             obj.Downloader.status = 'Searching ASF…'; obj.sendState();
             try
-                asfFolder = fullfile(obj.RootDir,'downloadasf');
+                asfFolder = fullfile(obj.ProjectDir,'downloadasf');
                 deleteIfExists(fullfile(asfFolder,'search_summary.json'));
                 deleteIfExists(fullfile(asfFolder,'download_data.json'));
                 writeJson(fullfile(asfFolder,'search_request.json'),request);
@@ -456,8 +478,8 @@ classdef App < handle
                         ~isfile(fullfile(asfFolder,'download_data.json'))
                     error('PHASE:ASFSearchFailed','The ASF backend returned no search result files. %s',strtrim(output));
                 end
-                backupAsfFiles(obj.RootDir);
-                search = phase_preprocessing_beta.readAsfSearch(obj.RootDir);
+                backupAsfFiles(obj.ProjectDir);
+                search = phase_preprocessing_beta.readAsfSearch(obj.ProjectDir);
                 obj.Downloader.results = search.results;
                 obj.Downloader.count = search.count;
                 obj.Downloader.totalSizeGB = search.totalSizeGB;
@@ -483,11 +505,11 @@ classdef App < handle
             end
             obj.Downloader.busy = true; obj.Downloader.status = 'Checking Earthdata credentials…'; obj.sendState();
             try
-                writeJson(fullfile(obj.RootDir,'downloadasf','login_request.json'), ...
+                writeJson(fullfile(obj.ProjectDir,'downloadasf','login_request.json'), ...
                     struct('username',username,'password',password));
                 controller = fullfile(obj.RootDir,'downloadasf','controller.py');
                 [status,output] = obj.runPython(controller,{'login'});
-                resultPath = fullfile(obj.RootDir,'downloadasf','login_result.json');
+                resultPath = fullfile(obj.ProjectDir,'downloadasf','login_result.json');
                 if status ~= 0 || ~isfile(resultPath)
                     error('PHASE:EarthdataLoginFailed','%s',strtrim(output));
                 end
@@ -506,8 +528,8 @@ classdef App < handle
         end
 
         function logoutAsf(obj)
-            deleteIfExists(fullfile(obj.RootDir,'downloadasf','login_result.json'));
-            deleteIfExists(fullfile(obj.RootDir,'downloadasf','login_request.json'));
+            deleteIfExists(fullfile(obj.ProjectDir,'downloadasf','login_result.json'));
+            deleteIfExists(fullfile(obj.ProjectDir,'downloadasf','login_request.json'));
             obj.Downloader.loggedIn = false; obj.Downloader.username = '';
             obj.Downloader.status = 'Signed out from Earthdata.'; obj.sendState();
         end
@@ -533,19 +555,19 @@ classdef App < handle
                 'Options',{'Download','Cancel'},'DefaultOption','Download','CancelOption','Cancel');
             if ~strcmp(answer,'Download'), return; end
 
-            saveAsfSelection(obj.RootDir,selected);
-            entries = initialDownloadEntries(obj.RootDir, selected);
+            saveAsfSelection(obj.ProjectDir,selected);
+            entries = initialDownloadEntries(obj.ProjectDir, selected);
             obj.startDownloadTransfer('initial', entries);
         end
 
         function refreshUpdateContext(obj)
-            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.ProjectDir);
             obj.UpdateStatus = obj.UpdateContext.message;
             obj.sendState();
         end
 
         function searchUpdateImages(obj, payload)
-            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+            obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.ProjectDir);
             if ~obj.UpdateContext.available, error('PHASE:UpdateContextMissing','%s',obj.UpdateContext.message); end
             if ~isstruct(payload) || ~isfield(payload,'endDate')
                 error('PHASE:UpdateEndDateMissing','Choose the update search end date.');
@@ -609,11 +631,11 @@ classdef App < handle
             stopPath = fullfile(obj.TransferDirectory,'stop.request');
             obj.TransferLogPath = fullfile(obj.TransferDirectory,'download.log');
             writeJson(manifestPath,struct('files',{entries}));
-            persistentManifest = fullfile(obj.RootDir,'downloadasf','last_download_manifest.json');
+            persistentManifest = fullfile(obj.ProjectDir,'downloadasf','last_download_manifest.json');
             writeJson(persistentManifest,struct('kind',kind,'files',{entries}));
 
             script = fullfile(obj.RootDir,'pythonScripts','phase_download_manager.py');
-            credentials = fullfile(obj.RootDir,'downloadasf','login_request.json');
+            credentials = fullfile(obj.ProjectDir,'downloadasf','login_request.json');
             parts = {pythonExecutable,script,'--manifest',manifestPath, ...
                 '--destination',obj.slavesFolder(),'--credentials',credentials, ...
                 '--progress',progressPath,'--output',resultPath, ...
@@ -678,9 +700,9 @@ classdef App < handle
                 % this timer callback abort here and leave the UI permanently
                 % busy even though the Python downloader had already exited.
                 try
-                    obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.RootDir);
-                    obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
-                    obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.RootDir);
+                    obj.SlaveFiles = phase_preprocessing_beta.scanSlaves(obj.ProjectDir);
+                    obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.ProjectDir);
+                    obj.UpdateContext = phase_preprocessing_beta.sentinelUpdateContext(obj.ProjectDir);
                 catch ME
                     obj.appendLog(['Download inventory refresh warning: ' ME.message]);
                 end
@@ -780,7 +802,7 @@ classdef App < handle
             if isstruct(obj.Transfer) && isfield(obj.Transfer,'active') && obj.Transfer.active
                 error('PHASE:DownloadAlreadyRunning','A download is already running.');
             end
-            manifestPath = fullfile(obj.RootDir,'downloadasf','last_download_manifest.json');
+            manifestPath = fullfile(obj.ProjectDir,'downloadasf','last_download_manifest.json');
             if ~isfile(manifestPath)
                 error('PHASE:NoDownloadToRetry','No previous download manifest is available.');
             end
@@ -795,7 +817,7 @@ classdef App < handle
         end
 
         function preserveTransferDiagnostics(obj)
-            diagnosticsDir = fullfile(obj.RootDir,'downloadasf');
+            diagnosticsDir = fullfile(obj.ProjectDir,'downloadasf');
             if ~isfolder(diagnosticsDir), mkdir(diagnosticsDir); end
             sources = { ...
                 fullfile(obj.TransferDirectory,'manifest.json'), ...
@@ -908,7 +930,7 @@ classdef App < handle
         end
 
         function refreshMap(obj)
-            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.RootDir);
+            obj.MapFootprints = phase_preprocessing_beta.collectFootprints(obj.ProjectDir);
             obj.appendLog(sprintf('Map refreshed with %d footprint(s).', numel(obj.MapFootprints)));
             obj.sendState();
         end
@@ -929,8 +951,7 @@ classdef App < handle
             cleanup = onCleanup(@() cleanupFiles({requestPath,outputPath})); %#ok<NASGU>
             try
                 writeJson(requestPath,struct('requests',{requests}));
-                cacheRoot = fullfile(obj.RootDir,'PHASE_Preprocessing', ...
-                    'phase_preprocessing_beta_ui','map_tiles');
+                cacheRoot = fullfile(obj.UiDir,'map_tiles');
                 if ~isfolder(cacheRoot), mkdir(cacheRoot); end
                 script = fullfile(obj.RootDir,'pythonScripts','cache_phase_map_tiles.py');
                 [status,output] = obj.runPython(script,{'--cache-root',cacheRoot, ...
@@ -977,6 +998,13 @@ classdef App < handle
             parts = [{pythonExecutable},{scriptPath},arguments];
             quoted = cellfun(@quoteCommandArgument,parts,'UniformOutput',false);
             command = strjoin(quoted,' ');
+            if strcmp(fileparts(scriptPath),fullfile(obj.RootDir,'downloadasf'))
+                asfFolder = fullfile(obj.ProjectDir,'downloadasf');
+                if ~isfolder(asfFolder), mkdir(asfFolder); end
+                previous = getenv('PHASE_ASF_DATA_DIR');
+                cleanup = onCleanup(@() setenv('PHASE_ASF_DATA_DIR',previous)); %#ok<NASGU>
+                setenv('PHASE_ASF_DATA_DIR',asfFolder);
+            end
             [status,output] = system(command);
         end
 
@@ -1035,7 +1063,7 @@ classdef App < handle
         end
 
         function removeSourceImages(obj)
-            pathValue = fullfile(obj.RootDir,'PHASE_Preprocessing','slaves');
+            pathValue = fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),'slaves');
             try
                 if isfolder(pathValue), rmdir(pathValue,'s'); end
                 mkdir(pathValue);
@@ -1047,7 +1075,7 @@ classdef App < handle
         end
 
         function removeProcessingFolder(obj, name, reason)
-            pathValue = fullfile(obj.RootDir,'PHASE_Preprocessing',name);
+            pathValue = fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),name);
             if ~isfolder(pathValue), return; end
             try
                 rmdir(pathValue,'s');
@@ -1132,8 +1160,8 @@ classdef App < handle
             updateState = struct('context',obj.UpdateContext, ...
                 'results',{obj.UpdateResults},'status',obj.UpdateStatus,'busy',obj.UpdateBusy);
             state = struct('kind','state','version','6.1.0', ...
-                'workDir',fullfile(obj.RootDir,'PHASE_Preprocessing'), ...
-                'configPath',fullfile(obj.RootDir,'PHASE_Preprocessing','input_preprocessing.mat'), ...
+                'workDir',phase_preprocessing_beta.dataFolder(obj.ProjectDir), ...
+                'configPath',fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),'input_preprocessing.mat'), ...
                 'schema',phase_preprocessing_beta.schema(), ...
                 'config',phase_preprocessing_beta.configToUi(obj.Config), ...
                 'detectedFields',{{}},'dirty',obj.IsDirty,'running',obj.IsRunning, ...

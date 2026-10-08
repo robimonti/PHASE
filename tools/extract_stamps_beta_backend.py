@@ -83,6 +83,12 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
     )
     callback = _replace_checked(
         callback,
+        "s2s_export_path = strcat(project_path, '/PHASE_Preprocessing/INSAR_', master_date);",
+        "s2s_export_path = phase_stamps_beta.exportPath(project_path, master_date);",
+        1,
+    )
+    callback = _replace_checked(
+        callback,
         "        setparm('percent_rand', percent_rand); % maximum acceptable percentage, alternative 'density_rand'",
         """\
         if strcmpi(select_method, 'DENSITY')

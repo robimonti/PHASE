@@ -4,8 +4,12 @@ classdef App < handle
     properties (SetAccess = private)
         UIFigure
         HTML
+        HostContainer
+        ContentGrid
+        OwnsFigure = true
         WorkDir
         LauncherDir
+        UiDir
         Config
         SavedConfig
         AutoDetectedFields = {}
@@ -22,9 +26,11 @@ classdef App < handle
     end
 
     methods
-        function obj = App(workDir, launcherDir)
+        function obj = App(workDir, launcherDir, parent)
             obj.WorkDir = char(java.io.File(workDir).getCanonicalPath());
             obj.LauncherDir = launcherDir;
+            obj.UiDir = phase_project.uiRuntime( ...
+                fullfile(launcherDir,'phase_stamps_beta_ui'),'stamps');
 
             [loaded, info] = phase_stamps_beta.loadConfig(obj.WorkDir);
             obj.SavedConfig = loaded;
@@ -35,24 +41,33 @@ classdef App < handle
             obj.IsDirty = ~phase_stamps_beta.configsEqual( ...
                 obj.Config, obj.SavedConfig) || ~info.exists;
 
-            obj.UIFigure = uifigure('Name', 'PHASE · StaMPS', ...
-                'Color', [0.025 0.039 0.075], ...
-                'Position', centeredPosition(1440, 900));
-            % Keep the controller alive when the launcher is called without
-            % an output argument. The figure releases this reference on close.
-            obj.UIFigure.UserData = obj;
-            obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
-            grid = uigridlayout(obj.UIFigure, [1 1]);
+            if nargin >= 3 && ~isempty(parent)
+                obj.OwnsFigure = false;
+                obj.HostContainer = parent;
+                obj.UIFigure = ancestor(parent,'figure');
+            else
+                obj.UIFigure = uifigure('Name', 'PHASE · StaMPS', ...
+                    'Color', [0.025 0.039 0.075], ...
+                    'Position', centeredPosition(1440, 900));
+                % The figure keeps the standalone controller alive.
+                obj.UIFigure.UserData = obj;
+                obj.UIFigure.CloseRequestFcn = @(~,~) delete(obj);
+                obj.HostContainer = obj.UIFigure;
+            end
+            grid = uigridlayout(obj.HostContainer, [1 1]);
+            obj.ContentGrid = grid;
             grid.Padding = [0 0 0 0];
-            uiPath = fullfile(launcherDir, 'phase_stamps_beta_ui', 'index.html');
+            uiPath = fullfile(obj.UiDir,'index.html');
             obj.HTML = uihtml(grid, 'HTMLSource', uiPath);
             obj.HTML.Layout.Row = 1;
             obj.HTML.Layout.Column = 1;
             obj.HTML.HTMLEventReceivedFcn = @(~,event) obj.onHtmlEvent(event);
             obj.configureLiveLog();
             obj.createTsPickerOverlay();
-            obj.UIFigure.AutoResizeChildren = 'off';
-            obj.UIFigure.SizeChangedFcn = @(~,~) obj.layoutTsPickerOverlay();
+            if obj.OwnsFigure
+                obj.UIFigure.AutoResizeChildren = 'off';
+                obj.UIFigure.SizeChangedFcn = @(~,~) obj.layoutTsPickerOverlay();
+            end
 
             for k = 1:numel(messages)
                 obj.appendLog(messages{k});
@@ -111,11 +126,18 @@ classdef App < handle
         function delete(obj)
             obj.endLiveDiary();
             try
-                if ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
+                if obj.OwnsFigure && ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
                     obj.UIFigure.CloseRequestFcn = [];
                     obj.UIFigure.SizeChangedFcn = [];
                     obj.UIFigure.UserData = [];
                     delete(obj.UIFigure);
+                elseif ~obj.OwnsFigure
+                    if ~isempty(obj.TSPickerOverlay) && isvalid(obj.TSPickerOverlay)
+                        delete(obj.TSPickerOverlay);
+                    end
+                    if ~isempty(obj.ContentGrid) && isvalid(obj.ContentGrid)
+                        delete(obj.ContentGrid);
+                    end
                 end
             catch
             end
@@ -273,6 +295,18 @@ classdef App < handle
                         ME.identifier ']: ' ME.message]);
                 end
             end
+            if result.ok
+                try
+                    published = phase_stamps_beta.publishExports(obj.WorkDir);
+                    if ~isempty(published)
+                        obj.appendLog(['Project exports available in ' published]);
+                    end
+                catch ME
+                    result = struct('ok',false,'message',ME.message, ...
+                        'identifier',ME.identifier);
+                    obj.appendLog(['Could not publish project exports: ' ME.message]);
+                end
+            end
             obj.IsRunning = false;
             if result.ok
                 obj.Status = 'success';
@@ -309,7 +343,12 @@ classdef App < handle
                 end
                 addpath(projectRoot);
                 obj.appendLog('Opening PHASE Model…');
-                PHASE_Model_beta();
+                dataProject = phase_project.findRoot(obj.WorkDir);
+                if isempty(dataProject)
+                    PHASE_Model_beta();
+                else
+                    PHASE_Model_beta(dataProject);
+                end
             catch ME
                 obj.appendLog(['PHASE Model could not be opened [' ...
                     ME.identifier ']: ' ME.message]);
@@ -375,8 +414,7 @@ classdef App < handle
         end
 
         function configureLiveLog(obj)
-            runtimeDir = fullfile(obj.LauncherDir, ...
-                'phase_stamps_beta_ui','runtime_logs');
+            runtimeDir = fullfile(obj.UiDir,'runtime_logs');
             if ~isfolder(runtimeDir), mkdir(runtimeDir); end
             token = char(java.util.UUID.randomUUID());
             fileName = ['stamps_' token '.log'];
@@ -402,13 +440,24 @@ classdef App < handle
             if ~obj.DiaryActive, return; end
             try, diary off; catch, end
             obj.DiaryActive = false;
+            projectRoot = phase_project.findRoot(obj.WorkDir);
+            if ~isempty(projectRoot) && isfile(obj.LiveLogFile)
+                try
+                    projectPaths = phase_project.paths(projectRoot);
+                    [~,name,extension] = fileparts(obj.LiveLogFile);
+                    copyfile(obj.LiveLogFile, ...
+                        fullfile(projectPaths.logs,[name extension]),'f');
+                catch ME
+                    obj.appendLog(['Could not save project log: ' ME.message]);
+                end
+            end
         end
 
         function createTsPickerOverlay(obj)
             if ~isempty(obj.TSPickerOverlay) && isvalid(obj.TSPickerOverlay)
                 return
             end
-            obj.TSPickerOverlay = uipanel(obj.UIFigure, ...
+            obj.TSPickerOverlay = uipanel(obj.HostContainer, ...
                 'BorderType','none','BackgroundColor',[0.985 0.988 0.994], ...
                 'Visible','off');
             outer = uigridlayout(obj.TSPickerOverlay,[2 1]);
@@ -446,13 +495,18 @@ classdef App < handle
                     isempty(obj.UIFigure) || ~isvalid(obj.UIFigure)
                 return
             end
-            position = obj.UIFigure.Position;
-            sidebarWidth = 254;
-            if position(3) <= 1150, sidebarWidth = 224; end
-            topbarHeight = 72;
-            obj.TSPickerOverlay.Position = [sidebarWidth 0 ...
-                max(100,position(3)-sidebarWidth) ...
-                max(100,position(4)-topbarHeight)];
+            position = obj.HostContainer.Position;
+            if obj.OwnsFigure
+                sidebarWidth = 254;
+                if position(3) <= 1150, sidebarWidth = 224; end
+                topbarHeight = 72;
+                obj.TSPickerOverlay.Position = [sidebarWidth 0 ...
+                    max(100,position(3)-sidebarWidth) ...
+                    max(100,position(4)-topbarHeight)];
+            else
+                obj.TSPickerOverlay.Units = 'normalized';
+                obj.TSPickerOverlay.Position = [0 0 1 1];
+            end
         end
 
         function closeTsPicker(obj)

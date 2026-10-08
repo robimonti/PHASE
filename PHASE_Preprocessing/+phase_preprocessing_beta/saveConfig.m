@@ -1,7 +1,7 @@
 function pathValue = saveConfig(rootDir, cfg)
 %SAVECONFIG Write the same input MAT contract used by the stable MLAPP.
 
-folder = fullfile(rootDir, 'PHASE_Preprocessing');
+folder = phase_preprocessing_beta.dataFolder(rootDir);
 if ~isfolder(folder), mkdir(folder); end
 pathValue = fullfile(folder, 'input_preprocessing.mat');
 

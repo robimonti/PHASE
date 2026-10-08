@@ -1,4 +1,4 @@
-function app = PHASE_Model_beta()
+function app = PHASE_Model_beta(projectRoot)
 %PHASE_MODEL_BETA Launch the editable standalone PHASE Model application.
 %
 % The modern controller uses the complete mechanically extracted backend in
@@ -9,7 +9,12 @@ addpath(rootDir);
 previousDir = pwd;
 restoreDir = onCleanup(@() restoreFolder(previousDir)); %#ok<NASGU>
 cd(rootDir);
-app = phase_model_beta.App(rootDir);
+if nargin < 1 || isempty(projectRoot)
+    app = phase_model_beta.App(rootDir);
+else
+    phase_project.open(projectRoot);
+    app = phase_model_beta.App(rootDir,projectRoot);
+end
 if nargout == 0, clear app; end
 end
 

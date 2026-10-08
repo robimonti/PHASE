@@ -6,13 +6,13 @@ from shapely.geometry import Point, Polygon
 
 #read and write to json files
 def read_json(filename):
-    path = os.path.join(os.path.dirname(__file__), filename)
+    path = os.path.join(os.environ.get("PHASE_ASF_DATA_DIR", os.path.dirname(__file__)), filename)
     
     with open(path, "r") as f:
         return json.load(f)
     
 def write_json(filename, data):
-    path = os.path.join(os.path.dirname(__file__), filename)
+    path = os.path.join(os.environ.get("PHASE_ASF_DATA_DIR", os.path.dirname(__file__)), filename)
 
     with open(path, "w") as f:
         json.dump(data, f, indent=4)

@@ -289,6 +289,8 @@ classdef LegacyEngine < matlab.apps.AppBase
         Menu2                           matlab.ui.container.Menu
         ExternalLogCallback              = []
         ExternalProgressCallback         = []
+        ProjectRoot                      = phase_preprocessing_beta.projectRoot()
+        InstallRoot                      = phase_preprocessing_beta.projectRoot()
     end
 
 
@@ -1310,7 +1312,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         function existingCount = countExistingDownloadFiles(app, products)
 
             appPath = phase_preprocessing_beta.projectRoot();
-            downloadFolder = fullfile(appPath, "PHASE_Preprocessing", "slaves");
+            downloadFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
 
             existingCount = 0;
 
@@ -1328,7 +1330,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         function existingBytes = countExistingDownloadBytes(app, products)
 
             appPath = phase_preprocessing_beta.projectRoot();
-            downloadFolder = fullfile(appPath, "PHASE_Preprocessing", "slaves");
+            downloadFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
 
             existingBytes = 0;
 
@@ -1613,7 +1615,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         function updateDownloadProgress(app, totalBytes, startTime, existingBytesBefore, bytesToActuallyDownload)
 
             appPath = phase_preprocessing_beta.projectRoot();
-            downloadFolder = fullfile(appPath, "PHASE_Preprocessing", "slaves");
+            downloadFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
 
             downloadDataFile = fullfile(appPath, "downloadasf", "download_data.json");
             downloadData = jsondecode(fileread(downloadDataFile));
@@ -1966,7 +1968,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
         function [latestDate, referenceZip, localDates] = getSENAvailableImageContext(app)
             currentFolder = phase_preprocessing_beta.projectRoot();
-            projectFolder = fullfile(currentFolder, 'PHASE_Preprocessing');
+            projectFolder = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
             localDates = {};
             referenceZip = '';
 
@@ -2371,8 +2373,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                 return
             end
 
-            destinationFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
-            projectFolder = fullfile(currentFolder, 'PHASE_Preprocessing');
+            destinationFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
+            projectFolder = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
             if exist(destinationFolder, 'dir') ~= 7
                 mkdir(destinationFolder);
             end
@@ -2695,8 +2697,8 @@ classdef LegacyEngine < matlab.apps.AppBase
         function restoreLoginState(app)
 
             appPath = phase_preprocessing_beta.projectRoot();
-            resultFile = fullfile(appPath, "downloadasf", "login_result.json");
-            requestFile = fullfile(appPath, "downloadasf", "login_request.json");
+            resultFile = fullfile(app.ProjectRoot, "downloadasf", "login_result.json");
+            requestFile = fullfile(app.ProjectRoot, "downloadasf", "login_request.json");
 
             if ~exist(resultFile, "file") || ~exist(requestFile, "file")
                 return;
@@ -2737,7 +2739,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
             % 2. Controlla lo stato attuale della cartella slaves per Cosmo-SkyMed
             currentFolder = phase_preprocessing_beta.projectRoot();
-            project_path_full = fullfile(currentFolder, 'PHASE_Preprocessing');
+            project_path_full = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
             csk_files = dir(fullfile(project_path_full, 'slaves', '**', '*.h5'));
 
             default_pos = [];
@@ -2827,7 +2829,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
             % 2. Controlla lo stato attuale della cartella slaves
             currentFolder = phase_preprocessing_beta.projectRoot();
-            project_path_full = fullfile(currentFolder, 'PHASE_Preprocessing');
+            project_path_full = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
             sen_files = dir(fullfile(project_path_full, 'slaves', '**', '*.zip'));
 
             default_pos = [];
@@ -2932,7 +2934,7 @@ classdef LegacyEngine < matlab.apps.AppBase
          function refreshImportedImagesTable(app)
               % Refresh the table with the .h5 files currently in slaves.
               currentFolder = phase_preprocessing_beta.projectRoot();
-              slavesFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
+              slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
               h5list = dir(fullfile(slavesFolder, '**', '*.h5'));
               if isempty(h5list)
                   app.ImportedImagesTable.Data = {};
@@ -2972,7 +2974,7 @@ classdef LegacyEngine < matlab.apps.AppBase
             end
 
             currentFolder = phase_preprocessing_beta.projectRoot();
-            projectFolder = fullfile(currentFolder, 'PHASE_Preprocessing');
+            projectFolder = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
             slavesFolder = fullfile(projectFolder, 'slaves');
 
             if exist(slavesFolder, 'dir') ~= 7
@@ -3018,7 +3020,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         function startupFcn(app)
 
             % Set the working directory to the PHASE project root
-            currentFolder = phase_preprocessing_beta.projectRoot();
+            currentFolder = app.ProjectRoot;
             cd(currentFolder);
 
             % Ensure Mapping Toolbox and Image Processing Toolbox are installed
@@ -3055,8 +3057,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                 drawnow;
 
                 % 2. Set diretto dei 2 path da input_preprocessing.mat (Python+GPT)
-                if exist('./PHASE_Preprocessing/input_preprocessing.mat', 'file') == 2
-                    cfg = load('./PHASE_Preprocessing/input_preprocessing.mat');
+                if exist(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'), 'file') == 2
+                    cfg = load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'));
                     if isfield(cfg, 'python')
                         % SEN side
                         if isprop(app, 'CustomPythonEnvironmentEditField') && isvalid(app.CustomPythonEnvironmentEditField)
@@ -3175,7 +3177,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
             % Specify the filename for saving
             constellation = app.constellation;
-            filename = './PHASE_Preprocessing/input_preprocessing.mat';  % specify the filename for saving
+            filename = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat');  % specify the filename for saving
 
             if app.constellation == "SEN"
 
@@ -3638,8 +3640,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                         %% SENTINEL-1 PREPROCESSING CODE ----------------------
 
                         pwd;
-                        prep_folder = pwd;
-                        addpath(genpath(prep_folder));
+                        prep_folder = app.ProjectRoot;
+                        addpath(genpath(app.InstallRoot));
 
                         %% ------------------ IMPORT OF THE REQUIRED VARIABLES --------------------
 
@@ -3648,14 +3650,17 @@ classdef LegacyEngine < matlab.apps.AppBase
                         par = filesep;
 
                         % READ OF THE INPUT VARIABLES FROM .MAT FILE
-                        load(strcat('.', par, 'PHASE_Preprocessing', par, 'input_preprocessing.mat'), 'python', ...
+                        load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'), 'python', ...
                                                 'master_date', 'master_processing', 'auto_master', ...
                                                 'polarisation', 'lon_min', 'lat_min', 'lon_max', 'lat_max', 'slaves_removal', 'dem_name', ...
                                                 'dem_file', 'dem_name_coreg', 'dem_file_coreg', 'dem_resampling', 'first_step', 'coherence_tc', ...
                                                 'epsg_code', 'gptbin_path', 'cpu', 'cache');
 
                         % PROJECT FOLDER
-                        project_path_full = strcat(prep_folder, par, 'PHASE_Preprocessing');
+                        project_path_full = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
+                        if ~isfolder(fullfile(project_path_full,'snap2stamps','bin'))
+                            mkdir(fullfile(project_path_full,'snap2stamps','bin'));
+                        end
 
                         % GENERAL VARIABLES
                         space = (' ');
@@ -3739,7 +3744,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                             % 2. CREATE project_master.conf
                             projectfolder = strcat('PROJECTFOLDER=',project_path_full);
-                            graphsfolder = strcat('GRAPHSFOLDER=', project_path_full, par, 'snap2stamps', par, 'graphs');
+                            graphsfolder = strcat('GRAPHSFOLDER=', app.InstallRoot, par, 'PHASE_Preprocessing', par, 'snap2stamps', par, 'graphs');
 
                             if ispc
                                 f_project_conf_master = fopen(strcat(project_path_full, '\snap2stamps\bin\project_master.conf'),'w');
@@ -3828,10 +3833,10 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                             % 3. EXECUTE MASTER SELECTOR AND MASTER PREP BATCH SCRIPT
                             updateOutput(app, 'Running automated Master Auto-Selector and Splitter...');
-                            step_selector = ('SEN_master_selector.py project_master.conf');
-                            step_selector_cmd = [python space step_selector];
-                            step1_master = ('SEN_splitting_master.py project_master.conf');
-                            step_master_2 = [python space step1_master];
+                            step_selector = phase_preprocessing_beta.scriptCommand(python, 'SEN_master_selector.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
+                            step_selector_cmd = step_selector;
+                            step1_master = phase_preprocessing_beta.scriptCommand(python, 'SEN_splitting_master.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
+                            step_master_2 = step1_master;
 
                             path_1_master = fullfile(project_path_full, par, 'snap2stamps', par, 'bin');
 
@@ -3859,7 +3864,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_snap2stamps_master = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_snap2stamps_master,'#!/bin/bash \n');
+                                fprintf(f_snap2stamps_master,'#!/bin/bash \nset -e\n');
                                 fprintf(f_snap2stamps_master,'cd "%s"\n',path_1_master);
                                 fprintf(f_snap2stamps_master,'%s\n',step_selector_cmd);
                                 fprintf(f_snap2stamps_master,'%s\n',step_master_2);
@@ -3867,7 +3872,6 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                                 path_2_master = (strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'));
                                 chmod = ['chmod +x' space path_2_master];
-                                system(chmod);
                                 phase_preprocessing_beta.runCommandLive(app, path_2_master, ...
                                     'Master selection and preparation', 3, 18, 1, 1);
 
@@ -3878,7 +3882,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_snap2stamps_master = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_snap2stamps_master,'#!/bin/bash \n');
+                                fprintf(f_snap2stamps_master,'#!/bin/bash \nset -e\n');
                                 fprintf(f_snap2stamps_master,'cd "%s"\n',path_1_master);
                                 fprintf(f_snap2stamps_master,'%s\n',step_selector_cmd);
                                 fprintf(f_snap2stamps_master,'%s\n',step_master_2);
@@ -3886,7 +3890,6 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                                 path_2_master = (strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'));
                                 chmod = ['chmod +x' space path_2_master];
-                                system(chmod);
                                 phase_preprocessing_beta.runCommandLive(app, path_2_master, ...
                                     'Master selection and preparation', 3, 18, 1, 1);
                             end
@@ -3952,7 +3955,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                         % CREATE THE PROJECT.CONF FILE FOR SNAP2STAMPS SLAVES PROCESSING
                         projectfolder = strcat('PROJECTFOLDER=',project_path_full); % path of the project folder
-                        graphsfolder = strcat('GRAPHSFOLDER=', project_path_full, par, 'snap2stamps', par, 'graphs'); % path of the graphs folder of snap2stamps
+                        graphsfolder = strcat('GRAPHSFOLDER=', app.InstallRoot, par, 'PHASE_Preprocessing', par, 'snap2stamps', par, 'graphs'); % path of the graphs folder of snap2stamps
                         masterfolder = strcat('MASTER=', master_file_destination); % master image path
 
                         if ispc
@@ -4078,13 +4081,13 @@ classdef LegacyEngine < matlab.apps.AppBase
                         end
 
                         % EXECUTE THE .CONF FILE VIA A BATCH/BASH FILE
-                        dp = ('::');
-                        step1_slaves = ('SEN_slaves_prep.py project.conf'); % slaves preparation
-                        step2_slaves = ('SEN_splitting_slaves.py project.conf'); % slaves splitting & apply orbits
-                        step3_slaves = ('SEN_coreg_ifg_topsar.py project.conf'); % coregistration & interferogram
-                        step4_slaves = ('SEN_stamps_export.py project.conf'); % StaMPS export
-                        step5_slaves = ('SEN_average_intensity.py project.conf'); % average instensity
-                        step6_slaves = ('SEN_terrain_correction.py project.conf'); % terrain corrected coherence and lia
+                        dp = phase_preprocessing_beta.skipPrefix();
+                        step1_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_slaves_prep.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % slaves preparation
+                        step2_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_splitting_slaves.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % slaves splitting & apply orbits
+                        step3_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_coreg_ifg_topsar.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % coregistration & interferogram
+                        step4_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_stamps_export.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % StaMPS export
+                        step5_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_average_intensity.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % average instensity
+                        step6_slaves = phase_preprocessing_beta.scriptCommand(python, 'SEN_terrain_correction.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % terrain corrected coherence and lia
 
                             % CASES DEFENDING ON FIRST STEP
                             if isnumeric(first_step)
@@ -4093,58 +4096,58 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 first_step_num = str2double(first_step);
                             end
                             if first_step_num == 1
-                                step_slaves_1 = [python space step1_slaves];
-                                step_slaves_2 = [python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = step1_slaves;
+                                step_slaves_2 = step2_slaves;
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 2
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = step2_slaves;
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 3
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 4
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                              elseif first_step_num == 5
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [dp python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = [dp step4_slaves];
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 6
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [dp python space step4_slaves];
-                                step_slaves_5 = [dp python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = [dp step4_slaves];
+                                step_slaves_5 = [dp step5_slaves];
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 else
                                     updateOutput(app, ['You are running just the terrain correction for coherence and LIA bands, but you have set tc_coherence = 1. ' ...
                                         'Please change it to 0 to perform this step.'])
@@ -4182,7 +4185,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 f_snap2stamps_slaves = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_slaves.sh'),'w');
                                 j = j+1;
                             end
-                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \n');
+                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \nset -e\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_1);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_2);
@@ -4203,7 +4206,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 f_snap2stamps_slaves = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_slaves.sh'),'w');
                                 j = j+1;
                             end
-                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \n');
+                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \nset -e\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_1);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_2);
@@ -4230,7 +4233,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                             path_2_slaves = (strcat(project_path_full, '/snap2stamps/bin/snap2stamps_slaves.sh'));
                             chmod_in = ('chmod +x');
                             chmod = [chmod_in space path_2_slaves];
-                            system(chmod);
+
                             phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...
                                 'Slave processing pipeline', 18, 92, first_step_num, 6);
                         elseif ismac
@@ -4238,7 +4241,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                             chmod_in = 'chmod +x';
                             chmod = [chmod_in space path_2_slaves];
                             % Executed without opening Terminal by runCommandLive.
-                            system(chmod);
+
                             phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...
                                 'Slave processing pipeline', 18, 92, first_step_num, 6);
                         end
@@ -4268,7 +4271,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 end
                                 fprintf(f_average_intensity,'@echo off \r\n');
                                 fprintf(f_average_intensity,'cd "%s"\r\n',path_1_slaves);
-                                fprintf(f_average_intensity,'%s\r\n',[python space step5_slaves]);
+                                fprintf(f_average_intensity,'%s\r\n',step5_slaves);
                                 fprintf(f_average_intensity,'cd "%s"\r\n',path_1_download);
                                 fprintf(f_average_intensity,'type nul > dummyAverageIntensity.txt \r\n');
                                 fprintf(f_average_intensity,'exit \r\n');
@@ -4283,9 +4286,9 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_average_intensity = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_update_average_intensity.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_average_intensity,'#!/bin/bash \n');
+                                fprintf(f_average_intensity,'#!/bin/bash \nset -e\n');
                                 fprintf(f_average_intensity,'cd "%s"\n',path_1_slaves);
-                                fprintf(f_average_intensity,'%s\n',[python space step5_slaves]);
+                                fprintf(f_average_intensity,'%s\n',step5_slaves);
                                 fprintf(f_average_intensity,'sleep 5 \n');
                                 fprintf(f_average_intensity,'cd "%s"\n',path_1_download);
                                 fprintf(f_average_intensity,'touch dummyAverageIntensity.txt \n');
@@ -4294,7 +4297,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 chmod_in = ('chmod +x');
                                 chmod = [chmod_in space path_2_average_intensity];
                                 xterm = ('sudo xterm -e');
-                                system(chmod);
+
                                 phase_preprocessing_beta.runCommandLive(app, path_2_average_intensity, ...
                                     'Full-stack average intensity', 78, 92, 5, 5);
                             elseif ismac
@@ -4304,9 +4307,9 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_average_intensity = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_update_average_intensity.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_average_intensity,'#!/bin/bash \n');
+                                fprintf(f_average_intensity,'#!/bin/bash \nset -e\n');
                                 fprintf(f_average_intensity,'cd "%s"\n',path_1_slaves);
-                                fprintf(f_average_intensity,'%s\n',[python space step5_slaves]);
+                                fprintf(f_average_intensity,'%s\n',step5_slaves);
                                 fprintf(f_average_intensity,'sleep 5 \n');
                                 fprintf(f_average_intensity,'cd "%s"\n',path_1_download);
                                 fprintf(f_average_intensity,'touch dummyAverageIntensity.txt \n');
@@ -4315,7 +4318,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 chmod_in = 'chmod +x';
                                 chmod = [chmod_in space path_2_average_intensity];
                                 % Executed without opening Terminal by runCommandLive.
-                                system(chmod);
+
                                 phase_preprocessing_beta.runCommandLive(app, path_2_average_intensity, ...
                                     'Full-stack average intensity', 78, 92, 5, 5);
                             end
@@ -4424,7 +4427,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         stamps_folder = sprintf('%s_%s_%s', orbit_type, date_str_start, date_str_end);
                         updateOutput(app, ['Dynamically generated StaMPS folder name: ' stamps_folder]);
 
-                        project_parent_path_full = prep_folder;
+                        project_parent_path_full = phase_preprocessing_beta.stampsFolder(app.ProjectRoot);
                         stamps_folder_full = fullfile(project_parent_path_full, stamps_folder);
                         if ~isfolder(stamps_folder_full)
                             mkdir(stamps_folder_full);
@@ -4433,7 +4436,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         % The beta launches the editable StaMPS module from its
                         % canonical installation. No PHASE_StaMPS.mlapp is copied
                         % or required at runtime.
-                        stamps_diagnostic = fullfile(project_path_full, 'diagnose_PHASE_StaMPS.m');
+                        stamps_diagnostic = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'diagnose_PHASE_StaMPS.m');
                         if isfile(stamps_diagnostic)
                             copyfile(stamps_diagnostic, stamps_folder_full, 'f');
                         end
@@ -4474,7 +4477,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         % paths inside PHASE_StaMPS (./input_StaMPS.mat, INSAR_*/,
                         % diff0/, ...) resolve correctly, then launch the app.
                         stamps_app_full = fullfile(project_parent_path_full, stamps_folder);
-                        stamps_app_file = fullfile(project_path_full, 'PHASE_StaMPS_beta.m');
+                        stamps_app_file = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'PHASE_StaMPS_beta.m');
                         updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
                         choice = 'Open now';
                         if isfile(dst_input_mat)
@@ -4546,21 +4549,24 @@ classdef LegacyEngine < matlab.apps.AppBase
                         %% COSMO-SKYMED PROCESSING ----------------------------
 
                         pwd;
-                        prep_folder = pwd;
-                        addpath(genpath(prep_folder));
+                        prep_folder = app.ProjectRoot;
+                        addpath(genpath(app.InstallRoot));
 
                         %% ------------------ IMPORT OF THE REQUIRED VARIABLES --------------------
 
                         % READ OF THE INPUT VARIABLES
                         par = filesep;
 
-                        load(strcat('.', par, 'PHASE_Preprocessing', par, 'input_preprocessing.mat'), 'python', ...
+                        load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'), 'python', ...
                                                 'master_date', 'auto_master', 'master_processing', 'lon_min', ...
                                                 'lat_min', 'lon_max', 'lat_max', 'slaves_removal', 'dem_name', 'dem_file', ...
                                                 'first_step', 'num_gcp', 'coherence_tc', 'epsg_code', 'gptbin_path', 'cpu', 'cache');
 
                         % PROJECT FOLDER
-                        project_path_full = strcat(prep_folder, par, 'PHASE_Preprocessing');
+                        project_path_full = phase_preprocessing_beta.dataFolder(app.ProjectRoot);
+                        if ~isfolder(fullfile(project_path_full,'snap2stamps','bin'))
+                            mkdir(fullfile(project_path_full,'snap2stamps','bin'));
+                        end
                         mkdir(project_path_full, 'slaves'); % create slaves folder
                         mkdir(project_path_full, 'master'); % create master folder
 
@@ -4623,7 +4629,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                             % 2. CREATE project_master.conf
                             projectfolder = strcat('PROJECTFOLDER=',project_path_full);
-                            graphsfolder = strcat('GRAPHSFOLDER=', project_path_full, par, 'snap2stamps', par, 'graphs');
+                            graphsfolder = strcat('GRAPHSFOLDER=', app.InstallRoot, par, 'PHASE_Preprocessing', par, 'snap2stamps', par, 'graphs');
 
                             if ispc
                                 f_project_conf_master = fopen(strcat(project_path_full, '\snap2stamps\bin\project_master.conf'),'w');
@@ -4703,10 +4709,10 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                             % 3. EXECUTE MASTER SELECTOR AND MASTER PREP BATCH SCRIPT
                             updateOutput(app, 'Running automated CSK Master Auto-Selector and Subsetting...');
-                            step_selector = ('CSK_master_selector.py project_master.conf');
-                            step_selector_cmd = [python space step_selector];
-                            step1_master = ('CSK_subset_master.py project_master.conf');
-                            step_master_2 = [python space step1_master];
+                            step_selector = phase_preprocessing_beta.scriptCommand(python, 'CSK_master_selector.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
+                            step_selector_cmd = step_selector;
+                            step1_master = phase_preprocessing_beta.scriptCommand(python, 'CSK_subset_master.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
+                            step_master_2 = step1_master;
 
                             path_1_master = fullfile(project_path_full, par, 'snap2stamps', par, 'bin');
 
@@ -4734,7 +4740,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_snap2stamps_master = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_snap2stamps_master,'#!/bin/bash \n');
+                                fprintf(f_snap2stamps_master,'#!/bin/bash \nset -e\n');
                                 fprintf(f_snap2stamps_master,'cd "%s"\n',path_1_master);
                                 fprintf(f_snap2stamps_master,'%s\n',step_selector_cmd);
                                 fprintf(f_snap2stamps_master,'%s\n',step_master_2);
@@ -4742,7 +4748,6 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                                 path_2_master = (strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'));
                                 chmod = ['chmod +x' space path_2_master];
-                                system(chmod);
                                 phase_preprocessing_beta.runCommandLive(app, path_2_master, ...
                                     'Master selection and preparation', 3, 18, 1, 1);
 
@@ -4753,7 +4758,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                     f_snap2stamps_master = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'),'w');
                                     j = j+1;
                                 end
-                                fprintf(f_snap2stamps_master,'#!/bin/bash \n');
+                                fprintf(f_snap2stamps_master,'#!/bin/bash \nset -e\n');
                                 fprintf(f_snap2stamps_master,'cd "%s"\n',path_1_master);
                                 fprintf(f_snap2stamps_master,'%s\n',step_selector_cmd);
                                 fprintf(f_snap2stamps_master,'%s\n',step_master_2);
@@ -4761,7 +4766,6 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                                 path_2_master = (strcat(project_path_full, '/snap2stamps/bin/snap2stamps_master.sh'));
                                 chmod = ['chmod +x' space path_2_master];
-                                system(chmod);
                                 phase_preprocessing_beta.runCommandLive(app, path_2_master, ...
                                     'Master selection and preparation', 3, 18, 1, 1);
                             end
@@ -4816,7 +4820,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                         % CREATE THE PROJECT.CONF FILE FOR SNAP2STAMPS SLAVES PROCESSING
                         projectfolder = strcat('PROJECTFOLDER=',project_path_full); % path of the project folder
-                        graphsfolder = strcat('GRAPHSFOLDER=', project_path_full, par, 'snap2stamps', par, 'graphs'); % path of the graphs folder of snap2stamps
+                        graphsfolder = strcat('GRAPHSFOLDER=', app.InstallRoot, par, 'PHASE_Preprocessing', par, 'snap2stamps', par, 'graphs'); % path of the graphs folder of snap2stamps
                         masterfolder = strcat('MASTER=', master_file_destination); % master image path
 
                         if ispc
@@ -4930,13 +4934,13 @@ classdef LegacyEngine < matlab.apps.AppBase
                         end
 
                         % EXECUTE THE .CONF FILE VIA A BATCH/BASH FILE
-                        dp = ('::');
-                        step1_slaves = ('CSK_slaves_prep.py project.conf'); % slaves preparation
-                        step2_slaves = ('CSK_subset_slaves.py project.conf'); % slaves splitting & apply orbits
-                        step3_slaves = ('CSK_coreg_ifg.py project.conf'); % coregistration & interferogram
-                        step4_slaves = ('CSK_stamps_export.py project.conf'); % StaMPS export
-                        step5_slaves = ('CSK_average_intensity.py project.conf'); % terrain corrected coherence and lia
-                        step6_slaves = ('CSK_terrain_correction.py project.conf'); % terrain corrected coherence and lia
+                        dp = phase_preprocessing_beta.skipPrefix();
+                        step1_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_slaves_prep.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % slaves preparation
+                        step2_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_subset_slaves.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % slaves splitting & apply orbits
+                        step3_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_coreg_ifg.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % coregistration & interferogram
+                        step4_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_stamps_export.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % StaMPS export
+                        step5_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_average_intensity.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % terrain corrected coherence and lia
+                        step6_slaves = phase_preprocessing_beta.scriptCommand(python, 'CSK_terrain_correction.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project.conf'), app.InstallRoot); % terrain corrected coherence and lia
 
                             % CASES DEFENDING ON FIRST STEP
                             if isnumeric(first_step)
@@ -4945,58 +4949,58 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 first_step_num = str2double(first_step);
                             end
                             if first_step_num == 1
-                                step_slaves_1 = [python space step1_slaves];
-                                step_slaves_2 = [python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = step1_slaves;
+                                step_slaves_2 = step2_slaves;
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 2
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = step2_slaves;
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 3
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = step3_slaves;
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 4
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = step4_slaves;
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 5
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [dp python space step4_slaves];
-                                step_slaves_5 = [python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = [dp step4_slaves];
+                                step_slaves_5 = step5_slaves;
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 end
                             elseif first_step_num == 6
-                                step_slaves_1 = [dp python space step1_slaves];
-                                step_slaves_2 = [dp python space step2_slaves];
-                                step_slaves_3 = [dp python space step3_slaves];
-                                step_slaves_4 = [dp python space step4_slaves];
-                                step_slaves_5 = [dp python space step5_slaves];
+                                step_slaves_1 = [dp step1_slaves];
+                                step_slaves_2 = [dp step2_slaves];
+                                step_slaves_3 = [dp step3_slaves];
+                                step_slaves_4 = [dp step4_slaves];
+                                step_slaves_5 = [dp step5_slaves];
                                 if coherence_tc == 0
-                                    step_slaves_6 = [python space step6_slaves];
+                                    step_slaves_6 = step6_slaves;
                                 else
                                     updateOutput(app, ['You are running just the terrain correction for coherence and LIA bands, but you have set tc_coherence = 1. ' ...
                                         'Please change it to 0 to perform this step.'])
@@ -5004,7 +5008,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                             end
 
                         if update_processed_run
-                            step_slaves_5 = [dp python space step5_slaves];
+                            step_slaves_5 = [dp step5_slaves];
                             updateOutput(app, 'Update mode: stack-wide average intensity deferred until existing products are restored.');
                         end
 
@@ -5039,7 +5043,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 f_snap2stamps_slaves = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_slaves.sh'),'w');
                                 j = j+1;
                             end
-                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \n');
+                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \nset -e\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_1);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_2);
@@ -5060,7 +5064,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 f_snap2stamps_slaves = fopen(strcat(project_path_full, '/snap2stamps/bin/snap2stamps_slaves.sh'),'w');
                                 j = j+1;
                             end
-                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \n');
+                            fprintf(f_snap2stamps_slaves,'#!/bin/bash \nset -e\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_1);
                             fprintf(f_snap2stamps_slaves,'%s\n',step_slaves_2);
@@ -5087,7 +5091,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                             chmod_in = ('chmod +x');
                             chmod = [chmod_in space path_2_slaves];
                             xterm = ('sudo xterm -e');
-                            system(chmod);
+
                             phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...
                                 'Slave processing pipeline', 18, 92, first_step_num, 6);
                         elseif ismac
@@ -5095,7 +5099,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                             chmod_in = 'chmod +x';
                             chmod = [chmod_in space path_2_slaves];
                             % Executed without opening Terminal by runCommandLive.
-                            system(chmod);
+
                             phase_preprocessing_beta.runCommandLive(app, path_2_slaves, ...
                                 'Slave processing pipeline', 18, 92, first_step_num, 6);
                         end
@@ -5203,7 +5207,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         stamps_folder = sprintf('%s_%s_%s', orbit_type, date_str_start, date_str_end);
                         updateOutput(app, ['Dynamically generated StaMPS folder name: ' stamps_folder]);
 
-                        project_parent_path_full = prep_folder;
+                        project_parent_path_full = phase_preprocessing_beta.stampsFolder(app.ProjectRoot);
                         stamps_folder_full = fullfile(project_parent_path_full, stamps_folder);
                         if ~isfolder(stamps_folder_full)
                             mkdir(stamps_folder_full);
@@ -5212,7 +5216,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         % The beta launches the editable StaMPS module from its
                         % canonical installation. No PHASE_StaMPS.mlapp is copied
                         % or required at runtime.
-                        stamps_diagnostic = fullfile(project_path_full, 'diagnose_PHASE_StaMPS.m');
+                        stamps_diagnostic = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'diagnose_PHASE_StaMPS.m');
                         if isfile(stamps_diagnostic)
                             copyfile(stamps_diagnostic, stamps_folder_full, 'f');
                         end
@@ -5253,7 +5257,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         % paths inside PHASE_StaMPS (./input_StaMPS.mat, INSAR_*/,
                         % diff0/, ...) resolve correctly, then launch the app.
                         stamps_app_full = fullfile(project_parent_path_full, stamps_folder);
-                        stamps_app_file = fullfile(project_path_full, 'PHASE_StaMPS_beta.m');
+                        stamps_app_file = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'PHASE_StaMPS_beta.m');
                         updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
                         choice = 'Open now';
                         if isfile(dst_input_mat)
@@ -5313,7 +5317,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         % Button pushed function: LoadButton, LoadButton_2
         function LoadButtonPushed(app, event)
 
-            filename = './PHASE_Preprocessing/input_preprocessing.mat';  % Specify the filename
+            filename = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat');  % Specify the filename
 
             if exist(filename, 'file') == 2
                 data = load(filename);
@@ -5898,7 +5902,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 return;
             end
 
-            resultFile = fullfile(appPath, "downloadasf", "login_result.json");
+            resultFile = fullfile(app.ProjectRoot, "downloadasf", "login_result.json");
 
             if ~exist(resultFile, "file")
                 app.LoginFeedbackLabel.Text = "Missing login_result.json.";
@@ -5933,8 +5937,8 @@ classdef LegacyEngine < matlab.apps.AppBase
         function SignOutButtonPushed(app, event)
             appPath = phase_preprocessing_beta.projectRoot();
 
-            resultFile = fullfile(appPath, "downloadasf", "login_result.json");
-            requestFile = fullfile(appPath, "downloadasf", "login_request.json");
+            resultFile = fullfile(app.ProjectRoot, "downloadasf", "login_result.json");
+            requestFile = fullfile(app.ProjectRoot, "downloadasf", "login_request.json");
 
             if exist(resultFile, "file")
                 delete(resultFile);
@@ -6140,7 +6144,7 @@ classdef LegacyEngine < matlab.apps.AppBase
 
             % Destination: PHASE_Preprocessing\slaves
             currentFolder = phase_preprocessing_beta.projectRoot();
-            slavesFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
+            slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
             if exist(slavesFolder, 'dir') ~= 7
                 mkdir(slavesFolder);
             end
@@ -6179,7 +6183,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         % Button pushed function: OpenslavesfolderButton
         function OpenslavesfolderButtonPushed(app, event)
             currentFolder = phase_preprocessing_beta.projectRoot();
-            slavesFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
+            slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
             if exist(slavesFolder, 'dir') ~= 7
                 mkdir(slavesFolder);
             end
@@ -6260,7 +6264,7 @@ classdef LegacyEngine < matlab.apps.AppBase
             end
 
             currentFolder = phase_preprocessing_beta.projectRoot();
-            slavesFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
+            slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
             if exist(slavesFolder, 'dir') ~= 7
                 mkdir(slavesFolder);
             end
@@ -6319,7 +6323,7 @@ classdef LegacyEngine < matlab.apps.AppBase
         % Button pushed function: OpenSENSlavesFolderButton
         function OpenSENSlavesFolderButtonPushed(app, event)
             currentFolder = phase_preprocessing_beta.projectRoot();
-            slavesFolder = fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves');
+            slavesFolder = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves');
             if exist(slavesFolder, 'dir') ~= 7
                 mkdir(slavesFolder);
             end
@@ -8237,7 +8241,15 @@ classdef LegacyEngine < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = LegacyEngine
+        function app = LegacyEngine(projectRoot, installRoot)
+            if nargin < 1 || isempty(projectRoot)
+                projectRoot = phase_preprocessing_beta.projectRoot();
+            end
+            if nargin < 2 || isempty(installRoot)
+                installRoot = phase_preprocessing_beta.projectRoot();
+            end
+            app.ProjectRoot = char(string(projectRoot));
+            app.InstallRoot = char(string(installRoot));
 
             % Create UIFigure and components
             createComponents(app)

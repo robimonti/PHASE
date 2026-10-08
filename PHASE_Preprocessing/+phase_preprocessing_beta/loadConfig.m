@@ -2,7 +2,8 @@ function [cfg, info] = loadConfig(rootDir)
 %LOADCONFIG Read input_preprocessing.mat without relying on App Designer.
 
 cfg = phase_preprocessing_beta.defaultConfig();
-pathValue = fullfile(rootDir, 'PHASE_Preprocessing', 'input_preprocessing.mat');
+pathValue = fullfile(phase_preprocessing_beta.dataFolder(rootDir), ...
+    'input_preprocessing.mat');
 info = struct('path', pathValue, 'exists', false, 'loadedFields', {{}});
 if exist(pathValue, 'file') ~= 2
     return

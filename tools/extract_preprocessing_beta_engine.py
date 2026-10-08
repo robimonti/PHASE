@@ -8,6 +8,7 @@ and the beta StaMPS handoff are adapted for the new controller.
 """
 
 from pathlib import Path
+import re
 import zipfile
 
 
@@ -66,7 +67,9 @@ def extract(xml: str) -> str:
         component_anchor,
         component_anchor
         + "        ExternalLogCallback              = []\n"
-        + "        ExternalProgressCallback         = []\n",
+        + "        ExternalProgressCallback         = []\n"
+        + "        ProjectRoot                      = phase_preprocessing_beta.projectRoot()\n"
+        + "        InstallRoot                      = phase_preprocessing_beta.projectRoot()\n",
         1,
     )
 
@@ -79,6 +82,46 @@ def extract(xml: str) -> str:
     code = code.replace(
         'fileparts(mfilename("fullpath"))',
         "phase_preprocessing_beta.projectRoot()",
+    )
+    # Legacy UI inventory callbacks are still reached by SaveButtonPushed.
+    # Point their reads at the project data folder as well, even though the
+    # beta controller presents its own inventory and downloader.
+    code = _replace_checked(
+        code, 'fullfile(appPath, "PHASE_Preprocessing", "slaves")',
+        "fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves')", 3,
+    )
+    code = _replace_checked(
+        code, "fullfile(currentFolder, 'PHASE_Preprocessing', 'slaves')",
+        "fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'slaves')", 6,
+    )
+    code = _replace_checked(
+        code, "fullfile(currentFolder, 'PHASE_Preprocessing')",
+        "phase_preprocessing_beta.dataFolder(app.ProjectRoot)", 5,
+    )
+    code = _replace_checked(
+        code, 'fullfile(appPath, "downloadasf", "login_result.json")',
+        'fullfile(app.ProjectRoot, "downloadasf", "login_result.json")', 3,
+    )
+    code = _replace_checked(
+        code, 'fullfile(appPath, "downloadasf", "login_request.json")',
+        'fullfile(app.ProjectRoot, "downloadasf", "login_request.json")', 2,
+    )
+    code = _replace_checked(
+        code,
+        "currentFolder = phase_preprocessing_beta.projectRoot();\n            cd(currentFolder);",
+        "currentFolder = app.ProjectRoot;\n            cd(currentFolder);", 1,
+    )
+    code = _replace_checked(
+        code, "function app = LegacyEngine\n",
+        "function app = LegacyEngine(projectRoot, installRoot)\n"
+        "            if nargin < 1 || isempty(projectRoot)\n"
+        "                projectRoot = phase_preprocessing_beta.projectRoot();\n"
+        "            end\n"
+        "            if nargin < 2 || isempty(installRoot)\n"
+        "                installRoot = phase_preprocessing_beta.projectRoot();\n"
+        "            end\n"
+        "            app.ProjectRoot = char(string(projectRoot));\n"
+        "            app.InstallRoot = char(string(installRoot));\n", 1,
     )
 
     output_anchor = """\
@@ -118,6 +161,87 @@ def extract(xml: str) -> str:
         "% Set the working directory to the PHASE project root",
         1,
     )
+
+    # Keep code in the installation and all generated configuration, scripts,
+    # SNAP products and StaMPS datasets in the selected project. Both sensor
+    # branches use the same legacy anchors, so guard their occurrence counts.
+    code = _replace_checked(code, "prep_folder = pwd;", "prep_folder = app.ProjectRoot;", 2)
+    code = _replace_checked(code, "addpath(genpath(prep_folder));", "addpath(genpath(app.InstallRoot));", 2)
+    code = _replace_checked(
+        code,
+        "load(strcat('.', par, 'PHASE_Preprocessing', par, 'input_preprocessing.mat'), 'python', ...",
+        "load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'), 'python', ...",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "project_path_full = strcat(prep_folder, par, 'PHASE_Preprocessing');",
+        "project_path_full = phase_preprocessing_beta.dataFolder(app.ProjectRoot);\n"
+        "                        if ~isfolder(fullfile(project_path_full,'snap2stamps','bin'))\n"
+        "                            mkdir(fullfile(project_path_full,'snap2stamps','bin'));\n"
+        "                        end",
+        2,
+    )
+    code = _replace_checked(
+        code,
+        "project_path_full, par, 'snap2stamps', par, 'graphs'",
+        "app.InstallRoot, par, 'PHASE_Preprocessing', par, 'snap2stamps', par, 'graphs'",
+        4,
+    )
+    code = _replace_checked(
+        code, "project_parent_path_full = prep_folder;",
+        "project_parent_path_full = phase_preprocessing_beta.stampsFolder(app.ProjectRoot);", 2,
+    )
+    code = _replace_checked(
+        code, "filename = './PHASE_Preprocessing/input_preprocessing.mat';",
+        "filename = fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat');", 2,
+    )
+    code = _replace_checked(
+        code, "if exist('./PHASE_Preprocessing/input_preprocessing.mat', 'file') == 2",
+        "if exist(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'), 'file') == 2", 1,
+    )
+    code = _replace_checked(
+        code, "cfg = load('./PHASE_Preprocessing/input_preprocessing.mat');",
+        "cfg = load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat'));", 1,
+    )
+
+    # A generated wrapper may live in the project, but it invokes the Python
+    # source from the installation by absolute path and passes an absolute
+    # per-project configuration path. This also handles spaces in paths.
+    command_pattern = re.compile(
+        r"(?P<name>step(?:_selector|1_master|[1-6]_slaves)) = "
+        r"\('(?P<script>(?:SEN|CSK)_[A-Za-z0-9_]+\.py) "
+        r"(?P<config>project(?:_master)?\.conf)'\);"
+    )
+    matches = list(command_pattern.finditer(code))
+    if len(matches) != 16:
+        raise RuntimeError(f"Expected 16 SNAP Python commands, found {len(matches)}")
+    def command_replacement(match: re.Match[str]) -> str:
+        return (f"{match['name']} = phase_preprocessing_beta.scriptCommand(python, "
+                f"'{match['script']}', fullfile(project_path_full, 'snap2stamps', "
+                f"'bin', '{match['config']}'), app.InstallRoot);")
+    code = command_pattern.sub(command_replacement, code)
+    code = code.replace("[python space step", "[step")
+    code = code.replace("[dp python space step", "[dp step")
+    code = code.replace("dp = ('::');", "dp = phase_preprocessing_beta.skipPrefix();")
+    code = code.replace("[step_selector]", "step_selector")
+    code = code.replace("[step1_master]", "step1_master")
+    code = code.replace("step_selector_cmd = [step_selector];", "step_selector_cmd = step_selector;")
+    code = code.replace("step_master_2 = [step1_master];", "step_master_2 = step1_master;")
+    code = re.sub(r"= \[(step[1-6]_slaves)\];", r"= \1;", code)
+    code = code.replace("[step5_slaves]", "step5_slaves")
+    # ProcessBuilder executes .sh through bash, so chmod is unnecessary and
+    # its unquoted path fails when a project name contains spaces.
+    code = _replace_checked(code, "system(chmod);", "", 6)
+    for handle, expected in (("f_snap2stamps_master", 4),
+                             ("f_snap2stamps_slaves", 4),
+                             ("f_average_intensity", 2)):
+        code = _replace_checked(
+            code,
+            f"fprintf({handle},'#!/bin/bash \\n');",
+            f"fprintf({handle},'#!/bin/bash \\nset -e\\n');",
+            expected,
+        )
 
     # The stable app still copies PHASE_StaMPS.mlapp into every ASC/DES folder.
     # The beta must have no runtime MLAPP dependency: remove those two copy
@@ -165,6 +289,14 @@ def extract(xml: str) -> str:
     if code.count(stable_launcher) != 2:
         raise RuntimeError("Could not locate both stable StaMPS launch assignments")
     code = code.replace(stable_launcher, beta_launcher)
+    code = _replace_checked(
+        code, "stamps_app_file = fullfile(project_path_full, 'PHASE_StaMPS_beta.m');",
+        "stamps_app_file = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'PHASE_StaMPS_beta.m');", 2,
+    )
+    code = _replace_checked(
+        code, "stamps_diagnostic = fullfile(project_path_full, 'diagnose_PHASE_StaMPS.m');",
+        "stamps_diagnostic = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'diagnose_PHASE_StaMPS.m');", 2,
+    )
     if code.count("run(stamps_app_file);") != 2:
         raise RuntimeError("Could not locate both stable StaMPS run calls")
     code = code.replace(
@@ -239,8 +371,7 @@ def extract(xml: str) -> str:
     code = _replace_checked(
         code,
         "system(strjoin({chmod, path_2_master}, ';'));",
-        "system(chmod);\n"
-        "                                phase_preprocessing_beta.runCommandLive(app, path_2_master, ...\n"
+        "phase_preprocessing_beta.runCommandLive(app, path_2_master, ...\n"
         "                                    'Master selection and preparation', 3, 18, 1, 1);",
         4,
     )

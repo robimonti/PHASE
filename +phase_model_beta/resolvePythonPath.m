@@ -13,6 +13,11 @@ if ~isempty(executable)
     return
 end
 
+executable = stripOuterQuotes(strtrim(getenv('PHASE_PYTHON')));
+if ~isempty(executable)
+    return
+end
+
 if ispc
     appData = getenv('APPDATA');
     if ~isempty(appData)
