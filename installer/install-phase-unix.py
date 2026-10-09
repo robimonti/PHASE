@@ -27,6 +27,7 @@ PHASE_REPO = "https://github.com/robimonti/PHASE.git"
 PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely")
 REQUIRED_FILES = (
     "PHASE_Hub.m",
+    "PHASE_Hub_UI.html",
     "+phase_hub/App.m",
     "+phase_project/open.m",
     "phase_update.py",

@@ -57,6 +57,6 @@ in `backups` e la persistenza del progetto e dei runtime StaMPS/TRAIN.
 
 Per ogni eventuale errore registrare la fase, il messaggio completo, la
 versione PHASE/SNAP/MATLAB, il log pertinente e il percorso del file atteso.
-Non considerare superata la prova solo perché l'hub e le schede si aprono:
+Non considerare superata la prova solo perché l'hub e le sezioni si aprono:
 occorrono i prodotti finali scientifici e un controllo di plausibilità su uno
 stack già conosciuto.

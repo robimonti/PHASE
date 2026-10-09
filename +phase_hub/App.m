@@ -3,16 +3,12 @@ classdef App < handle
 
     properties (SetAccess = private)
         UIFigure
-        TabGroup
+        Navigation
+        HomeView
         HomeTab
         PreprocessingTab
         StampsTab
         ModelTab
-        ProjectLabel
-        UpdateButton
-        HomeTitle
-        HomeDetails
-        HomeStatus
         PreprocessingHost
         StampsHost
         ModelHost
@@ -25,6 +21,7 @@ classdef App < handle
         ProjectRoot = ''
         Project = struct()
         CurrentStampsDir = ''
+        ActiveSection = 'project'
         IsClosing = false
     end
 
@@ -53,10 +50,9 @@ classdef App < handle
             obj.ProjectRoot = paths.root;
             obj.Project = project;
             obj.UIFigure.Name = ['PHASE · ' char(string(project.name))];
-            obj.ProjectLabel.Text = [char(string(project.name)) '  ·  ' paths.root];
             obj.updateHome();
             obj.refreshDatasets();
-            obj.TabGroup.SelectedTab = obj.HomeTab;
+            obj.showSection('project');
         end
 
         function refreshDatasets(obj)
@@ -104,8 +100,7 @@ classdef App < handle
                     error('PHASE:HubSectionUnknown', ...
                         'Unknown PHASE section: %s',char(string(name)));
             end
-            obj.TabGroup.SelectedTab = tab;
-            obj.activateTab(tab);
+            obj.selectSection(tab);
         end
 
         function delete(obj)
@@ -134,50 +129,30 @@ classdef App < handle
             obj.UIFigure.CloseRequestFcn = @(~,~) obj.requestClose();
 
             shell = uigridlayout(obj.UIFigure,[2 1]);
-            shell.RowHeight = {72,'1x'};
+            shell.RowHeight = {130,'1x'};
             shell.Padding = [0 0 0 0];
             shell.RowSpacing = 0;
-            toolbar = uigridlayout(shell,[1 6]);
-            toolbar.Layout.Row = 1;
-            toolbar.ColumnWidth = {42,145,'1x',150,150,150};
-            toolbar.Padding = [24 12 24 12];
-            toolbar.ColumnSpacing = 10;
-            toolbar.BackgroundColor = [1 1 1];
-            logoPath = fullfile(obj.InstallRoot,'Logo_square.png');
-            if isfile(logoPath)
-                logo = uiimage(toolbar,'ImageSource',logoPath, ...
-                    'ScaleMethod','fit');
-                logo.Layout.Column = 1;
+            htmlSource = fullfile(obj.InstallRoot,'PHASE_Hub_UI.html');
+            if ~isfile(htmlSource)
+                error('PHASE:HubViewMissing','The PHASE hub interface is missing: %s',htmlSource);
             end
-            title = uilabel(toolbar,'Text','PHASE', ...
-                'FontSize',25,'FontWeight','bold','FontColor',[53 101 207]/255);
-            title.Layout.Column = 2;
-            obj.ProjectLabel = uilabel(toolbar,'Text','No project open', ...
-                'FontSize',13,'FontColor',[0.31 0.36 0.45]);
-            obj.ProjectLabel.Layout.Column = 3;
-            openButton = uibutton(toolbar,'push','Text','Open project', ...
-                'ButtonPushedFcn',@(~,~) obj.chooseProject());
-            openButton.Layout.Column = 4;
-            styleButton(openButton,false);
-            newButton = uibutton(toolbar,'push','Text','New project', ...
-                'ButtonPushedFcn',@(~,~) obj.createProject());
-            newButton.Layout.Column = 5;
-            styleButton(newButton,true);
-            obj.UpdateButton = uibutton(toolbar,'push','Text','Check for updates', ...
-                'ButtonPushedFcn',@(~,~) obj.checkForUpdates());
-            obj.UpdateButton.Layout.Column = 6;
-            styleButton(obj.UpdateButton,false);
-            if ~isfile(fullfile(fileparts(obj.InstallRoot),'install.json'))
-                obj.UpdateButton.Enable = 'off';
-                obj.UpdateButton.Tooltip = 'Available in managed PHASE installations.';
-            end
+            obj.Navigation = uihtml(shell,'HTMLSource',htmlSource, ...
+                'DataChangedFcn',@(src,event) obj.handleHtmlAction(src,event));
+            obj.Navigation.Layout.Row = 1;
+            obj.Navigation.Data = struct('view','nav','active','project', ...
+                'version',obj.displayVersion(), ...
+                'updateEnabled',isfile(fullfile(fileparts(obj.InstallRoot),'install.json')));
 
-            obj.TabGroup = uitabgroup(shell);
-            obj.TabGroup.Layout.Row = 2;
-            obj.HomeTab = uitab(obj.TabGroup,'Title','Project');
-            obj.PreprocessingTab = uitab(obj.TabGroup,'Title','1 · Preprocessing');
-            obj.StampsTab = uitab(obj.TabGroup,'Title','2 · StaMPS');
-            obj.ModelTab = uitab(obj.TabGroup,'Title','3 · Model');
+            obj.HomeTab = uipanel(shell,'BorderType','none','BackgroundColor',[1 1 1]);
+            obj.PreprocessingTab = uipanel(shell,'BorderType','none','BackgroundColor',[1 1 1]);
+            obj.StampsTab = uipanel(shell,'BorderType','none','BackgroundColor',[1 1 1]);
+            obj.ModelTab = uipanel(shell,'BorderType','none','BackgroundColor',[1 1 1]);
+            panels = {obj.HomeTab,obj.PreprocessingTab,obj.StampsTab,obj.ModelTab};
+            for k = 1:numel(panels)
+                panels{k}.Layout.Row = 2;
+                panels{k}.Layout.Column = 1;
+                panels{k}.Visible = ternary(k == 1,'on','off');
+            end
             obj.buildHome();
             obj.PreprocessingHost = uipanel(obj.PreprocessingTab, ...
                 'BorderType','none','BackgroundColor',[1 1 1], ...
@@ -188,98 +163,16 @@ classdef App < handle
                 'BorderType','none','BackgroundColor',[1 1 1], ...
                 'Position',[0 0 1480 830]);
             obj.fillTab(obj.ModelTab,obj.ModelHost);
-            obj.TabGroup.SelectionChangedFcn = @(~,event) obj.activateTab(event.NewValue);
         end
 
         function buildHome(obj)
-            layout = uigridlayout(obj.HomeTab,[5 1]);
-            layout.RowHeight = {132,26,238,118,'1x'};
-            layout.Padding = [28 28 28 28];
-            layout.RowSpacing = 16;
-            layout.BackgroundColor = [0.975 0.978 0.985];
-
-            welcome = uipanel(layout,'BorderType','none', ...
-                'BackgroundColor',[0.92 0.945 1]);
-            welcome.Layout.Row = 1;
-            welcomeGrid = uigridlayout(welcome,[2 1]);
-            welcomeGrid.RowHeight = {48,'1x'};
-            welcomeGrid.Padding = [26 20 26 20];
-            welcomeGrid.RowSpacing = 0;
-            welcomeGrid.BackgroundColor = welcome.BackgroundColor;
-            obj.HomeTitle = uilabel(welcomeGrid,'Text','Your PHASE workspace', ...
-                'FontSize',28,'FontWeight','bold', ...
-                'FontColor',[0.08 0.16 0.3]);
-            obj.HomeTitle.Layout.Row = 1;
-            obj.HomeDetails = uilabel(welcomeGrid, ...
-                'Text','Create a project or open an existing one to get started.', ...
-                'FontSize',15,'FontColor',[0.2 0.28 0.4]);
-            obj.HomeDetails.Layout.Row = 2;
-
-            workflow = uilabel(layout,'Text','WORKFLOW', ...
-                'FontSize',11,'FontWeight','bold', ...
-                'FontColor',[0.35 0.43 0.56]);
-            workflow.Layout.Row = 2;
-            cards = uigridlayout(layout,[1 3]);
-            cards.Layout.Row = 3;
-            cards.ColumnWidth = {'1x','1x','1x'};
-            cards.ColumnSpacing = 14;
-            cards.Padding = [0 0 0 0];
-            cards.BackgroundColor = layout.BackgroundColor;
-            obj.addWorkflowCard(cards,1,'01  PREPROCESSING', ...
-                'Prepare SAR data', ...
-                'Set your area of interest, process the image stack and export StaMPS inputs.', ...
-                'Open Preprocessing',obj.PreprocessingTab);
-            obj.addWorkflowCard(cards,2,'02  STAMPS', ...
-                'Run PSI analysis', ...
-                'Select a processed dataset, run StaMPS and export displacement results.', ...
-                'Open StaMPS',obj.StampsTab);
-            obj.addWorkflowCard(cards,3,'03  MODEL', ...
-                'Explore results', ...
-                'Build spatial and temporal models, figures and GIS-ready outputs.', ...
-                'Open Model',obj.ModelTab);
-
-            statusPanel = uipanel(layout,'BorderType','none', ...
-                'BackgroundColor',[1 1 1]);
-            statusPanel.Layout.Row = 4;
-            statusGrid = uigridlayout(statusPanel,[2 1]);
-            statusGrid.RowHeight = {28,'1x'};
-            statusGrid.Padding = [22 17 22 17];
-            statusGrid.RowSpacing = 2;
-            statusGrid.BackgroundColor = [1 1 1];
-            statusTitle = uilabel(statusGrid,'Text','PROJECT STATUS', ...
-                'FontSize',11,'FontWeight','bold', ...
-                'FontColor',[0.35 0.43 0.56]);
-            statusTitle.Layout.Row = 1;
-            obj.HomeStatus = uilabel(statusGrid, ...
-                'Text','No project open. Your processing files and results will stay in the project folder.', ...
-                'FontSize',14,'WordWrap','on', ...
-                'FontColor',[0.2 0.28 0.4]);
-            obj.HomeStatus.Layout.Row = 2;
-        end
-
-        function addWorkflowCard(obj,parent,column,step,heading,description,action,tab)
-            card = uipanel(parent,'BorderType','line', ...
-                'BackgroundColor',[1 1 1]);
-            card.Layout.Column = column;
-            grid = uigridlayout(card,[4 1]);
-            grid.RowHeight = {23,37,'1x',42};
-            grid.Padding = [22 20 22 18];
-            grid.RowSpacing = 4;
-            grid.BackgroundColor = [1 1 1];
-            tag = uilabel(grid,'Text',step,'FontSize',11, ...
-                'FontWeight','bold','FontColor',[53 101 207]/255);
-            tag.Layout.Row = 1;
-            headingLabel = uilabel(grid,'Text',heading,'FontSize',19, ...
-                'FontWeight','bold','FontColor',[0.08 0.16 0.3]);
-            headingLabel.Layout.Row = 2;
-            descriptionLabel = uilabel(grid,'Text',description, ...
-                'FontSize',13,'WordWrap','on', ...
-                'FontColor',[0.31 0.36 0.45]);
-            descriptionLabel.Layout.Row = 3;
-            button = uibutton(grid,'push','Text',action, ...
-                'ButtonPushedFcn',@(~,~) obj.goToTab(tab));
-            button.Layout.Row = 4;
-            styleButton(button,false);
+            layout = uigridlayout(obj.HomeTab,[1 1]);
+            layout.Padding = [0 0 0 0];
+            obj.HomeView = uihtml(layout, ...
+                'HTMLSource',fullfile(obj.InstallRoot,'PHASE_Hub_UI.html'), ...
+                'DataChangedFcn',@(src,event) obj.handleHtmlAction(src,event));
+            obj.HomeView.Layout.Row = 1;
+            obj.HomeView.Layout.Column = 1;
         end
 
         function buildStampsTab(obj)
@@ -321,13 +214,61 @@ classdef App < handle
             panel.Layout.Column = 1;
         end
 
-        function activateTab(obj, tab)
+        function handleHtmlAction(obj,~,event)
+            data = event.Data;
+            if ~isstruct(data) || ~isfield(data,'action'), return; end
+            action = char(string(data.action));
+            switch action
+                case 'open'
+                    obj.chooseProject();
+                case 'new'
+                    obj.createProject();
+                case 'updates'
+                    obj.checkForUpdates();
+                case {'project','preprocessing','stamps','model'}
+                    obj.showSection(action);
+            end
+        end
+
+        function selectSection(obj,tab)
             if isempty(obj.ProjectRoot) && tab ~= obj.HomeTab
-                obj.TabGroup.SelectedTab = obj.HomeTab;
                 uialert(obj.UIFigure,'Open or create a PHASE project first.', ...
                     'Project required');
                 return
             end
+            panels = {obj.HomeTab,obj.PreprocessingTab,obj.StampsTab,obj.ModelTab};
+            names = {'project','preprocessing','stamps','model'};
+            for k = 1:numel(panels)
+                panels{k}.Visible = ternary(panels{k} == tab,'on','off');
+                if panels{k} == tab, obj.ActiveSection = names{k}; end
+            end
+            obj.Navigation.Data = struct('view','nav', ...
+                'active',obj.ActiveSection,'version',obj.displayVersion(), ...
+                'updateEnabled',isfile(fullfile(fileparts(obj.InstallRoot),'install.json')));
+            obj.activateTab(tab);
+        end
+
+        function value = displayVersion(obj)
+            value = 'v7.0.0 preview';
+            metadata = fullfile(fileparts(obj.InstallRoot),'install.json');
+            if ~isfile(metadata), return; end
+            try
+                info = jsondecode(fileread(metadata));
+                if isfield(info,'version')
+                    installed = char(string(info.version));
+                    if ~isempty(installed) && ~strcmp(installed,'dev')
+                        if startsWith(installed,'v')
+                            value = installed;
+                        else
+                            value = ['v' installed];
+                        end
+                    end
+                end
+            catch
+            end
+        end
+
+        function activateTab(obj, tab)
             try
                 if tab == obj.PreprocessingTab
                     if isempty(obj.PreprocessingApp) || ~isvalid(obj.PreprocessingApp)
@@ -386,7 +327,7 @@ classdef App < handle
         end
 
         function goToTab(obj,tab)
-            obj.TabGroup.SelectedTab = tab;
+            obj.selectSection(tab);
         end
 
         function chooseProject(obj)
@@ -486,22 +427,23 @@ classdef App < handle
         end
 
         function updateHome(obj)
-            if isempty(obj.HomeTitle) || ~isvalid(obj.HomeTitle), return; end
+            if isempty(obj.HomeView) || ~isvalid(obj.HomeView), return; end
+            state = struct('view','home','projectName','', ...
+                'projectPath','','inputCount','—', ...
+                'datasetCount','—','exportCount','—');
             if isempty(obj.ProjectRoot)
-                obj.HomeTitle.Text = 'Your PHASE workspace';
-                obj.HomeDetails.Text = 'Create a project or open an existing one to get started.';
-                obj.HomeStatus.Text = [ ...
-                    'No project open. Your processing files and results will stay in the project folder.'];
+                obj.HomeView.Data = state;
             else
-                obj.HomeTitle.Text = char(string(obj.Project.name));
                 p = phase_project.paths(obj.ProjectRoot);
                 datasets = [dir(fullfile(p.stamps,'ASC_*')); ...
                     dir(fullfile(p.stamps,'DSC_*')); ...
                     dir(fullfile(p.stamps,'DES_*'))];
-                count = nnz([datasets.isdir]);
-                obj.HomeDetails.Text = 'One project for Preprocessing, StaMPS and Model.';
-                obj.HomeStatus.Text = sprintf('Folder: %s    |    StaMPS datasets: %d', ...
-                    obj.ProjectRoot,count);
+                state.projectName = char(string(obj.Project.name));
+                state.projectPath = obj.ProjectRoot;
+                state.inputCount = countFiles(p.raw);
+                state.datasetCount = nnz([datasets.isdir]);
+                state.exportCount = countFiles(p.exports);
+                obj.HomeView.Data = state;
             end
         end
 
@@ -576,6 +518,13 @@ end
 
 function value = ternary(condition,yesValue,noValue)
 if condition, value = yesValue; else, value = noValue; end
+end
+
+function count = countFiles(folder)
+count = 0;
+if ~isfolder(folder), return; end
+entries = dir(folder);
+count = nnz(~[entries.isdir]);
 end
 
 function styleButton(button,isPrimary)

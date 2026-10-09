@@ -17,31 +17,28 @@ def test_missing_stamps_native_binaries_are_fatal(phase_root):
     assert 'throw "The mandatory StaMPS Windows binaries could not be installed.' in block
 
 
-def test_installer_creates_dataset_safe_stamps_shortcut(phase_root):
+def test_installer_creates_unified_hub_shortcut(phase_root):
     source = _installer(phase_root)
 
     apps_start = source.index("$apps = @(")
     apps_end = source.index("foreach ($a in $apps)", apps_start)
     apps = source[apps_start:apps_end]
 
-    assert "@{ Name = 'PHASE StaMPS'" in apps
-    assert "DatasetScoped = $true" in apps
-    assert "datasetDir = uigetdir" in source
-    assert "$($a.Function)(datasetDir)" in source
-    assert "if ~isequal(datasetDir,0)" in source
-    assert "No legacy MLAPP is copied" in source
-    assert '"PHASE StaMPS.lnk"' in source
+    assert "@{ Name = 'PHASE'; Launcher = 'PHASE_Hub.m'; Function = 'PHASE_Hub' }" in apps
+    assert "@{ Name = 'PHASE StaMPS'" not in apps
+    assert "PHASE_Hub; catch ME" in source
+    assert "Join-Path $desktop 'PHASE.lnk'" in source
+    assert "'PHASE_Hub_UI.html'" in source
 
 
-def test_installer_clones_main_and_launches_production_m_files(phase_root):
+def test_installer_clones_main_and_launches_unified_hub(phase_root):
     source = _installer(phase_root)
 
     assert "[string]$PhaseBranch = 'main'" in source
     assert "$Script:PhaseBranch = $PhaseBranch" in source
-    assert "Launcher = 'PHASE_Preprocessing.m'; Function = 'PHASE_Preprocessing'" in source
-    assert "Launcher = 'PHASE_Model.m'; Function = 'PHASE_Model'" in source
-    assert "$sc.TargetPath = $MatlabExe" in source
-    assert "$($a.Function)" in source
+    assert "Launcher = 'PHASE_Hub.m'; Function = 'PHASE_Hub'" in source
+    assert "$sc.TargetPath = Join-Path $env:SystemRoot 'System32\\WindowsPowerShell\\v1.0\\powershell.exe'" in source
+    assert "-File `\"$bootstrap`\"" in source
     assert "Open $($a.Name) in MATLAB App Designer" not in source
 
 
