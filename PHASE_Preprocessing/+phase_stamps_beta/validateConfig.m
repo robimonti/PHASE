@@ -25,6 +25,20 @@ elseif strcmp(cfg.ph_output,'wrapped')
     end
     warnings{end+1} = 'Wrapped phase runs through Step 5 and exports phase in radians, not displacement.';
 end
+if ~any(strcmp(cfg.export_atmosphere,{'standard','corrected'}))
+    errors{end+1} = 'Export atmospheric treatment must be standard or corrected.';
+elseif strcmp(cfg.export_atmosphere,'corrected')
+    if ~strcmp(cfg.ph_output,'unwrapped')
+        errors{end+1} = 'Atmosphere-corrected export requires unwrapped displacement.';
+    end
+    trainConfigured = cfg.train_flag == 0 && strcmpi(cfg.subtr_tropo,'y');
+    if ~trainConfigured && ~strcmp(cfg.stamps_last_step,'8')
+        errors{end+1} = 'Without TRAIN, atmosphere-corrected export requires StaMPS Step 8.';
+    elseif trainConfigured && strcmp(cfg.stamps_last_step,'8')
+        warnings{end+1} = ['Both corrections are configured. Export uses TRAIN ', ...
+            'v-dao; Step 8 is computed but not additionally subtracted.'];
+    end
+end
 selectionMethod = upper(strtrim(char(string(cfg.select_method))));
 if ~any(strcmp(selectionMethod,{'PERCENT','DENSITY'}))
     errors{end+1} = 'Selection method must be PERCENT or DENSITY.';

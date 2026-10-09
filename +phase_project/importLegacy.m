@@ -9,12 +9,12 @@ mode = char(string(mode));
 if ~any(strcmp(mode,{'copy','reference'}))
     error('PHASE:ImportModeInvalid','Mode must be copy or reference.');
 end
-inventory = phase_project.scanLegacy(legacyRoot);
+target = phase_project.paths(projectRoot);
+inventory = phase_project.scanLegacy(legacyRoot,target);
 if isempty(inventory.items)
     error('PHASE:NoLegacyResults', ...
         'No Model output or StaMPS EXPORT products found in %s.',inventory.sourceRoot);
 end
-target = phase_project.paths(projectRoot);
 source = inventory.sourceRoot;
 targetForComparison = target.root;
 sourceForComparison = source;

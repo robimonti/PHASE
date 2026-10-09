@@ -69,5 +69,6 @@ cfg.plot_s = 15;
 cfg.ref_centre_lonlat_w = [0.0 0.0];
 cfg.ref_radius_w = 0;
 cfg.ph_output = 'unwrapped';
+cfg.export_atmosphere = 'corrected';
 cfg.export_grid_diagnostics = false;
 end

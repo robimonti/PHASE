@@ -159,7 +159,11 @@ function createField(item) {
     control = document.createElement("select");
     asArray(item.options).forEach(option => {
       const element = document.createElement("option");
-      element.value = String(option); element.textContent = String(option); control.appendChild(element);
+      element.value = String(option);
+      element.textContent = item.id === "export_atmosphere"
+        ? (option === "corrected" ? "Corrected (TRAIN or Step 8)" : "Standard (v-do)")
+        : String(option);
+      control.appendChild(element);
     });
     control.value = textValue(PhaseUI.config[item.id]);
   } else if (item.type === "toggle") {
@@ -266,7 +270,13 @@ function renderSummary() {
   byId("summary-first").textContent = textValue(PhaseUI.config.stamps_first_step) || "—";
   byId("summary-last").textContent = textValue(PhaseUI.config.stamps_last_step) || "—";
   byId("summary-tropo").textContent = PhaseUI.config.train_enabled && PhaseUI.config.subtr_tropo === "y" ? PhaseUI.config.tropo_method : "Not applied";
-  byId("summary-output").textContent = PhaseUI.config.ph_output || "—";
+  let output = PhaseUI.config.ph_output || "—";
+  if (output === "unwrapped") {
+    const corrected = PhaseUI.config.export_atmosphere === "corrected";
+    output += corrected && PhaseUI.config.train_enabled && PhaseUI.config.subtr_tropo === "y" ? " · v-dao (TRAIN)"
+      : corrected && PhaseUI.config.stamps_last_step === "8" ? " · v-dso (Step 8)" : " · v-do (standard)";
+  }
+  byId("summary-output").textContent = output;
 }
 
 function appendLog(entry) {
@@ -396,7 +406,7 @@ function updateProgressFromLine(line) {
 
 function stampsStepLabel(step) {
   return ["","Load data","Estimate phase noise","Select PS","Weed PS",
-    "Merge and correct phase","Unwrap phase","Estimate DEM error","Filter atmospheric noise"][step] || "Processing";
+    "Merge and correct phase","Unwrap phase","Estimate DEM error","Filter correlated noise"][step] || "Processing";
 }
 
 function renderRunProgress() {

@@ -22,6 +22,9 @@ destination = fullfile(testRoot,'new-project');
 [loaded,p] = phase_project.open(destination);
 assert(strcmp(project.id,loaded.id));
 assert(strcmp(loaded.name,'Test'));
+assert(strcmp(loaded.layout,'phase-project-v2'));
+assert(isfile(fullfile(p.root,'README_PROJECT.txt')));
+assert(contains(p.results,'20_RESULTS'));
 assert(numel(report.items) == 2);
 assert(isfile(fullfile(p.model,'output_001','report.xlsx')));
 assert(isfile(fullfile(p.exports,'ASC_Jan20_Feb20','points.csv')));
@@ -36,11 +39,20 @@ referenceDestination = fullfile(testRoot,'reference-project');
 [~,referenceReport] = phase_project.importLegacy( ...
     legacy,referenceDestination,'Reference','reference');
 assert(strcmp(referenceReport.mode,'reference'));
-assert(~isfile(fullfile(referenceDestination,'results','model', ...
-    'output_001','report.xlsx')));
+referencePaths = phase_project.paths(referenceDestination);
+assert(~isfile(fullfile(referencePaths.model,'output_001','report.xlsx')));
 referencedResults = phase_project.importedResults(referenceDestination);
 assert(numel(referencedResults) == 2 && all([referencedResults.exists]));
 assert(~any([referencedResults.copied]));
+
+legacyProjectRoot = fullfile(testRoot,'existing-v1-project');
+mkdir(legacyProjectRoot);
+phase_project.writeJson(fullfile(legacyProjectRoot,'phase-project.json'), ...
+    struct('schemaVersion',1,'id','existing','name','Existing', ...
+    'layout','phase-project-v1'));
+[~,legacyPaths] = phase_project.open(legacyProjectRoot);
+assert(strcmp(legacyPaths.processing,fullfile(legacyProjectRoot,'processing')));
+assert(strcmp(legacyPaths.results,fullfile(legacyProjectRoot,'results')));
 
 installation = phase_project.installationRoot();
 uiCache = fullfile(testRoot,'ui-cache');

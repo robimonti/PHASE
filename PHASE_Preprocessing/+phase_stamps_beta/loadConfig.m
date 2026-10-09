@@ -16,7 +16,15 @@ defaultNames = fieldnames(defaults);
 for k = 1:numel(defaultNames)
     name = defaultNames{k};
     if ~isfield(cfg, name)
-        if any(strcmp(name, {'weed_time_win','unwrap_time_win','scn_time_win'})) && ...
+        if strcmp(name,'export_atmosphere')
+            % Preserve old export behaviour: TRAIN meant v-dao; no TRAIN v-do.
+            if isfield(cfg,'train_flag') && isfield(cfg,'subtr_tropo') && ...
+                    cfg.train_flag == 0 && strcmpi(char(string(cfg.subtr_tropo)),'y')
+                cfg.export_atmosphere = 'corrected';
+            else
+                cfg.export_atmosphere = 'standard';
+            end
+        elseif any(strcmp(name, {'weed_time_win','unwrap_time_win','scn_time_win'})) && ...
                 isfield(cfg, 'time_span')
             cfg.(name) = cfg.time_span;
         else

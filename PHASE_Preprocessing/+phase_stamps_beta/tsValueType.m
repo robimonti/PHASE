@@ -11,7 +11,7 @@ if isfile(metadataPath)
     try
         metadata = jsondecode(fileread(metadataPath));
         candidate = char(string(metadata.valueType));
-        if any(strcmp(candidate,{'v-do','v-dao'})) && ...
+        if any(strcmp(candidate,{'v-do','v-dao','v-dso'})) && ...
                 isfile(fullfile(workDir,['ps_plot_ts_' candidate '.mat']))
             valueType = candidate;
             return
@@ -23,11 +23,15 @@ end
 
 correctionRequested = cfg.train_flag == 0 && ...
     strcmpi(char(string(cfg.subtr_tropo)),'y');
-if correctionRequested
-    candidates = {'v-dao','v-do'};
-else
-    candidates = {'v-do','v-dao'};
+try
+    expected = phase_stamps_beta.chooseExportValueType( ...
+        cfg.export_atmosphere,correctionRequested, ...
+        str2double(char(string(cfg.stamps_last_step))),cfg.ph_output);
+catch
+    expected = 'v-do'; % A temporarily invalid form should not break the UI.
 end
+candidates = [{expected},setdiff({'v-do','v-dao','v-dso'}, ...
+    {expected},'stable')];
 for k = 1:numel(candidates)
     if isfile(fullfile(workDir,['ps_plot_ts_' candidates{k} '.mat']))
         valueType = candidates{k};

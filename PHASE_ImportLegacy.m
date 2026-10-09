@@ -18,5 +18,6 @@ fprintf('Found %d final files in %d Model runs and %d StaMPS datasets (%.2f GB).
     inventory.totalBytes / 1e9);
 [project,report] = phase_project.importLegacy(legacyRoot,projectRoot,'',mode);
 fprintf('Project created: %s\n',char(string(project.name)));
-fprintf('Import report: %s\n',fullfile(projectRoot,'imports','legacy-import.json'));
+projectPaths = phase_project.paths(projectRoot);
+fprintf('Import report: %s\n',fullfile(projectPaths.imports,'legacy-import.json'));
 end

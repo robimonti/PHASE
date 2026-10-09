@@ -72,6 +72,11 @@ def test_windows_installer_has_one_hub_shortcut(phase_root):
     assert "OpenFolderBtn" not in script
     assert "v7.0.0 preview" in script
     assert "Roberto Monti · pyccino" in script
+    assert "Install once. Work on any number of projects." in script
+    assert "Each project can live in any folder or drive" in script
+    assert "Persistent scatterer Highly Automated Suite for Environmental monitoring" in script
+    assert "$Script:EmbeddedLogoBase64 = ''" in script
     compiler = (phase_root / "installer" / "compile-to-exe.ps1").read_text(encoding="utf-8-sig")
     assert "version    = '7.0.0.0'" in compiler
     assert "company    = 'Roberto Monti and pyccino'" in compiler
+    assert "[Convert]::ToBase64String([IO.File]::ReadAllBytes($logoPath))" in compiler

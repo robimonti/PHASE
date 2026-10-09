@@ -37,7 +37,11 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
             'unwrap_prefilter_flag', 'unwrap_patch_phase', 'unwrap_la_error_flag', 'unwrap_hold_good_values', ...
             'subtr_tropo', 'tropo_method', 'select_reest_gamma_flag', 'drop_ifg_index', 'scla_deramp', ...
             'scla_method', 'scla_drop_index', 'scn_wavelength', 'scn_kriging_flag', 'ref_centre_lonlat', ...
-            'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output');
+            'ref_radius', 'ref_velocity', 'plot_s', 'ref_centre_lonlat_w', 'ref_radius_w', 'ph_output', ...
+            'export_atmosphere');
+        if exist('export_atmosphere','var') ~= 1
+            export_atmosphere = 'standard'; % Existing project configurations.
+        end
 
         % begin independent StaMPS temporal windows
         legacy_time_window_fields = {};
@@ -252,9 +256,21 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         % attempt to export tca2.mat even though no correction existed.
         tropo_correction_enabled = (train_flag == 0) && ...
             strcmpi(strtrim(subtr_tropo), 'y');
+        if strcmp(export_atmosphere,'corrected') && train_requested && ...
+                ~tropo_correction_enabled
+            error('PHASE_StaMPS:trainCorrectionUnavailable', ...
+                ['Atmosphere-corrected export requested with TRAIN, but TRAIN is ', ...
+                 'not available. Install TRAIN or choose standard export before starting.']);
+        end
         if train_flag == 0 && ~tropo_correction_enabled
             updateOutput(app, ['Tropospheric correction disabled by ', ...
                 'subtr_tropo=' char(string(subtr_tropo)) '.']);
+        end
+        exportValueType = phase_stamps_beta.chooseExportValueType( ...
+            export_atmosphere,tropo_correction_enabled, ...
+            str2double(char(string(stamps_last_step))),ph_output);
+        if ~isempty(exportValueType)
+            updateOutput(app,['Displacement export variant: ' exportValueType '.']);
         end
         % end effective tropospheric-correction decision
 
@@ -821,8 +837,8 @@ end % source all the softwares and prepare the data
 
             % LEGACY EXPORT: produces a single XLSX/CSV with every
             % PS for the AOI. Granular point selection on a basemap
-            % is now handled by the TS Points tab (uses
-            % ts_export_picker on top of ps_plot_ts_<vt>.mat).
+            % is now handled by the native PHASE TS Points view using
+            % ps_plot_ts_<vt>.mat and ts_export_batch.
             %
             % Historically this block opened an interactive figure
             % via ps_plot(...,'ts'), paused on `keyboard`, and asked
@@ -836,7 +852,7 @@ end % source all the softwares and prepare the data
             % (the per-PS velocity vector). The 'ts' call opens a
             % background figure even with BACKGROUND=1; we capture and
             % delete it so the run stays non-interactive.
-            if tropo_correction_enabled % TRAIN tropo correction included
+            if strcmp(exportValueType,'v-dao') % TRAIN correction included
                 load parms.mat;
                 fig_before = findall(0, 'Type', 'figure');
                 evalc("ps_plot('v-dao', tropo_method, 'ts', 1)");
@@ -851,39 +867,27 @@ end % source all the softwares and prepare the data
             else % no TRAIN
                 load parms.mat;
                 fig_before = findall(0, 'Type', 'figure');
-                evalc("ps_plot('v-do', 'ts', 1)");
+                evalc("ps_plot('" + exportValueType + "', 'ts', 1)");
                 new_figs = setdiff(findall(0, 'Type', 'figure'), fig_before);
                 if ~isempty(new_figs); delete(new_figs); end
-                ps_plot('v-do', -1);                  % write ps_plot_v-do.mat
-                load ps_plot_v-do.mat;
-                loaded_ps_ts = load('ps_plot_ts_v-do.mat');
+                ps_plot(exportValueType, -1);
+                load(['ps_plot_' exportValueType '.mat']);
+                loaded_ps_ts = load(['ps_plot_ts_' exportValueType '.mat']);
                 new_days_name = 'day_var';
                 eval([new_days_name ' = loaded_ps_ts.day;']);
-                load('ps_plot_ts_v-do.mat', 'bperp', 'ifg_list', 'lambda', 'lonlat', 'master_day', 'n_ps', 'ph_mm', 'ref_ps', 'unwrap_ifg_index');
+                load(['ps_plot_ts_' exportValueType '.mat'], 'bperp', 'ifg_list', 'lambda', 'lonlat', 'master_day', 'n_ps', 'ph_mm', 'ref_ps', 'unwrap_ifg_index');
             end
             % Include all PS (was: ismember against user-clicked lon2/lat2)
+            if size(ph_mm,1) ~= size(lonlat,1) || numel(ph_disp) ~= size(lonlat,1)
+                error('PHASE_StaMPS:exportShape', ...
+                    'StaMPS displacement, velocity and coordinates have different PS counts.');
+            end
             ind = true(size(lonlat,1),1);
             displ = ph_disp(ind);
             disp_ts = ph_mm(ind,:);
 
-            time_days = ((transpose(day_var))-time_zero);  % time and displacement vector with master
-            time_master = master_day - time_zero;
-            for i=1:length(time_days)
-                if time_days(i) < time_master
-                    disp_ts_temp(:,i) = disp_ts(:,i);
-                    time_days_temp(i) = time_days(i);
-                    n = i;
-                else
-                    disp_ts_temp(:,n+1) = zeros(size(disp_ts,1),1);
-                    time_days_temp(n+1) = time_master;
-                    disp_ts_temp(:,i+1) = disp_ts(:,i);
-                    time_days_temp(i+1) = time_days(i);
-                end
-            end
-            disp_ts = disp_ts_temp;
-            clear disp_ts_temp
-            time_days = time_days_temp;
-            clear time_days_temp
+            [time_days,disp_ts] = phase_stamps_beta.insertMasterEpoch( ...
+                day_var,master_day,time_zero,disp_ts);
 
             export_res = [lonlat(ind,1) lonlat(ind,2) displ disp_ts];
 
@@ -904,16 +908,15 @@ end % source all the softwares and prepare the data
             displ_table_all = readtable(strcat('./EXPORT/', export_name, '.xlsx'));
             writetable(displ_table_all, strcat('./EXPORT/', export_name, '.csv'), 'WriteMode', 'overwrite');
 
-            if tropo_correction_enabled
-                valueType = 'v-dao';
-            else
-                valueType = 'v-do';
-            end
             phase_project.writeJson(fullfile(cd_fullpath,'EXPORT', ...
                 [export_name '_series.json']),struct( ...
                 'quantity','line-of-sight displacement', ...
-                'valueType',valueType, ...
-                'trainCorrectionApplied',tropo_correction_enabled));
+                'displacementUnit','mm','velocityUnit','mm/year', ...
+                'valueType',exportValueType, ...
+                'exportAtmosphereChoice',export_atmosphere, ...
+                'trainUsedDuringProcessing',tropo_correction_enabled, ...
+                'trainCorrectionApplied',strcmp(exportValueType,'v-dao'), ...
+                'step8CorrectionApplied',strcmp(exportValueType,'v-dso')));
 
             updateOutput(app, '----------------------- STEP 3: Displacement time series export finished -----------------------');
 

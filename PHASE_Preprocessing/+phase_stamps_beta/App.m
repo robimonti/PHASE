@@ -20,6 +20,7 @@ classdef App < handle
         IsRunning = false
         TSPickerOverlay = []
         TSPickerContainer = []
+        TSPickerCleanup = []
         LiveLogFile = ''
         LiveLogUrl = ''
         DiaryActive = false
@@ -109,6 +110,7 @@ classdef App < handle
 
         function openTsPicker(obj)
             try
+                obj.closeTsPicker();
                 if isempty(obj.TSPickerOverlay) || ~isvalid(obj.TSPickerOverlay)
                     obj.createTsPickerOverlay();
                 end
@@ -116,7 +118,7 @@ classdef App < handle
                 obj.TSPickerOverlay.Visible = 'on';
                 try, uistack(obj.TSPickerOverlay,'top'); catch, end
                 drawnow;
-                phase_stamps_beta.openTsPicker( ...
+                obj.TSPickerCleanup = phase_stamps_beta.openTsPicker( ...
                     obj.WorkDir, obj.Config, obj.TSPickerContainer);
                 obj.appendLog('TS Points picker loaded inside PHASE StaMPS.');
             catch ME
@@ -127,6 +129,7 @@ classdef App < handle
         end
 
         function delete(obj)
+            obj.closeTsPicker();
             obj.endLiveDiary();
             try
                 if obj.OwnsFigure && ~isempty(obj.UIFigure) && isvalid(obj.UIFigure)
@@ -443,35 +446,12 @@ classdef App < handle
                 return
             end
             obj.TSPickerOverlay = uipanel(obj.HostContainer, ...
-                'BorderType','none','BackgroundColor',[0.94 0.965 0.99], ...
+                'BorderType','none','BackgroundColor',[0.965 0.978 0.997], ...
                 'Visible','off');
-            outer = uigridlayout(obj.TSPickerOverlay,[2 1]);
-            outer.RowHeight = {58,'1x'};
-            outer.Padding = [18 14 18 18];
-            outer.RowSpacing = 10;
-
-            header = uigridlayout(outer,[1 3]);
-            header.Layout.Row = 1;
-            header.ColumnWidth = {'1x','fit','fit'};
-            header.Padding = [0 0 0 0];
-            title = uilabel(header,'Text','TS Points · optional point export', ...
-                'FontName','Helvetica','FontSize',18,'FontWeight','bold', ...
-                'FontColor',[0.08 0.15 0.28]);
-            title.Layout.Column = 1;
-            refresh = uibutton(header,'push','Text','Reload picker', ...
-                'ButtonPushedFcn',@(~,~) obj.openTsPicker(), ...
-                'BackgroundColor',[0.92 0.945 1.0], ...
-                'FontColor',[0.208 0.396 0.812]);
-            refresh.Layout.Column = 2;
-            back = uibutton(header,'push','Text','Close picker', ...
-                'ButtonPushedFcn',@(~,~) obj.closeTsPicker(), ...
-                'BackgroundColor',[1 1 1], ...
-                'FontColor',[0.208 0.396 0.812]);
-            back.Layout.Column = 3;
-
+            outer = uigridlayout(obj.TSPickerOverlay,[1 1]);
+            outer.Padding = [0 0 0 0];
             obj.TSPickerContainer = uipanel(outer, ...
-                'BorderType','line','BackgroundColor',[1 1 1]);
-            obj.TSPickerContainer.Layout.Row = 2;
+                'BorderType','none','BackgroundColor',[0.965 0.978 0.997]);
             obj.layoutTsPickerOverlay();
         end
 
@@ -491,6 +471,10 @@ classdef App < handle
         end
 
         function closeTsPicker(obj)
+            if ~isempty(obj.TSPickerCleanup)
+                try, obj.TSPickerCleanup(); catch, end
+                obj.TSPickerCleanup = [];
+            end
             if ~isempty(obj.TSPickerOverlay) && isvalid(obj.TSPickerOverlay)
                 obj.TSPickerOverlay.Visible = 'off';
             end

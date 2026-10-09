@@ -59,6 +59,7 @@ $Script:ScriptDir = if ($PSScriptRoot) {
     Split-Path -Parent ([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
 }
 $Script:BundledSnapPath = Join-Path $Script:ScriptDir 'installers\esa-snap_sentinel_windows-13.0.0.exe'
+$Script:EmbeddedLogoBase64 = ''
 
 # State accumulated across wizard pages
 $Script:State = @{
@@ -1534,10 +1535,8 @@ function Invoke-StampsBinariesDownload {
             <StackPanel Grid.Row="2" Margin="34,0,24,28">
                 <Border Background="White" CornerRadius="4" Padding="14,12" Margin="0,0,0,14" BorderBrush="#E4E8F0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock FontSize="10" Foreground="#4A5168" Margin="0,0,0,4">
-                            <Run Text="PERSISTENT  SCATTERER" FontWeight="Bold" Foreground="#0F1430"/>
-                        </TextBlock>
-                        <TextBlock Text="Highly Automated Suite for Environmental Monitoring" TextWrapping="Wrap" FontSize="10" Foreground="#8C95B8" LineHeight="14"/>
+                        <TextBlock Text="PHASE" FontSize="10" FontWeight="Bold" Foreground="#0F1430" Margin="0,0,0,4"/>
+                        <TextBlock Text="Persistent scatterer Highly Automated Suite for Environmental monitoring" TextWrapping="Wrap" FontSize="10" Foreground="#8C95B8" LineHeight="14"/>
                     </StackPanel>
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
@@ -1589,6 +1588,12 @@ function Invoke-StampsBinariesDownload {
                         <TextBlock Text="3.  Install Python 3.11+ silently if missing" Margin="0,4"/>
                         <TextBlock Text="4.  Clone PHASE, StaMPS, TRAIN into the chosen folder" Margin="0,4"/>
                         <TextBlock Text="5.  Download native binaries, install GMT, configure all paths" Margin="0,4"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="#EDF3FF" CornerRadius="10" Padding="16,13" Margin="0,16,0,0" BorderBrush="#D6E3FA" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Install once. Work on any number of projects." FontWeight="SemiBold" Foreground="#163768" FontSize="13"/>
+                        <TextBlock Text="PHASE and its processing tools are installed once on this computer. Each project can live in any folder or drive you choose later; only its data and results go there." TextWrapping="Wrap" Margin="0,5,0,0" Foreground="#4A607F" FontSize="11"/>
                     </StackPanel>
                 </Border>
                 <TextBlock Text="Estimated time: 15-30 minutes (depending on connection and SNAP installer)."
@@ -1692,7 +1697,7 @@ function Invoke-StampsBinariesDownload {
             <!-- Page 5: Destination folder -->
             <StackPanel x:Name="Page5_Dest" Visibility="Collapsed">
                 <TextBlock Text="Destination folder" FontSize="28" FontWeight="Light" Margin="0,0,0,10"/>
-                <TextBlock Text="Choose where PHASE will be installed. Three subfolders will be created: PHASE\, StaMPS\, TRAIN\."
+                <TextBlock Text="Choose the one-time PHASE application location. This is not a project folder: after installation, create or open projects anywhere, including another drive."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,20"/>
 
                 <TextBlock Text="Folder" Margin="0,0,0,6" FontSize="11" Foreground="#8C95B8" FontFamily="JetBrains Mono, Cascadia Code, Consolas"/>
@@ -1769,6 +1774,7 @@ function Invoke-StampsBinariesDownload {
                 <TextBlock Text="Installation complete" FontSize="28" FontWeight="Light" Foreground="#2DBA6E" Margin="0,0,0,10"/>
                 <TextBlock x:Name="FinishSubtitle" Text="PHASE is ready. Launch the hub, then create or open a project to begin."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,22"/>
+                <TextBlock Text="PHASE is installed once. Your projects and results can be stored wherever you choose, independently of the app installation." TextWrapping="Wrap" FontSize="12" Foreground="#4A607F" Margin="0,0,0,14"/>
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -1815,6 +1821,23 @@ function Get-Element { param([string]$Name) $window.FindName($Name) }
 # Carica il logo PHASE nella sidebar. Lo cerchiamo accanto all'.exe (file
 # bundled in installer/PHASE_logo.png) e graceful-degrade se assente.
 function Set-PhaseLogo {
+    if (-not [string]::IsNullOrWhiteSpace($Script:EmbeddedLogoBase64)) {
+        try {
+            $bytes = [Convert]::FromBase64String($Script:EmbeddedLogoBase64)
+            $stream = [System.IO.MemoryStream]::new($bytes)
+            $bmp = New-Object System.Windows.Media.Imaging.BitmapImage
+            $bmp.BeginInit()
+            $bmp.StreamSource = $stream
+            $bmp.CacheOption = 'OnLoad'
+            $bmp.EndInit()
+            $bmp.Freeze()
+            (Get-Element 'LogoImage').Source = $bmp
+            $stream.Dispose()
+            return
+        } catch {
+            # A source checkout can still use the adjacent PNG below.
+        }
+    }
     $candidates = @(
         (Join-Path $Script:ScriptDir 'PHASE_logo.png'),
         (Join-Path $Script:ScriptDir '..\PHASE_logo.png'),

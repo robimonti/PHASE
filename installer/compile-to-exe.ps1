@@ -88,21 +88,31 @@ if ($IconFile -and (Test-Path $IconFile)) {
 
 $temporarySource = $null
 try {
+    $scriptText = Get-Content -LiteralPath $Source -Raw
     if (-not [string]::IsNullOrWhiteSpace($DefaultPhaseBranch)) {
         if ($DefaultPhaseBranch -notmatch '^[A-Za-z0-9_./-]+$') {
             throw "Branch name is not safe for embedding: $DefaultPhaseBranch"
         }
         $marker = "[string]`$PhaseBranch = 'main'"
-        $scriptText = Get-Content -LiteralPath $Source -Raw
         if (-not $scriptText.Contains($marker)) {
             throw "Expected default branch declaration not found in $Source"
         }
-        $temporarySource = Join-Path $env:TEMP ("phase-installer-" + [guid]::NewGuid().ToString('N') + '.ps1')
-        Set-Content -LiteralPath $temporarySource -Value $scriptText.Replace(
-            $marker, "[string]`$PhaseBranch = '$DefaultPhaseBranch'") -Encoding UTF8
-        $ps2exeArgs.inputFile = $temporarySource
+        $scriptText = $scriptText.Replace($marker, "[string]`$PhaseBranch = '$DefaultPhaseBranch'")
         Write-Host "Embedded PHASE branch: $DefaultPhaseBranch"
     }
+    $logoPath = Join-Path $scriptDir 'PHASE_logo.png'
+    if (-not (Test-Path -LiteralPath $logoPath)) {
+        throw "Installer logo not found: $logoPath"
+    }
+    $logoMarker = "`$Script:EmbeddedLogoBase64 = ''"
+    if (-not $scriptText.Contains($logoMarker)) {
+        throw "Expected embedded logo marker not found in $Source"
+    }
+    $logoBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($logoPath))
+    $scriptText = $scriptText.Replace($logoMarker, "`$Script:EmbeddedLogoBase64 = '$logoBase64'")
+    $temporarySource = Join-Path $env:TEMP ("phase-installer-" + [guid]::NewGuid().ToString('N') + '.ps1')
+    Set-Content -LiteralPath $temporarySource -Value $scriptText -Encoding UTF8
+    $ps2exeArgs.inputFile = $temporarySource
     Invoke-PS2EXE @ps2exeArgs
 } finally {
     if ($temporarySource -and (Test-Path -LiteralPath $temporarySource)) {

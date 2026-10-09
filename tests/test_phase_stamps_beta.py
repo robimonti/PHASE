@@ -93,7 +93,7 @@ def test_beta_backend_retains_stable_engine_with_explicit_export_customizations(
     assert "stamps(stamps_first_step, stamps_last_step)" in generated
     assert "phase_stamps_beta.wrappedPhaseSubset" in generated
     assert "trainCorrectionApplied" in generated
-    assert "ts_export_picker" in generated
+    assert "ts_export_batch" in generated
 
 
 def test_beta_backend_preserves_stable_setparm_and_stamps_calls(phase_root):
@@ -239,11 +239,15 @@ def test_beta_range_calendar_and_ts_picker_are_native_to_the_new_app(phase_root)
     assert "TSPickerContainer" in controller
     assert "obj.UIFigure.AutoResizeChildren = 'off'" in controller
     assert "phase_stamps_beta.openTsPicker" in controller
-    assert "ts_export_picker(workDir, parentContainer" in picker
+    assert "phase_stamps_beta.renderTsPicker" in picker
+    native_picker = _text(package / "renderTsPicker.m")
+    assert "geoaxes(mapHost)" in native_picker
+    assert "ts_export_batch(matPath" in native_picker
+    assert "WindowButtonDownFcn" in native_picker
     assert "uifigure(" not in picker
     assert "Point-by-point selection is optional" in html
     assert "CloseTsPicker" in js
-    assert "TS Points · optional point export" in controller
+    assert "TSPickerCleanup" in controller
 
 
 def test_stamps_dataset_bar_and_progress_are_integrated(phase_root):
@@ -268,10 +272,42 @@ def test_picker_uses_exported_correction_variant(phase_root):
     picker = _text(package / "openTsPicker.m")
     backend = _text(package / "runProcessing.m")
     assert "metadata.valueType" in resolver
-    assert "{'v-dao','v-do'}" in resolver
+    assert "{'v-do','v-dao','v-dso'}" in resolver
     assert "phase_stamps_beta.tsValueType" in picker
     assert "'_series.json'" in backend
-    assert "valueType = 'v-dao'" in backend
+    chooser = _text(package / "chooseExportValueType.m")
+    assert "valueType = 'v-dao'" in chooser
+    assert "valueType = 'v-dso'" in chooser
+    assert "phase_stamps_beta.chooseExportValueType" in backend
+    assert "step8CorrectionApplied" in backend
+    assert "strcmp(export_atmosphere,'corrected')" in backend
+    assert "phase_stamps_beta.insertMasterEpoch" in backend
+
+
+def test_export_atmosphere_choice_is_explicit_and_validated(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
+    defaults = _text(package / "defaultConfig.m")
+    schema = _text(package / "schema.m")
+    validator = _text(package / "validateConfig.m")
+    assert "cfg.export_atmosphere = 'corrected'" in defaults
+    assert "Preserve old export behaviour" in _text(package / "loadConfig.m")
+    assert "Atmospheric treatment of exported series" in schema
+    assert "{'standard','corrected'}" in schema
+    assert "requires StaMPS Step 8" in validator
+
+
+def test_new_project_layout_is_readable_and_old_layout_stays_supported(phase_root):
+    package = phase_root / "+phase_project"
+    paths = _text(package / "paths.m")
+    create = _text(package / "create.m")
+    opener = _text(package / "open.m")
+    assert "00_INPUT" in paths
+    assert "10_PROCESSING_INTERNAL" in paths
+    assert "20_RESULTS" in paths
+    assert "phase-project-v1" in paths and "phase-project-v2" in paths
+    assert "README_PROJECT.txt" in create
+    assert "schemaVersion',2" in create
+    assert "phase-project-v1" in opener and "phase-project-v2" in opener
 
 
 def test_beta_provides_a_matlab_side_smoke_test(phase_root):

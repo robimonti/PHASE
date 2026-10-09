@@ -1,10 +1,18 @@
-function inventory = scanLegacy(legacyRoot)
+function inventory = scanLegacy(legacyRoot, destinationPaths)
 %SCANLEGACY Inventory final products from a pre-project PHASE workspace.
 % No file is modified. Processing intermediates are intentionally excluded.
 
 legacyRoot = char(java.io.File(char(string(legacyRoot))).getCanonicalPath());
 if ~isfolder(legacyRoot)
     error('PHASE:LegacyFolderMissing','Legacy folder does not exist: %s.',legacyRoot);
+end
+if nargin < 2 || isempty(destinationPaths)
+    resultRoot = fullfile('results');
+    modelRoot = fullfile(resultRoot,'model');
+    exportsRoot = fullfile(resultRoot,'exports');
+else
+    modelRoot = erase(destinationPaths.model,[destinationPaths.root filesep]);
+    exportsRoot = erase(destinationPaths.exports,[destinationPaths.root filesep]);
 end
 inventory = struct('sourceRoot',legacyRoot,'items', ...
     struct('kind',{},'source',{},'relativeDestination',{},'bytes',{}), ...
@@ -18,13 +26,13 @@ for k = 1:numel(runs)
     runRoot = fullfile(legacyRoot,runName);
     before = numel(inventory.items);
     inventory = addFiles(inventory,runRoot,'*.xlsx', ...
-        fullfile('results','model',runName),'model-report');
+        fullfile(modelRoot,runName),'model-report');
     inventory = addFiles(inventory,fullfile(runRoot,'figures'),'*', ...
-        fullfile('results','model',runName,'figures'),'model-figure');
+        fullfile(modelRoot,runName,'figures'),'model-figure');
     inventory = addFiles(inventory,fullfile(runRoot,'files','shp'),'*', ...
-        fullfile('results','model',runName,'gis'),'model-gis');
+        fullfile(modelRoot,runName,'gis'),'model-gis');
     inventory = addFiles(inventory,fullfile(runRoot,'files','mat'),'*', ...
-        fullfile('results','model',runName,'mat'),'model-mat');
+        fullfile(modelRoot,runName,'mat'),'model-mat');
     if numel(inventory.items) > before
         inventory.modelRuns = inventory.modelRuns + 1;
     end
@@ -39,7 +47,7 @@ for k = 1:numel(datasets)
     before = numel(inventory.items);
     inventory = addFiles(inventory, ...
         fullfile(legacyRoot,datasetName,'EXPORT'),'*', ...
-        fullfile('results','exports',datasetName),'stamps-export');
+        fullfile(exportsRoot,datasetName),'stamps-export');
     if numel(inventory.items) > before
         inventory.stampsDatasets = inventory.stampsDatasets + 1;
     end
