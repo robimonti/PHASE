@@ -47,6 +47,9 @@ processCleanup = onCleanup(@() clearActiveProcess(engine)); %#ok<NASGU>
 readerCleanup = onCleanup(@() closeReader(reader)); %#ok<NASGU>
 
 currentProgress = rangeStart;
+currentPhase = phase;
+currentStep = [];
+totalItems = 0;
 while process.isAlive() || reader.ready()
     [lines,reader] = drainReadyLines(reader);
     for k = 1:numel(lines)
@@ -57,17 +60,38 @@ while process.isAlive() || reader.ready()
         end
         step = parseStep(line,firstStep,lastStep);
         if ~isempty(step)
+            currentStep = step;
+            totalItems = stageItemTotal(engine,step);
             stepCount = max(1,lastStep-firstStep+1);
             fraction = max(0,min(1,(step-firstStep)/stepCount));
             currentProgress = max(currentProgress, ...
                 rangeStart + fraction*(rangeEnd-rangeStart));
-            notifyProgress(engine,currentProgress, ...
-                sprintf('%s · step %d of %d',phase,step,lastStep),false);
+            if lastStep == 1
+                currentPhase = phase;
+            else
+                currentPhase = stageLabel(step,engine.constellation);
+            end
+            notifyProgress(engine,currentProgress,currentPhase,false);
+        elseif ~isempty(currentStep) && lastStep > 1
+            [itemIndex,itemName] = parseItem(line);
+            if ~isempty(itemIndex)
+                totalItems = max(totalItems,itemIndex);
+                stepCount = max(1,lastStep-firstStep+1);
+                fraction = (currentStep-firstStep + ...
+                    min(itemIndex/max(1,totalItems),0.99))/stepCount;
+                currentProgress = max(currentProgress, ...
+                    rangeStart + fraction*(rangeEnd-rangeStart));
+                currentPhase = sprintf('%s · %s %d of %d', ...
+                    stageLabel(currentStep,engine.constellation), ...
+                    unitLabel(currentStep),itemIndex,totalItems);
+                if ~isempty(itemName), currentPhase = [currentPhase ' · ' itemName]; end
+                notifyProgress(engine,currentProgress,currentPhase,false);
+            end
         end
     end
 
     if toc(lastNotice) >= 0.5
-        notifyProgress(engine,currentProgress,phase,false);
+        notifyProgress(engine,currentProgress,currentPhase,false);
         lastNotice = tic;
     end
     drawnow limitrate
@@ -133,6 +157,59 @@ if isempty(token), return; end
 candidate = str2double(token{1});
 if isfinite(candidate) && candidate >= firstStep && candidate <= lastStep
     step = candidate;
+end
+end
+
+function [index,name] = parseItem(line)
+index = []; name = '';
+token = regexp(strtrim(line), ...
+    '^\[(\d+)\]\s+(?:Folder:|Processing Master|Processing slave file:|Processing interferogram file:|Exporting pair:)', ...
+    'tokens','once','ignorecase');
+if isempty(token), return; end
+index = str2double(token{1});
+dates = regexp(line,'(?<!\d)\d{8}(?!\d)','match');
+if ~isempty(dates), name = dates{end}; end
+end
+
+function label = stageLabel(step,constellation)
+if strcmp(char(string(constellation)),'CSK')
+    labels = {'Prepare acquisitions','Subset slave images', ...
+        'Coregistration and interferograms','Export StaMPS inputs', ...
+        'Average intensity','Terrain correction'};
+else
+    labels = {'Prepare acquisitions','Split slave images', ...
+        'Coregistration and interferograms','Export StaMPS inputs', ...
+        'Average intensity','Terrain correction'};
+end
+label = labels{step};
+end
+
+function label = unitLabel(step)
+if step == 4, label = 'pair';
+elseif step == 6, label = 'interferogram';
+else, label = 'slave'; end
+end
+
+function total = stageItemTotal(engine,step)
+total = 0;
+root = phase_preprocessing_beta.dataFolder(engine.ProjectRoot);
+switch step
+    case 2
+        folder = fullfile(root,'slaves');
+        items = dir(folder);
+        total = nnz([items.isdir] & ~ismember({items.name},{'.','..'}));
+    case 3
+        if strcmp(char(string(engine.constellation)),'CSK')
+            items = dir(fullfile(root,'subset','*.dim'));
+            total = numel(items);
+        else
+            items = dir(fullfile(root,'split'));
+            total = nnz([items.isdir] & ~ismember({items.name},{'.','..'}));
+        end
+    case 4
+        total = numel(dir(fullfile(root,'coreg','*.dim')));
+    case 6
+        total = numel(dir(fullfile(root,'ifg','*.dim')));
 end
 end
 

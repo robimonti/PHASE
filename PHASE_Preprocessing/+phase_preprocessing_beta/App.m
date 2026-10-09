@@ -325,6 +325,15 @@ classdef App < handle
                 end
             end
             obj.sendState();
+            if strcmp(obj.Status,'success')
+                if ~obj.OwnsFigure && isa(obj.UIFigure.UserData,'phase_hub.App')
+                    obj.UIFigure.UserData.offerNextStage('preprocessing');
+                else
+                    uialert(obj.UIFigure, ...
+                        'Preprocessing completed. Open StaMPS PSI from the PHASE hub when ready.', ...
+                        'Preprocessing completed','Icon','success');
+                end
+            end
         end
 
         function stopProcessing(obj)

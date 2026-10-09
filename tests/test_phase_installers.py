@@ -68,6 +68,7 @@ def test_windows_installer_has_one_hub_shortcut(phase_root):
     assert "Removed old PHASE 7 desktop shortcut" in script
     assert 'x:Name="LaunchPhaseBtn" Content="Launch PHASE"' in script
     assert "Start-Process -FilePath $launcher -ErrorAction Stop" in script
+    assert "Join-Path (Join-Path $Script:State.InstallDir 'PHASE') 'PHASE.lnk'" in script
     assert "OpenFolderBtn" not in script
     assert "v7.0.0 preview" in script
     assert "Roberto Monti · pyccino" in script

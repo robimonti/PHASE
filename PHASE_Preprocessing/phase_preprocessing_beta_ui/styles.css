@@ -461,6 +461,11 @@ button { color: inherit; }
 .data-card h2 { margin: 10px 0 9px; color: var(--text); font-family: var(--font-display); font-size: 23px; font-weight: 620; letter-spacing: -.025em; }
 .data-card p { margin: 0; color: var(--muted); line-height: 1.62; }
 .data-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+#images-panel > .data-card:not(.wide) { display: flex; flex-direction: column; }
+#images-panel > .data-card:not(.wide) .data-actions { margin-top: auto; padding-top: 22px; }
+.master-date-control { display: flex; flex-direction: column; gap: 7px; }
+.master-date-control select { color: var(--phase-blue); }
+.master-date-control small { color: var(--muted); font-size: 10px; }
 .hidden { display: none !important; }
 
 .embedded-panel { margin-bottom: 14px; }

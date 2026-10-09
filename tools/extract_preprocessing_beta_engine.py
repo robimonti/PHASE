@@ -462,6 +462,23 @@ def extract(xml: str) -> str:
         "app.UIFigure.Visible = 'off';",
     )
 
+    # The hub owns navigation between modules. Keep the exported dataset, but
+    # never open a second StaMPS window after preprocessing finishes.
+    launch_start = "                        % OPEN PHASE_StaMPS_beta (cross-platform)."
+    launch_end = "                        %% ----------------------------------------------------"
+    if code.count(launch_start) != 2:
+        raise RuntimeError("Could not locate both StaMPS auto-launch blocks")
+    for _ in range(2):
+        start = code.index(launch_start)
+        end = code.index(launch_end, start)
+        replacement = """\
+                        stamps_app_full = fullfile(project_parent_path_full, stamps_folder);
+                        updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
+                        updateOutput(app, 'Open the StaMPS PSI section in the PHASE hub when ready.');
+
+"""
+        code = code[:start] + replacement + code[end:]
+
     header = """\
 % GENERATED FROM PHASE_Preprocessing.mlapp.
 % Run tools/extract_preprocessing_beta_engine.py after changing the stable app.

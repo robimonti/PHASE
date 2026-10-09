@@ -2533,7 +2533,7 @@ function Set-SetupProgress {
 })
 
 (Get-Element 'LaunchPhaseBtn').Add_Click({
-    $launcher = Join-Path $Script:State.InstallDir 'PHASE.lnk'
+    $launcher = Join-Path (Join-Path $Script:State.InstallDir 'PHASE') 'PHASE.lnk'
     if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
         [System.Windows.MessageBox]::Show("PHASE launcher not found:`n$launcher", 'Launch PHASE', 'OK', 'Error') | Out-Null
         return

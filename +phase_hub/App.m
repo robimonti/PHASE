@@ -103,6 +103,29 @@ classdef App < handle
             obj.selectSection(tab);
         end
 
+        function offerNextStage(obj, completed)
+            if obj.IsClosing || isempty(obj.UIFigure) || ~isvalid(obj.UIFigure), return; end
+            obj.refreshDatasets();
+            switch char(string(completed))
+                case 'preprocessing'
+                    next = 'stamps';
+                    label = 'StaMPS PSI';
+                    message = ['Preprocessing completed. The StaMPS dataset is ready ' ...
+                        'in this project. Continue to StaMPS PSI now?'];
+                case 'stamps'
+                    next = 'model';
+                    label = 'Displacement Modeling';
+                    message = ['StaMPS PSI completed and its exports are available. ' ...
+                        'Continue to Displacement Modeling now?'];
+                otherwise
+                    return
+            end
+            choice = uiconfirm(obj.UIFigure,message,'PHASE workflow', ...
+                'Options',{['Open ' label],'Stay here'}, ...
+                'DefaultOption',1,'CancelOption',2,'Icon','success');
+            if strcmp(choice,['Open ' label]), obj.showSection(next); end
+        end
+
         function delete(obj)
             if obj.IsClosing, return; end
             obj.IsClosing = true;

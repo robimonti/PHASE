@@ -134,14 +134,13 @@ def test_beta_controller_requires_save_before_start(phase_root):
     assert "phase_stamps_beta.runProcessing(adapter)" in controller
 
 
-def test_beta_offers_model_launch_only_after_success(phase_root):
+def test_beta_offers_hub_model_transition_only_after_success(phase_root):
     controller = _text(
         phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta" / "App.m"
     )
     assert "if result.ok\n                obj.offerModelLaunch();" in controller
-    assert "uiconfirm(obj.UIFigure" in controller
-    assert "Open PHASE Model" in controller
-    assert "PHASE_Model_beta();" in controller
+    assert "obj.UIFigure.UserData.offerNextStage('stamps')" in controller
+    assert "PHASE_Model_beta();" not in controller
 
 
 def test_beta_exports_only_ps_time_series_not_atmospheric_delay(phase_root):

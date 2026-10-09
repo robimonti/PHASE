@@ -251,6 +251,10 @@ function createField(item) {
     updateSwitchState(switchWrap, control.checked);
     control.addEventListener("change", () => updateSwitchState(switchWrap, control.checked));
     wrapper.appendChild(switchWrap);
+  } else if (item.type === "date") {
+    control = document.createElement("input");
+    control.type = "date";
+    control.value = toIsoDate(PhaseUI.config[item.id]);
   } else {
     control = document.createElement("input");
     control.type = "text";
@@ -275,7 +279,38 @@ function createField(item) {
     browse.addEventListener("click", () => { collectVisibleForm(); send("Browse", { ...payload(), field: item.id }); });
     row.appendChild(browse); wrapper.appendChild(row);
   } else if (item.type !== "toggle") {
-    wrapper.appendChild(control);
+    if (item.id === "master_date") {
+      const dateControls = document.createElement("div");
+      dateControls.className = "master-date-control";
+      dateControls.appendChild(control);
+      const available = availableMasterDates();
+      if (available.length) {
+        const selector = document.createElement("select");
+        selector.id = "available-master-dates";
+        selector.setAttribute("aria-label", "Available acquisition dates");
+        selector.innerHTML = '<option value="">Choose a date from imported images…</option>';
+        available.forEach(date => {
+          const option = document.createElement("option");
+          option.value = date; option.textContent = date;
+          selector.appendChild(option);
+        });
+        selector.value = available.includes(control.value) ? control.value : "";
+        selector.addEventListener("change", () => {
+          if (!selector.value) return;
+          control.value = selector.value;
+          control.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        dateControls.appendChild(selector);
+      }
+      const hint = document.createElement("small");
+      hint.textContent = available.length
+        ? "Available dates come from the imported images. You can also use the calendar."
+        : "Import images to see available acquisition dates here.";
+      dateControls.appendChild(hint);
+      wrapper.appendChild(dateControls);
+    } else {
+      wrapper.appendChild(control);
+    }
   }
   const help = document.createElement("div");
   help.className = "field-help"; help.textContent = item.help || " "; wrapper.appendChild(help);
@@ -286,9 +321,25 @@ function updateSwitchState(wrapper, checked) {
   wrapper.querySelector(".switch-state").textContent = checked ? "Enabled" : "Disabled";
 }
 
+function toIsoDate(value) {
+  const digits = String(value || "").replace(/[^0-9]/g, "");
+  return /^\d{8}$/.test(digits)
+    ? `${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}` : "";
+}
+
+function availableMasterDates() {
+  const isSEN = constellationCode() === "SEN";
+  return [...new Set(asArray(PhaseUI.state?.slaves)
+    .filter(file => isSEN ? file.type === "Sentinel-1" : ["CSK", "CSG"].includes(file.type))
+    .map(file => String(file.date || ""))
+    .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
+}
+
 function collectVisibleForm() {
   document.querySelectorAll("[data-config-field]").forEach(control => {
-    PhaseUI.config[control.dataset.configField] = control.type === "checkbox" ? control.checked : control.value;
+    const value = control.type === "checkbox" ? control.checked : control.value;
+    PhaseUI.config[control.dataset.configField] = control.dataset.configField === "master_date"
+      ? String(value).replace(/[^0-9]/g, "") : value;
   });
   applyAutomaticEpsg();
 }
@@ -312,6 +363,8 @@ function applyFieldDependencies() {
     }
   }
   setFieldDisabled("master_date", Boolean(PhaseUI.config.auto_master));
+  const availableDates = byId("available-master-dates");
+  if (availableDates) availableDates.disabled = Boolean(PhaseUI.config.auto_master);
   setFieldDisabled("process_master", resumeSlaves);
   setFieldDisabled("dem_file", PhaseUI.config.dem_name !== "External DEM");
   setFieldDisabled("dem_file_coreg", PhaseUI.config.dem_name_coreg !== "External DEM");

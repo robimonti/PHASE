@@ -4472,34 +4472,9 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 'PHASE_StaMPS_beta will create it when the initial settings are saved.']);
                         end
 
-                        % OPEN PHASE_StaMPS_beta (cross-platform). We change MATLAB
-                        % current directory to the StaMPS folder so the relative
-                        % paths inside PHASE_StaMPS (./input_StaMPS.mat, INSAR_*/,
-                        % diff0/, ...) resolve correctly, then launch the app.
                         stamps_app_full = fullfile(project_parent_path_full, stamps_folder);
-                        stamps_app_file = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'PHASE_StaMPS_beta.m');
                         updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
-                        choice = 'Open now';
-                        if isfile(dst_input_mat)
-                            updateOutput(app, ['Opening PHASE_StaMPS_beta with the existing configuration in: ' stamps_app_full]);
-                        else
-                            updateOutput(app, ['Opening PHASE_StaMPS_beta to create the initial configuration in: ' stamps_app_full]);
-                        end
-                        if strcmp(choice, 'Open now')
-                            if isfile(stamps_app_file)
-                                updateOutput(app, ['Launching the canonical PHASE_StaMPS_beta runtime for: ' stamps_app_full]);
-                                try
-                                    phase_preprocessing_beta.launchStampsBeta(stamps_app_file, stamps_app_full);
-                                catch ex
-                                    updateOutput(app, ['Failed to launch PHASE_StaMPS: ' ex.message]);
-                                    updateOutput(app, ['Open it manually with: PHASE_StaMPS_beta(''' stamps_app_full ''')']);
-                                end
-                            else
-                                updateOutput(app, ['PHASE_StaMPS_beta.m not found in ' project_path_full ', please open it manually.']);
-                            end
-                        else
-                            updateOutput(app, ['You can open PHASE_StaMPS later from: ' stamps_app_full]);
-                        end
+                        updateOutput(app, 'Open the StaMPS PSI section in the PHASE hub when ready.');
 
                         %% ----------------------------------------------------
 
@@ -5252,34 +5227,9 @@ classdef LegacyEngine < matlab.apps.AppBase
                                 'PHASE_StaMPS_beta will create it when the initial settings are saved.']);
                         end
 
-                        % OPEN PHASE_StaMPS_beta (cross-platform). We change MATLAB
-                        % current directory to the StaMPS folder so the relative
-                        % paths inside PHASE_StaMPS (./input_StaMPS.mat, INSAR_*/,
-                        % diff0/, ...) resolve correctly, then launch the app.
                         stamps_app_full = fullfile(project_parent_path_full, stamps_folder);
-                        stamps_app_file = fullfile(app.InstallRoot, 'PHASE_Preprocessing', 'PHASE_StaMPS_beta.m');
                         updateOutput(app, ['Preprocessing completed. StaMPS dataset folder: ' stamps_app_full]);
-                        choice = 'Open now';
-                        if isfile(dst_input_mat)
-                            updateOutput(app, ['Opening PHASE_StaMPS_beta with the existing configuration in: ' stamps_app_full]);
-                        else
-                            updateOutput(app, ['Opening PHASE_StaMPS_beta to create the initial configuration in: ' stamps_app_full]);
-                        end
-                        if strcmp(choice, 'Open now')
-                            if isfile(stamps_app_file)
-                                updateOutput(app, ['Launching the canonical PHASE_StaMPS_beta runtime for: ' stamps_app_full]);
-                                try
-                                    phase_preprocessing_beta.launchStampsBeta(stamps_app_file, stamps_app_full);
-                                catch ex
-                                    updateOutput(app, ['Failed to launch PHASE_StaMPS: ' ex.message]);
-                                    updateOutput(app, ['Open it manually with: PHASE_StaMPS_beta(''' stamps_app_full ''')']);
-                                end
-                            else
-                                updateOutput(app, ['PHASE_StaMPS_beta.m not found in ' project_path_full ', please open it manually.']);
-                            end
-                        else
-                            updateOutput(app, ['You can open PHASE_StaMPS later from: ' stamps_app_full]);
-                        end
+                        updateOutput(app, 'Open the StaMPS PSI section in the PHASE hub when ready.');
 
                         %% ----------------------------------------------------
 

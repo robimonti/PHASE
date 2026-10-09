@@ -34,7 +34,8 @@ def test_preprocessing_project_engine_separates_code_from_generated_data(phase_r
     assert "phase_preprocessing_beta.stampsFolder(app.ProjectRoot)" in engine
     assert engine.count("phase_preprocessing_beta.scriptCommand(python,") == 16
     assert "project_path_full, par, 'snap2stamps', par, 'graphs'" not in engine
-    assert "stamps_app_file = fullfile(app.InstallRoot" in engine
+    assert "Open the StaMPS PSI section in the PHASE hub when ready." in engine
+    assert "phase_preprocessing_beta.launchStampsBeta(" not in engine
     assert "set -e\\n" in engine
     assert "system(chmod);" not in engine[engine.index("function StartButtonPushed"):]
     assert "_replace_checked" in extractor
@@ -76,9 +77,7 @@ def test_preprocessing_engine_exposes_every_stable_callback_as_text(phase_root):
         "initializeDownloaderMap",
     ):
         assert callback in engine_functions
-    assert engine.count(
-        "phase_preprocessing_beta.launchStampsBeta(stamps_app_file, stamps_app_full);"
-    ) == 2
+    assert engine.count("Open the StaMPS PSI section in the PHASE hub when ready.") == 2
     assert "canonical_stamps_app" not in engine
     assert "dest_mlapp" not in engine
     assert "copyfile(canonical_stamps_app" not in engine
@@ -89,6 +88,23 @@ def test_preprocessing_default_config_is_fully_represented_in_schema(phase_root)
     defaults = set(re.findall(r"^cfg\.(\w+)\s*=", _text(package / "defaultConfig.m"), re.M))
     schema_fields = set(re.findall(r"item\('([^']+)'", _text(package / "schema.m")))
     assert defaults == schema_fields
+
+
+def test_master_date_picker_and_per_acquisition_progress(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta"
+    view = phase_root / "PHASE_Preprocessing" / "phase_preprocessing_beta_ui"
+    schema = _text(package / "schema.m")
+    js = _text(view / "app.js")
+    styles = _text(view / "styles.css")
+    monitor = _text(package / "runCommandLive.m")
+    assert "'master_date','Manual master date','master','date'" in schema
+    assert 'control.type = "date"' in js
+    assert "availableMasterDates()" in js
+    assert 'String(value).replace(/[^0-9]/g, "")' in js
+    assert "#images-panel > .data-card:not(.wide)" in styles
+    assert "function [index,name] = parseItem(line)" in monitor
+    assert "Coregistration and interferograms" in monitor
+    assert "itemIndex,totalItems" in monitor
 
 
 def test_preprocessing_beta_resolves_python3_before_running_backends(phase_root):
@@ -280,7 +296,7 @@ def test_betas_have_no_runtime_mlapp_dependency(phase_root):
     assert "PHASE_Preprocessing.mlapp" not in controller
     assert "canonical_stamps_app" not in engine
     assert "dest_mlapp" not in engine
-    assert "phase_preprocessing_beta.launchStampsBeta" in engine
+    assert "phase_preprocessing_beta.launchStampsBeta" not in engine
     assert "phase_stamps_beta.App" in stamps_launcher
     assert "phase_stamps_beta.runProcessing" in stamps_controller
     assert "run(" not in stamps_launcher
@@ -390,11 +406,10 @@ def test_preprocessing_beta_creates_dataset_and_bootstraps_unconfigured_stamps(p
     )
     assert engine.count("if ~isfolder(stamps_folder_full)") == 2
     assert engine.count("mkdir(stamps_folder_full);") == 2
-    assert engine.count("if isfile(dst_input_mat)") >= 4
-    assert "StaMPS launch deferred" not in engine
-    assert engine.count("choice = 'Open now';") == 2
-    assert engine.count("Opening PHASE_StaMPS_beta to create the initial configuration") == 2
-    assert engine.count("phase_preprocessing_beta.launchStampsBeta") == 2
+    assert engine.count("if isfile(dst_input_mat)") == 2
+    assert engine.count("Open the StaMPS PSI section in the PHASE hub when ready.") == 2
+    assert "choice = 'Open now';" not in engine
+    assert "phase_preprocessing_beta.launchStampsBeta" not in engine
     launcher = _text(
         phase_root
         / "PHASE_Preprocessing"

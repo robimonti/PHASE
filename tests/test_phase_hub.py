@@ -70,3 +70,15 @@ def test_modules_can_embed_without_taking_ownership_of_hub_figure(phase_root):
         assert "obj.UIFigure = ancestor(parent,'figure')" in controller
         assert "uigridlayout(obj.HostContainer" in controller
         assert "if obj.OwnsFigure" in controller
+
+
+def test_completed_modules_offer_next_section_inside_hub(phase_root):
+    hub = (phase_root / "+phase_hub" / "App.m").read_text(encoding="utf-8")
+    preprocessing = (phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta" / "App.m").read_text(encoding="utf-8")
+    stamps = (phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta" / "App.m").read_text(encoding="utf-8")
+    assert "function offerNextStage(obj, completed)" in hub
+    assert "obj.refreshDatasets();" in hub
+    assert "obj.showSection(next);" in hub
+    assert "obj.UIFigure.UserData.offerNextStage('preprocessing')" in preprocessing
+    assert "obj.UIFigure.UserData.offerNextStage('stamps')" in stamps
+    assert "PHASE_Model_beta();" not in stamps
