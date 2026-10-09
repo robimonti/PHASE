@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 from pathlib import Path
 import platform
 import plistlib
@@ -46,21 +47,36 @@ def main() -> None:
         volume = stage / "volume"
         volume.mkdir()
         app = volume / "PHASE Installer.app"
+        bundle = app / "Contents"
+        contents = bundle / "Resources"
+        executable = bundle / "MacOS" / "PHASEInstaller"
+        contents.mkdir(parents=True)
+        executable.parent.mkdir(parents=True)
+        build_env = os.environ.copy()
+        if "DEVELOPER_DIR" not in build_env and Path("/Applications/Xcode.app/Contents/Developer").is_dir():
+            build_env["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
         subprocess.run([
-            "osacompile", "-o", str(app),
-            str(installer_dir / "PHASE-Installer.applescript")
-        ], check=True)
-        contents = app / "Contents" / "Resources"
+            "xcrun", "swiftc", "-parse-as-library", "-O", "-target", "arm64-apple-macos13.0",
+            "-module-cache-path", str(stage / "swift-module-cache"),
+            "-o", str(executable), str(installer_dir / "PHASEInstaller.swift")
+        ], env=build_env, check=True)
         shutil.copy2(installer_dir / "install-phase-unix.py", contents)
         shutil.copy2(installer_dir / "find-python-macos.sh", contents)
         shutil.copy2(installer_dir / "PHASE.icns", contents)
-        shutil.copy2(installer_dir / "PHASE.icns", contents / "applet.icns")
-        plist_path = app / "Contents" / "Info.plist"
-        with plist_path.open("rb") as stream:
-            plist = plistlib.load(stream)
-        plist["CFBundleIconFile"] = "applet.icns"
-        plist["CFBundleIdentifier"] = "org.phaseinsar.phase.installer"
-        plist["CFBundleDisplayName"] = "PHASE Installer"
+        shutil.copy2(root / "PHASE_logo.png", contents)
+        plist_path = bundle / "Info.plist"
+        plist = {
+            "CFBundleName": "PHASE Installer",
+            "CFBundleDisplayName": "PHASE Installer",
+            "CFBundleIdentifier": "org.phaseinsar.phase.installer",
+            "CFBundleVersion": "7.0.0",
+            "CFBundleShortVersionString": "7.0.0",
+            "CFBundleExecutable": "PHASEInstaller",
+            "CFBundlePackageType": "APPL",
+            "CFBundleIconFile": "PHASE.icns",
+            "LSMinimumSystemVersion": "13.0",
+            "NSHighResolutionCapable": True,
+        }
         with plist_path.open("wb") as stream:
             plistlib.dump(plist, stream)
         installer.SOURCE_FOR_COPY = root

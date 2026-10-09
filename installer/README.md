@@ -115,11 +115,14 @@ macOS, una revisione delle licenze/distribuzione e firma/notarizzazione.
   un solo EXE; non serve passare argomenti a riga di comando all'utente.
 - **macOS Apple Silicon:** costruire `PHASE-7-macos-arm64.dmg` con
   `python3 installer/build-macos-dmg.py --output /path/PHASE-7-macos-arm64.dmg`.
-  Il DMG contiene un'app installer con finestre native e una copia del motore;
+  Il DMG contiene un wizard nativo SwiftUI a sette passi, con palette e struttura
+  visiva dell'installer Windows, e una copia del motore;
   crea poi `~/Applications/PHASE.app` con icona PHASE. MATLAB, SNAP e Python 3.10+
   con `venv` sono prerequisiti esterni. Per una distribuzione senza avvisi di
   Gatekeeper, usare `--sign-identity` e `--notary-profile` con credenziali
-  Apple Developer ID configurate. Il DMG costruito senza queste opzioni è
+  Apple Developer ID configurate. Per compilare il wizard serve la toolchain
+  Swift di Xcode; l'utente finale non deve installare Xcode. Il DMG costruito
+  senza firma/notarizzazione è
   solo una preview locale.
 - **Linux:** su Linux x86_64 o aarch64, con `appimagetool`, costruire
   `PHASE-7-linux.AppImage` tramite
