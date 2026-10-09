@@ -9,35 +9,52 @@ on run
     try
         set pythonPath to do shell script ("sh " & quoted form of (resourcesRoot & "find-python-macos.sh"))
     on error
-        display dialog "Per installare PHASE serve Python 3.10 o più recente con venv. Se è installato, seleziona il suo eseguibile; altrimenti installalo e riapri questo installer." buttons {"Seleziona", "Annulla"} default button "Seleziona" with icon caution
-        set pythonPath to POSIX path of (choose file with prompt "Eseguibile Python 3.10+")
+        display dialog "PHASE needs Python 3.10 or newer with venv. Select its executable, or install Python and reopen this installer." buttons {"Select", "Cancel"} default button "Select" with icon caution
+        set pythonPath to POSIX path of (choose file with prompt "Python 3.10+ executable")
     end try
 
     set matlabPath to do shell script "ls -1d /Applications/MATLAB_R*.app/bin/matlab 2>/dev/null | tail -n 1"
     if matlabPath is "" then
-        display dialog "Seleziona l'eseguibile matlab dentro MATLAB_R*.app/bin." buttons {"Seleziona", "Annulla"} default button "Seleziona"
-        set matlabPath to POSIX path of (choose file with prompt "Eseguibile MATLAB")
+        display dialog "Select the matlab executable inside MATLAB_R*.app/bin." buttons {"Select", "Cancel"} default button "Select"
+        set matlabPath to POSIX path of (choose file with prompt "MATLAB executable")
     end if
 
     set snapPath to "/Applications/esa-snap/bin/gpt"
     try
         do shell script "test -x " & quoted form of snapPath
     on error
-        display dialog "Seleziona l'eseguibile gpt di ESA SNAP." buttons {"Seleziona", "Annulla"} default button "Seleziona"
-        set snapPath to POSIX path of (choose file with prompt "Eseguibile SNAP gpt")
+        display dialog "Select the ESA SNAP gpt executable." buttons {"Select", "Cancel"} default button "Select"
+        set snapPath to POSIX path of (choose file with prompt "SNAP gpt executable")
     end try
 
-    set answer to display dialog "PHASE sarà installato nella tua cartella utente e apparirà in Applicazioni. MATLAB e SNAP resteranno nelle loro installazioni attuali. Continuare?" buttons {"Annulla", "Installa PHASE"} default button "Installa PHASE" with icon note
-    if button returned of answer is not "Installa PHASE" then return
+    set runtimeArgs to ""
+    try
+        do shell script "test -f " & quoted form of (resourcesRoot & "StaMPS/matlab/stamps.m") & " -a -f " & quoted form of (resourcesRoot & "TRAIN/matlab/aps_linear.m")
+        set runtimeArgs to " --stamps " & quoted form of (resourcesRoot & "StaMPS") & " --train " & quoted form of (resourcesRoot & "TRAIN")
+        set psiMessage to "This installer includes the Apple Silicon StaMPS and TRAIN runtime."
+    on error
+        set psiMessage to "This installer does not include a native PSI runtime. Preprocessing and Modeling can be installed, but StaMPS processing will need a prepared runtime."
+    end try
 
-    display notification "L'installazione può richiedere alcuni minuti." with title "PHASE"
-    set commandText to quoted form of pythonPath & " " & quoted form of installerScript & " --source " & quoted form of engineSource & " --python " & quoted form of pythonPath & " --matlab " & quoted form of matlabPath & " --gpt " & quoted form of snapPath
+    set answer to display dialog "PHASE is installed once in your user Applications folder. You can create any number of projects in folders anywhere you choose; project data stays separate from the app. MATLAB and SNAP remain in their current locations.\n\n" & psiMessage buttons {"Cancel", "Install PHASE"} default button "Install PHASE" with icon note
+    if button returned of answer is not "Install PHASE" then return
+
+    display notification "Installation may take a few minutes." with title "PHASE"
+    set commandText to quoted form of pythonPath & " " & quoted form of installerScript & " --source " & quoted form of engineSource & " --python " & quoted form of pythonPath & " --matlab " & quoted form of matlabPath & " --gpt " & quoted form of snapPath & runtimeArgs
     try
         with timeout of 3600 seconds
             set installResult to do shell script commandText & " 2>&1"
         end timeout
-        display dialog "PHASE è installato. Apri PHASE.app dalla cartella Applicazioni del tuo utente.\n\n" & installResult buttons {"OK"} default button "OK" with icon note
+        set finishAnswer to display dialog "PHASE is installed. Open PHASE.app from your user Applications folder, or launch it now.\n\n" & installResult buttons {"Close", "Launch PHASE"} default button "Launch PHASE" with icon note
+        if button returned of finishAnswer is "Launch PHASE" then
+            set appPath to (POSIX path of (path to home folder)) & "Library/Application Support/PHASE/PHASE.app"
+            try
+                do shell script "open " & quoted form of appPath
+            on error launchError
+                display dialog "PHASE was installed, but could not launch automatically:\n\n" & launchError buttons {"OK"} default button "OK" with icon caution
+            end try
+        end if
     on error messageText
-        display dialog "Installazione non riuscita:\n\n" & messageText buttons {"OK"} default button "OK" with icon caution
+        display dialog "Installation failed:\n\n" & messageText buttons {"OK"} default button "OK" with icon caution
     end try
 end run

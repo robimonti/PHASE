@@ -56,7 +56,8 @@ dei file non equivalgono a una verifica end-to-end del processing.
 #### Stato del porting PSI su macOS Apple Silicon
 
 Il fork `pyccino/StaMPS` usato da PHASE è stato compilato su Apple Silicon:
-sette binari arm64 e sette test CTest passano. Il launcher Unix imposta ora
+sette binari arm64 e sette test CTest passano. SNAPHU, Triangle e GNU awk
+sono stati compilati per arm64 e inclusi nel runtime di prova. Il launcher Unix imposta ora
 `STAMPS`, `APS_toolbox`, MATLAB e i percorsi dei binari; l'installer sostituisce
 le configurazioni upstream con percorsi locali reali. I comandi di preparazione
 StaMPS falliscono esplicitamente se un prerequisito o il processing fallisce,
@@ -65,7 +66,7 @@ anche quando i progetti contengono spazi nel percorso.
 Per preparare un runtime di prova prima di integrare tutto nel DMG:
 
 ```bash
-brew install cmake gawk
+brew install cmake
 git clone https://github.com/pyccino/StaMPS.git /path/to/StaMPS-source
 git clone https://github.com/pyccino/TRAIN.git /path/to/TRAIN-source
 python3 installer/prepare-macos-runtime.py \
@@ -73,20 +74,32 @@ python3 installer/prepare-macos-runtime.py \
   --train-source /path/to/TRAIN-source \
   --snaphu /path/to/arm64/snaphu \
   --triangle /path/to/arm64/triangle \
+  --gawk /path/to/arm64/gawk \
   --output /path/to/phase-macos-runtime
 ./installer/install-phase-macos.command --source "$PWD" \
   --stamps /path/to/phase-macos-runtime/StaMPS \
   --train /path/to/phase-macos-runtime/TRAIN
 ```
 
-SNAPHU e il programma Triangle di Shewchuk vanno ottenuti separatamente dalle
+SNAPHU, GNU awk e il programma Triangle di Shewchuk vanno ottenuti separatamente dalle
 [pagine Stanford](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/)
-e [CMU](https://www.cs.cmu.edu/~quake/triangle.html) e compilati per arm64.
+e [CMU](https://www.cs.cmu.edu/~quake/triangle.html), e dal
+[progetto GNU awk](https://www.gnu.org/software/gawk/), e compilati per arm64.
 Non usare il pacchetto Homebrew `triangle`: è un programma omonimo diverso.
-Entrambi hanno condizioni di licenza da verificare prima di includerli in un
-DMG pubblico. Il DMG attuale installa il solo motore PHASE e non può ancora
-essere presentato come installer PSI completo. Mancano la prova di una pipeline
-reale macOS e l'integrazione guidata delle dipendenze native nel wizard.
+Questi componenti hanno condizioni di licenza da verificare prima di includerli in un
+DMG pubblico. Per una **preview locale** che includa il runtime già preparato:
+
+```bash
+python3 installer/build-macos-dmg.py \
+  --runtime /path/to/phase-macos-runtime \
+  --output /path/to/PHASE-7-macos-arm64-preview.dmg
+```
+
+Senza `--runtime`, il DMG installa il solo motore PHASE e lo dichiara nel
+wizard. Con `--runtime`, la GUI installa StaMPS/TRAIN insieme all'app, senza
+chiedere all'utente di scegliere manualmente le loro cartelle. La preview non
+è una release pubblica: mancano una prova della pipeline PSI su dati reali
+macOS, una revisione delle licenze/distribuzione e firma/notarizzazione.
 
 ### Pacchetti grafici da distribuire
 

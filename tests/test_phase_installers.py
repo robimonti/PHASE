@@ -95,6 +95,7 @@ def test_macos_runtime_builder_never_writes_inside_source(phase_root, tmp_path, 
     train.mkdir()
     with pytest.raises(RuntimeError, match="must be separate"):
         module.prepare(stamps, train, tmp_path / "snaphu", tmp_path / "triangle",
+                       tmp_path / "gawk",
                        stamps / "runtime")
     assert not (stamps / "runtime").exists()
 
@@ -107,7 +108,30 @@ def test_macos_installer_reports_missing_native_psi_tools(phase_root, tmp_path):
     assert "StaMPS/bin/calamp" in missing
     assert "snaphu" in missing
     assert "triangle" in missing
+    assert "gawk" in missing
     assert any("TRAIN runtime" in item for item in missing)
+
+
+def test_macos_installer_accepts_complete_arm64_psi_runtime(phase_root, tmp_path, monkeypatch):
+    installer = load_unix_installer(phase_root)
+    stamps = tmp_path / "StaMPS"
+    train = tmp_path / "TRAIN"
+    for name in ("calamp", "cpxsum", "pscphase", "pscdem", "psclonlat",
+                 "selpsc_patch", "selsbc_patch"):
+        binary = stamps / "bin" / name
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        binary.write_bytes(b"arm64 binary")
+        binary.chmod(0o755)
+    for name in ("snaphu", "triangle", "gawk"):
+        binary = stamps / "external" / name / "bin" / name
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        binary.write_bytes(b"arm64 binary")
+        binary.chmod(0o755)
+    (train / "matlab").mkdir(parents=True)
+    (train / "matlab" / "aps_linear.m").write_text("", encoding="utf-8")
+    monkeypatch.setattr(installer.subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0, "arm64\n", ""))
+    assert installer.macos_psi_missing(stamps, train) == []
 
 
 def test_windows_installer_has_one_hub_shortcut(phase_root):

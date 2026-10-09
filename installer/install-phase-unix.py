@@ -126,21 +126,26 @@ def validate_external(path: str | None, kind: str) -> Path | None:
 
 def macos_psi_missing(stamps: Path | None, train: Path | None) -> list[str]:
     """Report prerequisites before claiming an Apple Silicon PSI runtime."""
+    def native(path: Path) -> bool:
+        if not path.is_file() or not os.access(path, os.X_OK):
+            return False
+        result = subprocess.run(["lipo", "-archs", str(path)],
+                                capture_output=True, text=True, check=False)
+        return result.returncode == 0 and "arm64" in result.stdout.split()
+
     missing = []
     if stamps is None:
         missing.append("StaMPS runtime")
     else:
         for name in ("calamp", "cpxsum", "pscphase", "pscdem", "psclonlat",
                      "selpsc_patch", "selsbc_patch"):
-            if not (stamps / "bin" / name).is_file():
+            if not native(stamps / "bin" / name):
                 missing.append(f"StaMPS/bin/{name}")
-        for name in ("snaphu", "triangle"):
-            if not (stamps / "external" / name / "bin" / name).is_file():
+        for name in ("snaphu", "triangle", "gawk"):
+            if not native(stamps / "external" / name / "bin" / name):
                 missing.append(name)
-    if train is None:
+    if train is None or not (train / "matlab" / "aps_linear.m").is_file():
         missing.append("TRAIN runtime (optional if correction is disabled)")
-    if not (shutil.which("gawk") or Path("/opt/homebrew/bin/gawk").is_file()):
-        missing.append("gawk")
     return missing
 
 
@@ -188,6 +193,7 @@ def write_launcher(path: Path, prefix: Path, matlab: Path, gpt: Path, python: Pa
         f"{shlex.quote(str(stamps / 'bin'))}:"
         f"{shlex.quote(str(stamps / 'external' / 'snaphu' / 'bin'))}:"
         f"{shlex.quote(str(stamps / 'external' / 'triangle' / 'bin'))}:"
+        f"{shlex.quote(str(stamps / 'external' / 'gawk' / 'bin'))}:"
         f"{shlex.quote(str(python.parent))}:\"$PATH\"\n"
         f"{shlex.quote(str(python))} {shlex.quote(str(engine / 'phase_update.py'))} "
         f"apply --prefix {shlex.quote(str(prefix))}\n"
@@ -206,7 +212,7 @@ def configure_unix_runtimes(stage: Path, prefix: Path) -> None:
             f"export STAMPS={shlex.quote(str(prefix / 'engine' / 'StaMPS'))}\n"
             'export MATLABPATH="$STAMPS/matlab${MATLABPATH:+:$MATLABPATH}"\n'
             'export PATH="$STAMPS/bin:$STAMPS/external/snaphu/bin:'
-            '$STAMPS/external/triangle/bin:$PATH"\n',
+            '$STAMPS/external/triangle/bin:$STAMPS/external/gawk/bin:$PATH"\n',
             encoding="utf-8",
         )
     train = stage / "engine" / "TRAIN"

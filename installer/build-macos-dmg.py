@@ -18,6 +18,8 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--sign-identity", help="Developer ID Application identity")
     parser.add_argument("--notary-profile", help="notarytool keychain profile")
+    parser.add_argument("--runtime", type=Path,
+                        help="Prepared StaMPS/TRAIN runtime for a local PSI installer preview")
     args = parser.parse_args()
     if args.notary_profile and not args.sign_identity:
         parser.error("--notary-profile requires --sign-identity")
@@ -30,6 +32,11 @@ def main() -> None:
     installer = importlib.util.module_from_spec(source_spec)
     source_spec.loader.exec_module(installer)
     installer.validate_runtime(root)
+    runtime = args.runtime.expanduser().resolve() if args.runtime else None
+    if runtime:
+        missing = installer.macos_psi_missing(runtime / "StaMPS", runtime / "TRAIN")
+        if missing:
+            raise RuntimeError("Incomplete Apple Silicon PSI runtime: " + ", ".join(missing))
     output = args.output.expanduser().resolve()
     if root in output.parents:
         raise RuntimeError("Build the DMG outside the source checkout.")
@@ -58,6 +65,9 @@ def main() -> None:
             plistlib.dump(plist, stream)
         installer.SOURCE_FOR_COPY = root
         shutil.copytree(root, contents / "engine", ignore=installer.ignored)
+        if runtime:
+            shutil.copytree(runtime / "StaMPS", contents / "StaMPS")
+            shutil.copytree(runtime / "TRAIN", contents / "TRAIN")
         signing = ["codesign", "--force", "--deep", "--sign",
                    args.sign_identity or "-"]
         if args.sign_identity:
