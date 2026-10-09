@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
@@ -53,7 +55,59 @@ def test_unix_launcher_targets_installed_hub(phase_root, tmp_path):
     assert "PHASE_GPTBIN=" in content
     assert "PHASE_PYTHON=" in content
     assert "PHASE with spaces/engine" in content
+    assert "export STAMPS=" in content
+    assert "export APS_toolbox=" in content
+    assert "/opt/MATLAB/bin:" in content
+    assert "StaMPS/matlab" in content
+    assert "TRAIN/matlab" in content
     assert launcher.stat().st_mode & 0o111
+
+
+def test_unix_runtime_configs_do_not_use_upstream_example_paths(phase_root, tmp_path):
+    installer = load_unix_installer(phase_root)
+    stage = tmp_path / "stage"
+    (stage / "engine" / "StaMPS").mkdir(parents=True)
+    (stage / "engine" / "TRAIN").mkdir(parents=True)
+    prefix = tmp_path / "PHASE with spaces"
+    installer.configure_unix_runtimes(stage, prefix)
+    stamps = (stage / "engine" / "StaMPS" / "StaMPS_CONFIG.bash").read_text()
+    train = (stage / "engine" / "TRAIN" / "APS_CONFIG.sh").read_text()
+    assert str(prefix / "engine" / "StaMPS") in stamps
+    assert str(prefix / "engine" / "TRAIN") in train
+    assert "/home/ahooper" not in stamps
+    assert "/nfs/see-fs" not in train
+    if shutil.which("bash"):
+        subprocess.run(["bash", "-n", str(stage / "engine" / "StaMPS" / "StaMPS_CONFIG.bash")], check=True)
+        subprocess.run(["bash", "-n", str(stage / "engine" / "TRAIN" / "APS_CONFIG.sh")], check=True)
+
+
+def test_macos_runtime_builder_never_writes_inside_source(phase_root, tmp_path, monkeypatch):
+    path = phase_root / "installer" / "prepare-macos-runtime.py"
+    spec = importlib.util.spec_from_file_location("phase_macos_runtime", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(module.platform, "machine", lambda: "arm64")
+    stamps = tmp_path / "StaMPS"
+    train = tmp_path / "TRAIN"
+    stamps.mkdir()
+    train.mkdir()
+    with pytest.raises(RuntimeError, match="must be separate"):
+        module.prepare(stamps, train, tmp_path / "snaphu", tmp_path / "triangle",
+                       stamps / "runtime")
+    assert not (stamps / "runtime").exists()
+
+
+def test_macos_installer_reports_missing_native_psi_tools(phase_root, tmp_path):
+    installer = load_unix_installer(phase_root)
+    stamps = tmp_path / "StaMPS"
+    stamps.mkdir()
+    missing = installer.macos_psi_missing(stamps, None)
+    assert "StaMPS/bin/calamp" in missing
+    assert "snaphu" in missing
+    assert "triangle" in missing
+    assert any("TRAIN runtime" in item for item in missing)
 
 
 def test_windows_installer_has_one_hub_shortcut(phase_root):

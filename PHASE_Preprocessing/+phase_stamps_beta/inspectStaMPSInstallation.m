@@ -55,6 +55,29 @@ if requireWindowsBinaries
     end
 end
 
+if ismac
+    requiredMac = { ...
+        fullfile('bin','calamp'), fullfile('bin','cpxsum'), ...
+        fullfile('bin','pscphase'), fullfile('bin','pscdem'), ...
+        fullfile('bin','psclonlat'), fullfile('bin','selpsc_patch'), ...
+        fullfile('bin','selsbc_patch'), ...
+        fullfile('external','snaphu','bin','snaphu'), ...
+        fullfile('external','triangle','bin','triangle')};
+    for k = 1:numel(requiredMac)
+        if ~isfile(fullfile(folder,requiredMac{k}))
+            report.missingBinaries{end+1} = requiredMac{k}; %#ok<AGROW>
+        end
+    end
+    if ~isempty(report.missingBinaries)
+        report.errors{end+1} = sprintf( ...
+            'Apple Silicon StaMPS runtime is missing: %s. Prepare native arm64 tools first.', ...
+            strjoin(report.missingBinaries,', '));
+    end
+    if isempty(which('gawk')) && system('command -v gawk >/dev/null 2>&1') ~= 0
+        report.errors{end+1} = 'StaMPS needs GNU awk (gawk); install it before PSI processing.';
+    end
+end
+
 report.ok = isempty(report.errors);
 end
 

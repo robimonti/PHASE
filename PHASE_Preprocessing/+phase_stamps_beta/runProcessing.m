@@ -306,6 +306,10 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         end
         if isunix
             stamps_path = which('StaMPS_CONFIG.bash');
+            if isempty(stamps_path)
+                error('PHASE_StaMPS:stampsConfigMissing', ...
+                    'StaMPS_CONFIG.bash is missing from the selected StaMPS runtime.');
+            end
         else
             stamps_path = which('StaMPS_CONFIG.ps1');
         end
@@ -318,9 +322,16 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         stamps_last_step = str2double(stamps_last_step);
 
         % DEFINITION OF THE TASKS
-        source_stamps = [source space stamps_path];
-        source_stamps = strcat(source_stamps, ' -echo');
-        source_snap = [mt_prep_snap space master_date space s2s_export_path space amplitude_threshold];
+        if isunix
+            source_stamps = ['source ' phase_stamps_beta.quotePosix(stamps_path)];
+            source_snap = strjoin({mt_prep_snap, ...
+                phase_stamps_beta.quotePosix(master_date), ...
+                phase_stamps_beta.quotePosix(s2s_export_path), ...
+                phase_stamps_beta.quotePosix(amplitude_threshold)},' ');
+        else
+            source_stamps = [source space stamps_path ' -echo'];
+            source_snap = [mt_prep_snap space master_date space s2s_export_path space amplitude_threshold];
+        end
 
         % EXECUTION OF THE TASKS
         if stamps_preparation == 0 % check if the StaMPS preparation has to be done or not
@@ -359,9 +370,14 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
 else
     train_path = '';   % Windows: TRAIN on MATLABPATH, no shell config to source
 end
-                source_train = [source space train_path];
+                if isunix && isempty(train_path)
+                    error('PHASE_StaMPS:trainConfigMissing', ...
+                        'APS_CONFIG.sh is missing from the selected TRAIN runtime.');
+                end
+                source_train = ['source ' phase_stamps_beta.quotePosix(train_path)];
                 if isunix
-    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train, source_snap}, ';'), 'StaMPS, TRAIN and SNAP environment preparation');
+    [prep_status,~] = phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train, source_snap}, ' && '), 'StaMPS, TRAIN and SNAP environment preparation');
+    if prep_status ~= 0, error('PHASE_StaMPS:mtPrepSnapFailed','StaMPS data preparation failed (exit %d).',prep_status); end
 else
     [mt_prep_snap_status, mt_prep_snap_output] = ...
     phase_stamps_beta.runCommandHidden(app, ...
@@ -375,7 +391,8 @@ error('PHASE_StaMPS:mtPrepSnapFailed', ...
 end % source all the softwares and prepare the data
             else
                 if isunix
-    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_snap}, ';'), 'StaMPS and SNAP environment preparation');
+    [prep_status,~] = phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_snap}, ' && '), 'StaMPS and SNAP environment preparation');
+    if prep_status ~= 0, error('PHASE_StaMPS:mtPrepSnapFailed','StaMPS data preparation failed (exit %d).',prep_status); end
 else
     [mt_prep_snap_status, mt_prep_snap_output] = ...
     phase_stamps_beta.runCommandHidden(app, ...
@@ -399,16 +416,19 @@ end % source all the softwares and prepare the data
 
             if tropo_correction_enabled % TRAIN correction is effectively enabled
                 train_path = which('APS_CONFIG.sh');
-                source_train = [source space train_path];
                 if isunix
-    phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train}, ';'), 'StaMPS and TRAIN environment preparation');
+    if isempty(train_path), error('PHASE_StaMPS:trainConfigMissing','APS_CONFIG.sh is missing from the selected TRAIN runtime.'); end
+    source_train = ['source ' phase_stamps_beta.quotePosix(train_path)];
+    [prep_status,~] = phase_stamps_beta.runCommandHidden(app, strjoin({source_stamps, source_train}, ' && '), 'StaMPS and TRAIN environment preparation');
+    if prep_status ~= 0, error('PHASE_StaMPS:environmentFailed','StaMPS/TRAIN environment setup failed (exit %d).',prep_status); end
 else
     % Windows: when train_flag==0 reaches here, Change #1 has already
     % verified TRAIN is on MATLABPATH; no shell config to source.
 end % source all the softwares and prepare the data
             else
                 if isunix
-    phase_stamps_beta.runCommandHidden(app, source_stamps, 'StaMPS environment preparation');
+    [prep_status,~] = phase_stamps_beta.runCommandHidden(app, source_stamps, 'StaMPS environment preparation');
+    if prep_status ~= 0, error('PHASE_StaMPS:environmentFailed','StaMPS environment setup failed (exit %d).',prep_status); end
 else
     % Environment comes from self-bootstrapping .bat shim
 end % source all the softwares and prepare the data

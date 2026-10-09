@@ -124,6 +124,26 @@ def validate_external(path: str | None, kind: str) -> Path | None:
     return root
 
 
+def macos_psi_missing(stamps: Path | None, train: Path | None) -> list[str]:
+    """Report prerequisites before claiming an Apple Silicon PSI runtime."""
+    missing = []
+    if stamps is None:
+        missing.append("StaMPS runtime")
+    else:
+        for name in ("calamp", "cpxsum", "pscphase", "pscdem", "psclonlat",
+                     "selpsc_patch", "selsbc_patch"):
+            if not (stamps / "bin" / name).is_file():
+                missing.append(f"StaMPS/bin/{name}")
+        for name in ("snaphu", "triangle"):
+            if not (stamps / "external" / name / "bin" / name).is_file():
+                missing.append(name)
+    if train is None:
+        missing.append("TRAIN runtime (optional if correction is disabled)")
+    if not (shutil.which("gawk") or Path("/opt/homebrew/bin/gawk").is_file()):
+        missing.append("gawk")
+    return missing
+
+
 def ignored(directory: str, names: list[str]) -> set[str]:
     current = Path(directory)
     blocked = {name for name in names if name in {"__pycache__", ".DS_Store"}
@@ -144,22 +164,60 @@ SOURCE_FOR_COPY = Path("/")
 
 def write_launcher(path: Path, prefix: Path, matlab: Path, gpt: Path, python: Path) -> None:
     engine = prefix / "engine"
+    stamps = engine / "StaMPS"
+    train = engine / "TRAIN"
     matlab_root = str(engine).replace("'", "''")
+    stamps_matlab = str(stamps / "matlab").replace("'", "''")
+    train_root = str(train).replace("'", "''")
+    train_matlab = str(train / "matlab").replace("'", "''")
     expression = (
         f"addpath('{matlab_root}'); "
-        f"addpath(fullfile('{matlab_root}','PHASE_Preprocessing')); PHASE_Hub"
+        f"addpath(fullfile('{matlab_root}','PHASE_Preprocessing')); "
+        f"if isfolder('{stamps_matlab}'), addpath('{stamps_matlab}'); end; "
+        f"if isfolder('{train_matlab}'), addpath('{train_root}'); "
+        f"addpath(genpath('{train_matlab}')); end; "
+        "PHASE_Hub"
     )
     content = (
         "#!/bin/sh\nset -eu\n"
         f"export PHASE_GPTBIN={shlex.quote(str(gpt))}\n"
         f"export PHASE_PYTHON={shlex.quote(str(python))}\n"
-        f"export PATH={shlex.quote(str(python.parent))}:\"$PATH\"\n"
+        f"export STAMPS={shlex.quote(str(stamps))}\n"
+        f"export APS_toolbox={shlex.quote(str(train))}\n"
+        f"export PATH=/opt/homebrew/bin:{shlex.quote(str(matlab.parent))}:"
+        f"{shlex.quote(str(stamps / 'bin'))}:"
+        f"{shlex.quote(str(stamps / 'external' / 'snaphu' / 'bin'))}:"
+        f"{shlex.quote(str(stamps / 'external' / 'triangle' / 'bin'))}:"
+        f"{shlex.quote(str(python.parent))}:\"$PATH\"\n"
         f"{shlex.quote(str(python))} {shlex.quote(str(engine / 'phase_update.py'))} "
         f"apply --prefix {shlex.quote(str(prefix))}\n"
         f"exec {shlex.quote(str(matlab))} -desktop -r {shlex.quote(expression)}\n"
     )
     path.write_text(content, encoding="utf-8")
     path.chmod(0o755)
+
+
+def configure_unix_runtimes(stage: Path, prefix: Path) -> None:
+    """Replace upstream example paths with relocatable, per-user paths."""
+    stamps = stage / "engine" / "StaMPS"
+    if stamps.is_dir():
+        (stamps / "StaMPS_CONFIG.bash").write_text(
+            "# PHASE-managed StaMPS environment.\n"
+            f"export STAMPS={shlex.quote(str(prefix / 'engine' / 'StaMPS'))}\n"
+            'export MATLABPATH="$STAMPS/matlab${MATLABPATH:+:$MATLABPATH}"\n'
+            'export PATH="$STAMPS/bin:$STAMPS/external/snaphu/bin:'
+            '$STAMPS/external/triangle/bin:$PATH"\n',
+            encoding="utf-8",
+        )
+    train = stage / "engine" / "TRAIN"
+    if train.is_dir():
+        (train / "APS_CONFIG.sh").write_text(
+            "# PHASE-managed TRAIN environment.\n"
+            f"export APS_toolbox={shlex.quote(str(prefix / 'engine' / 'TRAIN'))}\n"
+            'export MATLABPATH="$APS_toolbox/matlab${MATLABPATH:+:$MATLABPATH}"\n'
+            'export PATH="$APS_toolbox/bin:$PATH"\n',
+            encoding="utf-8",
+        )
 
 
 def create_macos_app(stage: Path, prefix: Path) -> None:
@@ -243,6 +301,10 @@ def install(args: argparse.Namespace) -> dict[str, str]:
         validate_runtime(source)
     stamps = validate_external(args.stamps, "stamps")
     train = validate_external(args.train, "train")
+    psi_missing = macos_psi_missing(stamps, train) if system == "macos" else []
+    if stamps and not args.dry_run and any(item != "TRAIN runtime (optional if correction is disabled)"
+                                      for item in psi_missing):
+        raise RuntimeError("Incomplete macOS PSI runtime: " + ", ".join(psi_missing))
     ensure_safe_prefix(prefix, source)
     plan = {
         "system": system, "prefix": str(prefix),
@@ -250,6 +312,7 @@ def install(args: argparse.Namespace) -> dict[str, str]:
         "matlab": str(matlab), "gpt": str(gpt), "python": str(python),
         "stamps": str(stamps) if stamps else "not supplied",
         "train": str(train) if train else "not supplied",
+        "psiRuntimeMissing": psi_missing,
         "pythonDependencies": "skipped" if args.skip_python_deps else ", ".join(PYTHON_PACKAGES),
     }
     if args.dry_run:
@@ -273,6 +336,7 @@ def install(args: argparse.Namespace) -> dict[str, str]:
             shutil.copytree(stamps, stage / "engine" / "StaMPS")
         if train:
             shutil.copytree(train, stage / "engine" / "TRAIN")
+        configure_unix_runtimes(stage, prefix)
         if args.skip_python_deps:
             installed_python = python
         else:

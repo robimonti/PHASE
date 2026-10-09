@@ -53,6 +53,41 @@ L'installer macOS rifiuta Apple Intel. Linux non è ancora stato testato con
 un'installazione completa su una macchina Linux; il wrapper e la preparazione
 dei file non equivalgono a una verifica end-to-end del processing.
 
+#### Stato del porting PSI su macOS Apple Silicon
+
+Il fork `pyccino/StaMPS` usato da PHASE è stato compilato su Apple Silicon:
+sette binari arm64 e sette test CTest passano. Il launcher Unix imposta ora
+`STAMPS`, `APS_toolbox`, MATLAB e i percorsi dei binari; l'installer sostituisce
+le configurazioni upstream con percorsi locali reali. I comandi di preparazione
+StaMPS falliscono esplicitamente se un prerequisito o il processing fallisce,
+anche quando i progetti contengono spazi nel percorso.
+
+Per preparare un runtime di prova prima di integrare tutto nel DMG:
+
+```bash
+brew install cmake gawk
+git clone https://github.com/pyccino/StaMPS.git /path/to/StaMPS-source
+git clone https://github.com/pyccino/TRAIN.git /path/to/TRAIN-source
+python3 installer/prepare-macos-runtime.py \
+  --stamps-source /path/to/StaMPS-source \
+  --train-source /path/to/TRAIN-source \
+  --snaphu /path/to/arm64/snaphu \
+  --triangle /path/to/arm64/triangle \
+  --output /path/to/phase-macos-runtime
+./installer/install-phase-macos.command --source "$PWD" \
+  --stamps /path/to/phase-macos-runtime/StaMPS \
+  --train /path/to/phase-macos-runtime/TRAIN
+```
+
+SNAPHU e il programma Triangle di Shewchuk vanno ottenuti separatamente dalle
+[pagine Stanford](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/)
+e [CMU](https://www.cs.cmu.edu/~quake/triangle.html) e compilati per arm64.
+Non usare il pacchetto Homebrew `triangle`: è un programma omonimo diverso.
+Entrambi hanno condizioni di licenza da verificare prima di includerli in un
+DMG pubblico. Il DMG attuale installa il solo motore PHASE e non può ancora
+essere presentato come installer PSI completo. Mancano la prova di una pipeline
+reale macOS e l'integrazione guidata delle dipendenze native nel wizard.
+
 ### Pacchetti grafici da distribuire
 
 - **Windows:** compilare `install-phase.exe` su Windows con

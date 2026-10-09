@@ -41,13 +41,14 @@ trainRoot = findTrainRoot(cfg,stampsRoot);
 if ~isempty(trainRoot)
     trainMatlab = fullfile(trainRoot,'matlab');
     if isfolder(trainMatlab)
+        addpath(trainRoot); % APS_CONFIG.sh lives at the TRAIN root.
         addpath(genpath(trainMatlab));
         messages{end+1} = ['TRAIN runtime ready: ' trainRoot];
     end
 elseif cfg.train_flag == 0 && strcmpi(strtrim(cfg.subtr_tropo),'y')
     error('PHASE_StaMPS_beta:trainRuntimeMissing', ...
         ['TRAIN correction is enabled, but no TRAIN clone was found beside ', ...
-         'PHASE/StaMPS. Run prepare-windows-runtime.ps1 or disable TRAIN.']);
+         'StaMPS. Install a prepared TRAIN runtime or disable TRAIN.']);
 end
 end
 

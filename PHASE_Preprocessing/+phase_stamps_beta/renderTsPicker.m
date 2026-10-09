@@ -36,13 +36,25 @@ navy = [0.078 0.149 0.275];
 muted = [0.39 0.47 0.61];
 surface = [0.965 0.978 0.997];
 host.BackgroundColor = surface;
+previousScrollable = host.Scrollable;
+host.Scrollable = 'on';
 topfig = ancestor(host,'figure');
 previousClick = topfig.WindowButtonDownFcn;
+previousResize = host.SizeChangedFcn;
+previousAutoResize = host.AutoResizeChildren;
 pickMode = false;
 selectedRow = [];
 markers = gobjects(0);
 
-root = uigridlayout(host,[2 2]);
+% A grid that only fills the viewport never overflows, so Scrollable alone
+% has no effect. Give the picker a minimum canvas height and resize it with
+% the viewport; short remote-desktop windows can then scroll vertically.
+canvas = uipanel(host,'BorderType','none','Units','pixels', ...
+    'BackgroundColor',surface);
+host.AutoResizeChildren = 'off';
+host.SizeChangedFcn = @resizeCanvas;
+resizeCanvas([],[]);
+root = uigridlayout(canvas,[2 2]);
 root.RowHeight = {77,'1x'};
 root.ColumnWidth = {'1x',350};
 root.Padding = [23 17 23 22];
@@ -60,7 +72,7 @@ header.BackgroundColor = surface;
 uilabel(header,'Text','TS Points','FontSize',23,'FontWeight','bold', ...
     'FontColor',navy);
 uilabel(header,'Text', ...
-    'Optional point export · The complete time series is already in EXPORT.', ...
+    'Optional point export · The complete time series is already in project results.', ...
     'FontSize',11,'FontColor',muted);
 
 mapCard = uipanel(root,'BorderType','line', ...
@@ -119,10 +131,10 @@ points = uitable(controls,'Data',cell(0,4), ...
     'CellSelectionCallback',@selectRow);
 points.Layout.Row = 2;
 
-pick = actionButton(controls,'◎  Pick nearest PS on map', ...
+pick = actionButton(controls,'◎  Select a scatterer on the map', ...
     [0.92 0.95 1],blue,@togglePick);
 pick.Layout.Row = 3;
-free = actionButton(controls,'＋  Add free point on map', ...
+free = actionButton(controls,'＋  Place a point anywhere on the map', ...
     [0.96 0.97 0.99],navy,@addFreePoint);
 free.Layout.Row = 4;
 
@@ -146,10 +158,10 @@ latInput = uieditfield(coordinates,'numeric','Value',0, ...
 radiusInput = uieditfield(coordinates,'numeric','Value',100, ...
     'Limits',[1 1e6]); radiusInput.Layout.Row = 2; radiusInput.Layout.Column = 3;
 
-manual = actionButton(controls,'Add coordinates to selection', ...
+manual = actionButton(controls,'Add typed coordinates', ...
     [0.92 0.95 1],blue,@addManual);
 manual.Layout.Row = 6;
-remove = actionButton(controls,'Remove selected point', ...
+remove = actionButton(controls,'Remove highlighted point', ...
     [0.96 0.97 0.99],navy,@removeSelected);
 remove.Layout.Row = 7;
 
@@ -157,10 +169,10 @@ fileActions = uigridlayout(controls,[1 2]);
 fileActions.Layout.Row = 8;
 fileActions.ColumnWidth = {'1x','1x'};
 fileActions.Padding = [0 0 0 0];
-loadButton = actionButton(fileActions,'Load list CSV', ...
+loadButton = actionButton(fileActions,'Import points CSV', ...
     [0.92 0.95 1],blue,@loadList);
 loadButton.Layout.Column = 1;
-saveButton = actionButton(fileActions,'Save list CSV', ...
+saveButton = actionButton(fileActions,'Save points CSV', ...
     [0.92 0.95 1],blue,@saveList);
 saveButton.Layout.Column = 2;
 
@@ -169,7 +181,7 @@ bottom.Layout.Row = 9;
 bottom.RowHeight = {32,18};
 bottom.Padding = [0 0 0 0];
 bottom.RowSpacing = 3;
-exportButton = actionButton(bottom,'Export selected time series', ...
+exportButton = actionButton(bottom,'Export selected points', ...
     blue,[1 1 1],@exportSelected);
 exportButton.Layout.Row = 1;
 status = uilabel(bottom,'Text','Ready · select a point or load a list.', ...
@@ -188,18 +200,43 @@ end
 cleanup = @restoreMap;
 
     function button = actionButton(parent,textValue,background,foreground,callback)
-        button = uibutton(parent,'push','Text',textValue, ...
-            'BackgroundColor',background,'FontColor',foreground, ...
-            'FontWeight','bold','FontSize',11, ...
-            'ButtonPushedFcn',callback);
+        htmlSource = fullfile(fileparts(fileparts(mfilename('fullpath'))), ...
+            'phase_stamps_beta_ui','rounded_button.html');
+        button = uihtml(parent,'HTMLSource',htmlSource, ...
+            'Data',struct('label',textValue, ...
+                'background',cssColor(background), ...
+                'foreground',cssColor(foreground), ...
+                'enabled',true,'clicked',0), ...
+            'DataChangedFcn',callback);
+    end
+
+    function value = cssColor(rgb)
+        channels = round(255*rgb);
+        value = sprintf('#%02X%02X%02X',channels(1),channels(2),channels(3));
+    end
+
+    function setButtonState(button,field,value)
+        data = button.Data;
+        data.(field) = value;
+        button.Data = data;
     end
 
     function restoreMap()
         try
             topfig.WindowButtonDownFcn = previousClick;
+            host.SizeChangedFcn = previousResize;
+            host.AutoResizeChildren = previousAutoResize;
+            host.Scrollable = previousScrollable;
             if isvalid(ax), ax.Interactions = defaultInteractions; end
         catch
         end
+    end
+
+    function resizeCanvas(~,~)
+        if ~isvalid(host) || ~isvalid(canvas), return; end
+        viewport = host.Position;
+        canvas.Position = [0 0 max(760,viewport(3)-14) ...
+            max(710,viewport(4)-14)];
     end
 
     function togglePick(~,~)
@@ -207,14 +244,14 @@ cleanup = @restoreMap;
         if pickMode
             ax.Interactions = zoomInteraction;
             topfig.WindowButtonDownFcn = @onMapClick;
-            pick.Text = '●  Picking PS · click a dot';
-            pick.BackgroundColor = [0.83 0.91 1];
+            setButtonState(pick,'label','●  Picking scatterers · click a dot');
+            setButtonState(pick,'background',cssColor([0.83 0.91 1]));
             mapHint.Text = 'Pick mode · click a PS';
         else
             topfig.WindowButtonDownFcn = previousClick;
             ax.Interactions = defaultInteractions;
-            pick.Text = '◎  Pick nearest PS on map';
-            pick.BackgroundColor = [0.92 0.95 1];
+            setButtonState(pick,'label','◎  Select a scatterer on the map');
+            setButtonState(pick,'background',cssColor([0.92 0.95 1]));
             mapHint.Text = 'Navigate: pan and zoom';
         end
     end
@@ -358,7 +395,7 @@ cleanup = @restoreMap;
             status.Text = 'Select at least one point first.';
             return
         end
-        exportButton.Enable = 'off';
+        setButtonState(exportButton,'enabled',false);
         status.Text = 'Exporting selected time series…';
         drawnow;
         temporaryCsv = [tempname '.csv'];
@@ -376,7 +413,7 @@ cleanup = @restoreMap;
         catch ME
             status.Text = ['Export failed: ' ME.message];
         end
-        exportButton.Enable = 'on';
+        setButtonState(exportButton,'enabled',true);
     end
 end
 
