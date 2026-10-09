@@ -242,10 +242,8 @@ classdef App < handle
                 panels{k}.Visible = ternary(panels{k} == tab,'on','off');
                 if panels{k} == tab, obj.ActiveSection = names{k}; end
             end
-            obj.Navigation.Data = struct('view','nav', ...
-                'active',obj.ActiveSection,'version',obj.displayVersion(), ...
-                'updateEnabled',isfile(fullfile(fileparts(obj.InstallRoot),'install.json')));
             obj.activateTab(tab);
+            obj.updateHome();
         end
 
         function value = displayVersion(obj)
@@ -430,11 +428,12 @@ classdef App < handle
             if isempty(obj.HomeView) || ~isvalid(obj.HomeView), return; end
             state = struct('view','home','projectName','', ...
                 'projectPath','','inputCount','—', ...
-                'datasetCount','—','exportCount','—');
-            if isempty(obj.ProjectRoot)
-                obj.HomeView.Data = state;
-            else
+                'datasetCount','—','exportCount','—', ...
+                'preprocessingComplete',false,'stampsComplete',false, ...
+                'modelComplete',false,'recommended','preprocessing');
+            if ~isempty(obj.ProjectRoot)
                 p = phase_project.paths(obj.ProjectRoot);
+                progress = phase_project.workflowStatus(obj.ProjectRoot);
                 datasets = [dir(fullfile(p.stamps,'ASC_*')); ...
                     dir(fullfile(p.stamps,'DSC_*')); ...
                     dir(fullfile(p.stamps,'DES_*'))];
@@ -442,9 +441,20 @@ classdef App < handle
                 state.projectPath = obj.ProjectRoot;
                 state.inputCount = countFiles(p.raw);
                 state.datasetCount = nnz([datasets.isdir]);
-                state.exportCount = countFiles(p.exports);
-                obj.HomeView.Data = state;
+                state.exportCount = countFiles(p.exports,true);
+                state.preprocessingComplete = progress.preprocessing;
+                state.stampsComplete = progress.stamps;
+                state.modelComplete = progress.model;
+                state.recommended = progress.recommended;
             end
+            obj.HomeView.Data = state;
+            obj.Navigation.Data = struct('view','nav', ...
+                'active',obj.ActiveSection,'version',obj.displayVersion(), ...
+                'updateEnabled',isfile(fullfile(fileparts(obj.InstallRoot),'install.json')), ...
+                'preprocessingComplete',state.preprocessingComplete, ...
+                'stampsComplete',state.stampsComplete, ...
+                'modelComplete',state.modelComplete, ...
+                'recommended',state.recommended);
         end
 
         function textValue = stampsHelpText(obj)
@@ -520,10 +530,14 @@ function value = ternary(condition,yesValue,noValue)
 if condition, value = yesValue; else, value = noValue; end
 end
 
-function count = countFiles(folder)
+function count = countFiles(folder,recursive)
 count = 0;
 if ~isfolder(folder), return; end
-entries = dir(folder);
+if nargin >= 2 && recursive
+    entries = dir(fullfile(folder,'**','*'));
+else
+    entries = dir(folder);
+end
 count = nnz(~[entries.isdir]);
 end
 

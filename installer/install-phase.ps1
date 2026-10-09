@@ -1541,9 +1541,9 @@ function Invoke-StampsBinariesDownload {
                     </StackPanel>
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
-                    <Run Text="build" Foreground="#B0B8C8"/>
-                    <Run Text="  1.9.0  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
-                    <Run Text="·  pyccino/PHASE" Foreground="#8C95B8"/>
+                    <Run Text="PHASE" Foreground="#B0B8C8"/>
+                    <Run Text="  v7.0.0 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
         </Grid>
@@ -1568,7 +1568,7 @@ function Invoke-StampsBinariesDownload {
                         <Run Text="//" Foreground="#1A4FE0"/>
                         <Run Text=" phase-installer "/>
                         <Run Text="//" Foreground="#1A4FE0"/>
-                        <Run Text=" pyccino"/>
+                        <Run Text=" Roberto Monti · pyccino"/>
                     </TextBlock>
                 </Grid>
             </Border>
@@ -1767,22 +1767,22 @@ function Invoke-StampsBinariesDownload {
             <!-- Page 7: Finish -->
             <StackPanel x:Name="Page7_Finish" Visibility="Collapsed">
                 <TextBlock Text="Installation complete" FontSize="28" FontWeight="Light" Foreground="#2DBA6E" Margin="0,0,0,10"/>
-                <TextBlock x:Name="FinishSubtitle" Text="PHASE is ready. Start with PHASE Preprocessing; module 2 opens from its generated dataset folder."
+                <TextBlock x:Name="FinishSubtitle" Text="PHASE is ready. Launch the hub, then create or open a project to begin."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,22"/>
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="PHASE folder" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,4"/>
                         <TextBlock x:Name="FinishPath" Text="" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="12" Margin="0,0,0,18" Foreground="#0F1430"/>
-                        <TextBlock Text="Available MATLAB apps" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,8"/>
-                        <TextBlock Text="·  PHASE Preprocessing — module 1A (SNAP preprocessing)" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE StaMPS — module 1B, opens for each ASC_/DSC_ dataset" Margin="0,3" Foreground="#4A5168"/>
-                        <TextBlock Text="·  PHASE Model — module 2 geospatial analysis" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="PHASE workflow" FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" FontWeight="SemiBold" Foreground="#1A4FE0" Margin="0,0,0,8"/>
+                        <TextBlock Text="·  Preprocessing — import and process SAR scenes" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  StaMPS PSI — estimate displacement time series" Margin="0,3" Foreground="#4A5168"/>
+                        <TextBlock Text="·  Displacement Modeling — analyze and export results" Margin="0,3" Foreground="#4A5168"/>
                     </StackPanel>
                 </Border>
 
                 <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
-                    <Button x:Name="OpenFolderBtn" Content="Open PHASE folder"/>
+                    <Button x:Name="LaunchPhaseBtn" Content="Launch PHASE"/>
                     <Button x:Name="OpenLogBtn" Content="Open install log"/>
                 </StackPanel>
             </StackPanel>
@@ -2532,8 +2532,18 @@ function Set-SetupProgress {
     }
 })
 
-(Get-Element 'OpenFolderBtn').Add_Click({
-    Start-Process explorer.exe -ArgumentList (Join-Path $Script:State.InstallDir 'PHASE')
+(Get-Element 'LaunchPhaseBtn').Add_Click({
+    $launcher = Join-Path $Script:State.InstallDir 'PHASE.lnk'
+    if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
+        [System.Windows.MessageBox]::Show("PHASE launcher not found:`n$launcher", 'Launch PHASE', 'OK', 'Error') | Out-Null
+        return
+    }
+    try {
+        Start-Process -FilePath $launcher -ErrorAction Stop
+        $window.Close()
+    } catch {
+        [System.Windows.MessageBox]::Show("Could not launch PHASE:`n$($_.Exception.Message)", 'Launch PHASE', 'OK', 'Error') | Out-Null
+    }
 })
 
 (Get-Element 'OpenLogBtn').Add_Click({
@@ -2739,6 +2749,7 @@ function Assert-PhaseStandaloneRuntime {
         '+phase_hub\App.m',
         '+phase_project\open.m',
         '+phase_project\create.m',
+        '+phase_project\workflowStatus.m',
         'PHASE_Preprocessing.m',
         'PHASE_Model.m',
         'PHASE_Preprocessing\PHASE_StaMPS.m',

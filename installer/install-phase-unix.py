@@ -34,6 +34,7 @@ REQUIRED_FILES = (
     "PHASE_mod2.png",
     "+phase_hub/App.m",
     "+phase_project/open.m",
+    "+phase_project/workflowStatus.m",
     "phase_update.py",
     "PHASE_Preprocessing_beta.m",
     "PHASE_Preprocessing/+phase_preprocessing_beta/App.m",

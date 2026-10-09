@@ -12,7 +12,7 @@
   button:focus-visible { outline:3px solid #77a0f3; outline-offset:2px; }
   .glass { background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(240,246,255,.78)); border:1px solid rgba(188,203,229,.75); box-shadow:0 8px 26px rgba(49,81,145,.08),inset 0 1px 0 rgba(255,255,255,.98); border-radius:18px; }
   .nav-shell { height:100%; padding:11px 26px 9px; background:linear-gradient(180deg,#fff 0%,#f8faff 100%); border-bottom:1px solid var(--line); }
-  .nav-top { height:62px; display:flex; align-items:center; justify-content:flex-end; gap:25px; }
+  .nav-top { height:62px; display:flex; align-items:center; justify-content:space-between; gap:25px; }
   .brand { display:flex; align-items:center; gap:11px; min-width:0; }
   .brand img { width:107px; height:53px; object-fit:contain; flex:none; }
   .brand-lines { display:flex; flex-direction:column; gap:2px; color:var(--muted); font-size:11px; white-space:nowrap; }
@@ -24,6 +24,9 @@
   .nav-button { min-width:166px; height:39px; padding:0 18px; color:#39577f; font-size:13px; font-weight:700; }
   .nav-button:hover, .soft:hover { border-color:#9db8eb; background:#eaf1ff; }
   .nav-button.active { color:#fff; border-color:#3565cf; background:linear-gradient(145deg,#4e78d9,#285cc6); box-shadow:0 6px 16px rgba(47,91,195,.22),inset 0 1px 0 rgba(255,255,255,.24); }
+  .nav-indicator { display:inline-block; width:7px; height:7px; margin-left:7px; border-radius:50%; background:#35a66d; vertical-align:middle; visibility:hidden; }
+  .nav-button.done .nav-indicator { visibility:visible; }
+  .nav-button.next:not(.active) { border-color:#83a4e9; box-shadow:0 0 0 2px rgba(53,101,207,.13),0 8px 20px rgba(53,101,207,.13); }
   .home { height:100%; overflow:auto; padding:26px 30px 30px; background:#f7f9fd; }
   .project-intro { display:grid; grid-template-columns:minmax(0,1fr) 191px; gap:14px; align-items:stretch; }
   .hero { display:flex; align-items:center; min-height:142px; padding:23px 28px; background:rgba(230,242,251,.88); -webkit-backdrop-filter:saturate(160%) blur(22px); backdrop-filter:saturate(160%) blur(22px); }
@@ -40,12 +43,16 @@
   .section-title { margin:22px 3px 12px; font-size:11px; font-weight:800; letter-spacing:.13em; color:#61728f; }
   .workflow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
   .card { min-height:380px; padding:20px 21px 18px; display:flex; flex-direction:column; }
-  .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-  .step { font-size:11px; font-weight:800; color:var(--blue); letter-spacing:.09em; }
+  .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:5px; }
+  .step { font-size:13px; font-weight:800; color:var(--blue); letter-spacing:.075em; }
+  .stage-state { display:inline-block; margin-top:11px; padding:5px 9px; border-radius:999px; background:#edf3ff; color:#5270a8; font-size:10px; font-weight:750; }
+  .card.done { border-color:rgba(59,157,105,.48); background:linear-gradient(145deg,#f7fdf9,#fff 70%); }
+  .card.done .stage-state { background:#e1f6e9; color:#23824f; }
+  .card.next { border:2px solid #6d96e8; box-shadow:0 0 0 3px rgba(53,101,207,.13),0 12px 34px rgba(53,101,207,.16); }
+  .card.next .stage-state { background:#e0ebff; color:#285cc6; }
   .icon { width:60px; height:60px; border-radius:17px; background:linear-gradient(135deg,#e8f0ff,#f6eafa); display:grid; place-items:center; flex:none; }
   .icon svg { width:42px; height:42px; fill:none; stroke:#426ed0; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
-  .card h2 { margin:5px 0 8px; font-size:19px; letter-spacing:-.02em; }
-  .module-mark { width:174px; height:76px; margin:0 0 6px; object-fit:contain; object-position:left center; }
+  .module-mark { width:190px; height:78px; margin:0 0 14px; object-fit:contain; object-position:left center; }
   .card ul { margin:0 0 13px; padding-left:18px; color:#4e5d74; font-size:12.5px; line-height:1.55; }
   .card li::marker { color:#5d83dc; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:auto; margin-bottom:13px; }
@@ -64,14 +71,14 @@
 <body>
 <div id="nav" class="nav-shell" hidden>
   <div class="nav-top">
-    <button class="glass update" data-action="updates" title="Check for PHASE updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Check for updates</span></button>
     <div class="brand"><img src="PHASE_logo.png" alt="PHASE logo"><div class="brand-lines"><strong>Roberto Monti</strong><span>Politecnico di Milano</span><span id="version">v7.0.0 preview</span></div></div>
+    <button class="glass update" data-action="updates" title="Check for PHASE updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Check for updates</span></button>
   </div>
   <nav class="nav-pills" aria-label="PHASE sections">
     <button class="glass nav-button" data-action="project">Project</button>
-    <button class="glass nav-button" data-action="preprocessing">Preprocessing</button>
-    <button class="glass nav-button" data-action="stamps">StaMPS PSI</button>
-    <button class="glass nav-button" data-action="model">Displacement Modeling</button>
+    <button class="glass nav-button" data-action="preprocessing">Preprocessing<span class="nav-indicator" aria-hidden="true"></span></button>
+    <button class="glass nav-button" data-action="stamps">StaMPS PSI<span class="nav-indicator" aria-hidden="true"></span></button>
+    <button class="glass nav-button" data-action="model">Displacement Modeling<span class="nav-indicator" aria-hidden="true"></span></button>
   </nav>
 </div>
 <main id="home" class="home" hidden>
@@ -80,9 +87,9 @@
   </section><div class="hero-actions"><button class="action soft" data-action="open"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3zM3 7V5h7l2 2"/></svg>Open project</button><button class="action primary" data-action="new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>New project</button></div></div>
   <div class="section-title">WORKFLOW</div>
   <section class="workflow" aria-label="PHASE workflow">
-    <article class="glass card"><div class="card-head"><div class="step">01 · PREPROCESSING</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m8 11 11 11m-4-14 8 8M6 21l14 14m4-12 11-11 5 5-11 11zM16 32c3-3 8-3 11 0m-15 4c5-5 13-5 18 0"/><circle cx="19" cy="22" r="2"/></svg></div></div><h2>Preprocessing</h2><img class="module-mark" src="PHASE_mod1a.png" alt="SAR images preprocessing module"><ul><li>Import SAR scenes and define the AOI</li><li>Choose the master and process the stack in SNAP</li><li>Generate interferograms and StaMPS inputs</li></ul><div class="chips"><span class="chip">Sentinel-1</span><span class="chip">SNAP</span><span class="chip">ASF</span></div><button class="action soft" data-action="preprocessing">Open PHASE Preprocessing →</button></article>
-    <article class="glass card"><div class="card-head"><div class="step">02 · STAMPS PSI</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 8v31h35M11 29l7-8 6 6 7-14 8 7"/><circle cx="11" cy="29" r="2"/><circle cx="18" cy="21" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="13" r="2"/><circle cx="39" cy="20" r="2"/></svg></div></div><h2>StaMPS PSI</h2><img class="module-mark" src="PHASE_mod1b.png" alt="StaMPS PSI module"><ul><li>Select and refine persistent scatterers</li><li>Estimate displacement time series</li><li>Apply optional TRAIN atmospheric correction</li></ul><div class="chips"><span class="chip">StaMPS</span><span class="chip">TRAIN</span><span class="chip">PSI</span></div><button class="action soft" data-action="stamps">Open PHASE StaMPS →</button></article>
-    <article class="glass card"><div class="card-head"><div class="step">03 · DISPLACEMENT MODELING</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 10h34v28H7zM18 10v28m11-28v28M7 19h34M7 29h34"/><path d="M10 32c7-3 10-13 17-13 5 0 7 8 12 4" stroke="#cb2e6c" stroke-width="2.8"/></svg></div></div><h2>Displacement Modeling</h2><img class="module-mark" src="PHASE_mod2.png" alt="Geospatial analysis module"><ul><li>Build 1D or 2D spatio-temporal models</li><li>Map deformation, uncertainty and alerts</li><li>Export reports and GIS-ready results</li></ul><div class="chips"><span class="chip">PHASE Model</span><span class="chip">GIS</span><span class="chip">Reports</span></div><button class="action soft" data-action="model">Open Displacement Modeling →</button></article>
+    <article class="glass card" data-stage="preprocessing"><div class="card-head"><div><div class="step">01 · PREPROCESSING</div><span class="stage-state">Not started</span></div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m8 11 11 11m-4-14 8 8M6 21l14 14m4-12 11-11 5 5-11 11zM16 32c3-3 8-3 11 0m-15 4c5-5 13-5 18 0"/><circle cx="19" cy="22" r="2"/></svg></div></div><img class="module-mark" src="PHASE_mod1a.png" alt="SAR images preprocessing module"><ul><li>Import SAR scenes and define the AOI</li><li>Choose the master and process the stack in SNAP</li><li>Generate interferograms and StaMPS inputs</li></ul><div class="chips"><span class="chip">Sentinel-1</span><span class="chip">SNAP</span><span class="chip">ASF</span></div><button class="action soft" data-action="preprocessing">Open PHASE Preprocessing →</button></article>
+    <article class="glass card" data-stage="stamps"><div class="card-head"><div><div class="step">02 · STAMPS PSI</div><span class="stage-state">Not started</span></div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 8v31h35M11 29l7-8 6 6 7-14 8 7"/><circle cx="11" cy="29" r="2"/><circle cx="18" cy="21" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="13" r="2"/><circle cx="39" cy="20" r="2"/></svg></div></div><img class="module-mark" src="PHASE_mod1b.png" alt="StaMPS PSI module"><ul><li>Select and refine persistent scatterers</li><li>Estimate displacement time series</li><li>Apply optional TRAIN atmospheric correction</li></ul><div class="chips"><span class="chip">StaMPS</span><span class="chip">TRAIN</span><span class="chip">PSI</span></div><button class="action soft" data-action="stamps">Open PHASE StaMPS →</button></article>
+    <article class="glass card" data-stage="model"><div class="card-head"><div><div class="step">03 · DISPLACEMENT MODELING</div><span class="stage-state">Not started</span></div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 10h34v28H7zM18 10v28m11-28v28M7 19h34M7 29h34"/><path d="M10 32c7-3 10-13 17-13 5 0 7 8 12 4" stroke="#cb2e6c" stroke-width="2.8"/></svg></div></div><img class="module-mark" src="PHASE_mod2.png" alt="Geospatial analysis module"><ul><li>Build 1D or 2D spatio-temporal models</li><li>Map deformation, uncertainty and alerts</li><li>Export reports and GIS-ready results</li></ul><div class="chips"><span class="chip">PHASE Model</span><span class="chip">GIS</span><span class="chip">Reports</span></div><button class="action soft" data-action="model">Open Displacement Modeling →</button></article>
   </section>
   <div class="section-title">PROJECT STATUS</div>
   <section class="glass status"><div class="status-grid"><div><div class="metric-label">Project folder</div><div id="folder" class="metric-value">No project open</div></div><div><div class="metric-label">SAR input files</div><div id="inputs" class="metric-value">—</div></div><div><div class="metric-label">StaMPS datasets</div><div id="datasets" class="metric-value">—</div></div><div><div class="metric-label">Export files</div><div id="exports" class="metric-value">—</div></div></div><div class="status-note">Project data and results stay in this folder. PHASE code stays in the shared installation.</div></section>
@@ -100,6 +107,8 @@ function setup(htmlComponent) {
       document.querySelectorAll('.nav-button').forEach(button => {
         const active = button.dataset.action === data.active;
         button.classList.toggle('active',active);
+        button.classList.toggle('done',Boolean(data[button.dataset.action + 'Complete']));
+        button.classList.toggle('next',button.dataset.action === data.recommended);
         button.setAttribute('aria-current',active ? 'page' : 'false');
       });
     } else {
@@ -110,6 +119,14 @@ function setup(htmlComponent) {
       document.getElementById('inputs').textContent = data.inputCount ?? '—';
       document.getElementById('datasets').textContent = data.datasetCount ?? '—';
       document.getElementById('exports').textContent = data.exportCount ?? '—';
+      document.querySelectorAll('.card[data-stage]').forEach(card => {
+        const stage = card.dataset.stage;
+        const complete = Boolean(data[stage + 'Complete']);
+        const recommended = !complete && data.recommended === stage;
+        card.classList.toggle('done',complete);
+        card.classList.toggle('next',recommended);
+        card.querySelector('.stage-state').textContent = complete ? 'Complete' : recommended ? 'Suggested next' : 'Not started';
+      });
     }
   }
   document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click',() => {

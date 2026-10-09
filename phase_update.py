@@ -28,6 +28,7 @@ REQUIRED_FILES = (
     "PHASE_Hub.m", "PHASE_Hub_UI.html", "PHASE_logo.png",
     "PHASE_mod1a.png", "PHASE_mod1b.png", "PHASE_mod2.png",
     "+phase_hub/App.m", "+phase_project/open.m",
+    "+phase_project/workflowStatus.m",
     "PHASE_Preprocessing_beta.m", "+phase_model_beta/App.m",
     "PHASE_Preprocessing/+phase_stamps_beta/App.m",
 )

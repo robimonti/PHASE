@@ -66,3 +66,11 @@ def test_windows_installer_has_one_hub_shortcut(phase_root):
     assert "Join-Path $desktop 'PHASE.lnk'" in script
     assert "Join-Path $desktop 'PHASE 7.lnk'" in script
     assert "Removed old PHASE 7 desktop shortcut" in script
+    assert 'x:Name="LaunchPhaseBtn" Content="Launch PHASE"' in script
+    assert "Start-Process -FilePath $launcher -ErrorAction Stop" in script
+    assert "OpenFolderBtn" not in script
+    assert "v7.0.0 preview" in script
+    assert "Roberto Monti · pyccino" in script
+    compiler = (phase_root / "installer" / "compile-to-exe.ps1").read_text(encoding="utf-8-sig")
+    assert "version    = '7.0.0.0'" in compiler
+    assert "company    = 'Roberto Monti and pyccino'" in compiler

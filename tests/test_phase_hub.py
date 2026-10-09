@@ -39,6 +39,24 @@ def test_hub_home_uses_english_and_phase_visual_style(phase_root):
     assert "Il tuo workspace PHASE" not in view
 
 
+def test_hub_progress_uses_published_outputs_and_highlights_next_stage(phase_root):
+    hub = (phase_root / "+phase_hub" / "App.m").read_text(encoding="utf-8")
+    view = (phase_root / "PHASE_Hub_UI.html").read_text(encoding="utf-8")
+    progress = (phase_root / "+phase_project" / "workflowStatus.m").read_text(encoding="utf-8")
+    assert "phase_project.workflowStatus(obj.ProjectRoot)" in hub
+    assert "state.preprocessingComplete = progress.preprocessing" in hub
+    assert "data-stage=\"preprocessing\"" in view
+    assert "data-stage=\"stamps\"" in view
+    assert "data-stage=\"model\"" in view
+    assert "card.classList.toggle('done',complete)" in view
+    assert "card.classList.toggle('next',recommended)" in view
+    assert "<h2>Preprocessing</h2>" not in view
+    assert "<h2>StaMPS PSI</h2>" not in view
+    assert "<h2>Displacement Modeling</h2>" not in view
+    assert "hasFiles(fullfile(folder,'diff0'))" in progress
+    assert "isfile(fullfile(folder,'files','mat','PHASEresults.mat'))" in progress
+
+
 def test_modules_can_embed_without_taking_ownership_of_hub_figure(phase_root):
     files = [
         phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta" / "App.m",
