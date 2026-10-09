@@ -16,31 +16,15 @@ if isfolder(cfg.installation_folder)
     addpath(fullfile(cfg.installation_folder, 'matlab_compat'));
 end
 
-valueType = 'v-do';
-matPath = fullfile(workDir, ['ps_plot_ts_' valueType '.mat']);
-if exist(matPath, 'file') ~= 2
-    previous = pwd;
-    cleanup = onCleanup(@() cd(previous));
-    figuresBefore = findall(0, 'Type', 'figure');
-    cd(workDir);
-    evalc("ps_plot('" + valueType + "','ts',1)");
-    figuresAfter = findall(0, 'Type', 'figure');
-    newFigures = setdiff(figuresAfter, figuresBefore);
-    for k = 1:numel(newFigures)
-        try
-            if isvalid(newFigures(k))
-                delete(newFigures(k));
-            end
-        catch
-        end
+valueType = phase_stamps_beta.tsValueType(workDir,cfg);
+if isempty(valueType)
+    if strcmp(char(string(cfg.ph_output)),'wrapped')
+        error('PHASE_StaMPS_beta:wrappedNoPicker', ...
+            'TS Points is for unwrapped displacement. Wrapped phase is already exported in EXPORT.');
     end
-    clear cleanup
-    if exist(matPath, 'file') ~= 2
-        error('PHASE_StaMPS_beta:tsDataMissing', ...
-            'ps_plot finished but did not produce %s. Run StaMPS Step 7 first.', matPath);
-    end
+    error('PHASE_StaMPS_beta:tsDataMissing', ...
+        'No displacement time series is available yet. Complete StaMPS Step 7 first.');
 end
-
 try
     delete(parentContainer.Children);
     ts_export_picker(workDir, parentContainer, valueType, ...

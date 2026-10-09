@@ -1,4 +1,3 @@
-import importlib.util
 import re
 import zipfile
 
@@ -83,18 +82,18 @@ def test_beta_default_config_is_fully_represented_in_ui_schema(phase_root):
     assert "density_rand" in schema_fields
 
 
-def test_beta_backend_is_reproducibly_extracted_from_stable_app(phase_root):
-    tool_path = phase_root / "tools" / "extract_stamps_beta_backend.py"
-    spec = importlib.util.spec_from_file_location("extract_stamps_beta_backend", tool_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+def test_beta_backend_retains_stable_engine_with_explicit_export_customizations(phase_root):
     generated = _text(
         phase_root
         / "PHASE_Preprocessing"
         / "+phase_stamps_beta"
         / "runProcessing.m"
     )
-    assert generated == module.extract(_stable_xml(phase_root))
+    assert "load('input_StaMPS.mat'" in generated
+    assert "stamps(stamps_first_step, stamps_last_step)" in generated
+    assert "phase_stamps_beta.wrappedPhaseSubset" in generated
+    assert "trainCorrectionApplied" in generated
+    assert "ts_export_picker" in generated
 
 
 def test_beta_backend_preserves_stable_setparm_and_stamps_calls(phase_root):
@@ -149,7 +148,7 @@ def test_beta_exports_only_ps_time_series_not_atmospheric_delay(phase_root):
     )
     assert "Displacement time series export started" in backend
     assert "ps_plot('v-dao'" in backend
-    assert "Atmospheric delay export intentionally omitted." in backend
+    assert "No separate atmosphere time-series CSV is generated" in backend
     assert "Atmosphere time series export" not in backend
     assert "_ATMOSPHERE.xlsx" not in backend
     assert "_ATMOSPHERE.csv" not in backend
@@ -242,7 +241,37 @@ def test_beta_range_calendar_and_ts_picker_are_native_to_the_new_app(phase_root)
     assert "phase_stamps_beta.openTsPicker" in controller
     assert "ts_export_picker(workDir, parentContainer" in picker
     assert "uifigure(" not in picker
-    assert "No legacy MLAPP is opened" in html
+    assert "Point-by-point selection is optional" in html
+    assert "CloseTsPicker" in js
+    assert "TS Points · optional point export" in controller
+
+
+def test_stamps_dataset_bar_and_progress_are_integrated(phase_root):
+    hub = _text(phase_root / "+phase_hub" / "App.m")
+    bar = _text(phase_root / "PHASE_Stamps_Dataset_UI.html")
+    ui = phase_root / "PHASE_Preprocessing" / "phase_stamps_beta_ui"
+    html = _text(ui / "index.html")
+    js = _text(ui / "app.js")
+    assert "PHASE_Stamps_Dataset_UI.html" in hub
+    assert "handleDatasetAction" in hub
+    assert "border-radius:13px" in bar
+    assert 'id="advanced-toggle" type="checkbox" checked' in html
+    assert "processing-progress-bar" in html
+    assert "updateProgressFromLine" in js
+    assert "patch ${index}" in js
+    assert "open-picker-from-run" in html
+
+
+def test_picker_uses_exported_correction_variant(phase_root):
+    package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
+    resolver = _text(package / "tsValueType.m")
+    picker = _text(package / "openTsPicker.m")
+    backend = _text(package / "runProcessing.m")
+    assert "metadata.valueType" in resolver
+    assert "{'v-dao','v-do'}" in resolver
+    assert "phase_stamps_beta.tsValueType" in picker
+    assert "'_series.json'" in backend
+    assert "valueType = 'v-dao'" in backend
 
 
 def test_beta_provides_a_matlab_side_smoke_test(phase_root):

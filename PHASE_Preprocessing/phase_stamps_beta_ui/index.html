@@ -49,8 +49,8 @@
 
       <div class="sidebar-footer">
         <label class="advanced-toggle">
-          <input id="advanced-toggle" type="checkbox">
-          <span>Show advanced controls</span>
+          <input id="advanced-toggle" type="checkbox" checked>
+          <span>Show all parameters</span>
         </label>
         <div id="version" class="version">PHASE 6.1</div>
       </div>
@@ -99,6 +99,12 @@
           <div class="summary-block wide"><span>TRAIN tropospheric correction</span><strong id="summary-tropo">—</strong></div>
           <div class="summary-block wide"><span>Output</span><strong id="summary-output">—</strong></div>
         </div>
+        <div class="processing-progress-card">
+          <div class="processing-progress-heading"><div><span>Current operation</span><strong id="processing-progress-phase">Ready</strong></div><strong id="processing-progress-percent">0%</strong></div>
+          <div class="processing-progress-track"><span id="processing-progress-bar"></span></div>
+          <div class="processing-progress-metrics"><div><span>Elapsed</span><strong id="processing-elapsed">0m 00s</strong></div><div><span>Progress model</span><strong>StaMPS steps and patches</strong></div></div>
+        </div>
+        <div id="picker-ready" class="picker-ready hidden"><div><strong>Full time-series export is ready</strong><span>Point-by-point selection is optional; your complete CSV/XLSX was exported automatically.</span></div><button id="open-picker-from-run" class="button secondary" type="button">Explore TS Points →</button></div>
         <div class="console-wrap">
           <div class="console-bar">
             <span>Processing log</span>
@@ -113,7 +119,7 @@
           <div>
             <div class="eyebrow">Interactive export</div>
             <h1>TS Points</h1>
-            <p>Inspect persistent scatterers and export selected point histories.</p>
+            <p>Optionally inspect persistent scatterers and export selected point histories. The full time series is already exported automatically.</p>
           </div>
         </div>
         <div class="feature-panel">
@@ -123,8 +129,9 @@
           <div class="feature-content">
             <div class="tag">Integrated PHASE tool</div>
             <h2>Load the time-series picker</h2>
-            <p>The native picker is loaded inside this PHASE StaMPS window and uses only the products in the current processing folder. No legacy MLAPP is opened. If needed, PHASE generates <code>ps_plot_ts_v-do.mat</code> first.</p>
+            <p>Open the picker inside this StaMPS section to select individual points after the unwrapped PSI run. It does not replace or change the complete CSV/XLSX export.</p>
             <button id="open-ts-picker" class="button primary" type="button">Load TS picker</button>
+            <p id="picker-unavailable" class="picker-unavailable">Complete an unwrapped PSI run before selecting individual points.</p>
           </div>
         </div>
       </section>

@@ -102,6 +102,9 @@ classdef App < handle
                 catch
                 end
             end
+            if contains(message,'Data preparation finished')
+                obj.sendState(); % Patch folders now exist; publish their total.
+            end
         end
 
         function openTsPicker(obj)
@@ -169,6 +172,8 @@ classdef App < handle
                     case 'opentspicker'
                         obj.updateFromPayload(payload);
                         obj.openTsPicker();
+                    case 'closetspicker'
+                        obj.closeTsPicker();
                     case 'openworkdir'
                         openFolder(obj.WorkDir);
                     case 'openerrorlog'
@@ -385,6 +390,10 @@ classdef App < handle
             state.statusDetail = obj.StatusDetail;
             state.logs = obj.Logs;
             state.liveLogUrl = obj.LiveLogUrl;
+            patches = dir(fullfile(obj.WorkDir,'PATCH_*'));
+            state.patchCount = nnz([patches.isdir]);
+            state.pickerAvailable = ~isempty( ...
+                phase_stamps_beta.tsValueType(obj.WorkDir,obj.Config));
             obj.HTML.Data = state;
             drawnow limitrate
         end
@@ -434,7 +443,7 @@ classdef App < handle
                 return
             end
             obj.TSPickerOverlay = uipanel(obj.HostContainer, ...
-                'BorderType','none','BackgroundColor',[0.985 0.988 0.994], ...
+                'BorderType','none','BackgroundColor',[0.94 0.965 0.99], ...
                 'Visible','off');
             outer = uigridlayout(obj.TSPickerOverlay,[2 1]);
             outer.RowHeight = {58,'1x'};
@@ -445,19 +454,19 @@ classdef App < handle
             header.Layout.Row = 1;
             header.ColumnWidth = {'1x','fit','fit'};
             header.Padding = [0 0 0 0];
-            title = uilabel(header,'Text','TS Points', ...
-                'FontName','Helvetica','FontSize',20,'FontWeight','bold', ...
-                'FontColor',[0.27 0.275 0.275]);
+            title = uilabel(header,'Text','TS Points · optional point export', ...
+                'FontName','Helvetica','FontSize',18,'FontWeight','bold', ...
+                'FontColor',[0.08 0.15 0.28]);
             title.Layout.Column = 1;
             refresh = uibutton(header,'push','Text','Reload picker', ...
                 'ButtonPushedFcn',@(~,~) obj.openTsPicker(), ...
                 'BackgroundColor',[0.92 0.945 1.0], ...
                 'FontColor',[0.208 0.396 0.812]);
             refresh.Layout.Column = 2;
-            back = uibutton(header,'push','Text','Back to PHASE', ...
+            back = uibutton(header,'push','Text','Close picker', ...
                 'ButtonPushedFcn',@(~,~) obj.closeTsPicker(), ...
                 'BackgroundColor',[1 1 1], ...
-                'FontColor',[0.27 0.275 0.275]);
+                'FontColor',[0.208 0.396 0.812]);
             back.Layout.Column = 3;
 
             obj.TSPickerContainer = uipanel(outer, ...
@@ -472,17 +481,13 @@ classdef App < handle
                 return
             end
             position = obj.HostContainer.Position;
-            if obj.OwnsFigure
-                sidebarWidth = 254;
-                if position(3) <= 1150, sidebarWidth = 224; end
-                topbarHeight = 72;
-                obj.TSPickerOverlay.Position = [sidebarWidth 0 ...
-                    max(100,position(3)-sidebarWidth) ...
-                    max(100,position(4)-topbarHeight)];
-            else
-                obj.TSPickerOverlay.Units = 'normalized';
-                obj.TSPickerOverlay.Position = [0 0 1 1];
-            end
+            sidebarWidth = 254;
+            if position(3) <= 1150, sidebarWidth = 224; end
+            topbarHeight = 72;
+            obj.TSPickerOverlay.Units = 'pixels';
+            obj.TSPickerOverlay.Position = [sidebarWidth 0 ...
+                max(100,position(3)-sidebarWidth) ...
+                max(100,position(4)-topbarHeight)];
         end
 
         function closeTsPicker(obj)

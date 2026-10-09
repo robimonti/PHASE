@@ -13,6 +13,8 @@ const PhaseUI = {
   liveLines: [],
   liveTimer: null,
   runStartedAt: null,
+  runProgress: { percentage: 0, phase: "Ready", step: 0 },
+  progressLineCount: 0,
 };
 
 function setup(htmlComponent) {
@@ -35,10 +37,15 @@ function wireStaticControls() {
   byId("workdir").addEventListener("click", () => send("OpenWorkDir", {}));
   byId("open-error-log").addEventListener("click", () => send("OpenErrorLog", {}));
   byId("open-ts-picker").addEventListener("click", () => send("OpenTsPicker", payload()));
+  byId("open-picker-from-run").addEventListener("click", () => {
+    switchPage("ts");
+    send("OpenTsPicker", payload());
+  });
   byId("clear-log").addEventListener("click", () => { PhaseUI.logs = []; renderLogs(); });
   byId("advanced-toggle").addEventListener("change", event => {
     document.body.classList.toggle("show-advanced", event.target.checked);
   });
+  document.body.classList.toggle("show-advanced", byId("advanced-toggle").checked);
   byId("previous-section").addEventListener("click", () => moveSection(-1));
   byId("next-section").addEventListener("click", () => moveSection(1));
 }
@@ -56,6 +63,11 @@ function receiveState(state) {
     PhaseUI.liveRaw = "";
     PhaseUI.liveLines = [];
     PhaseUI.runStartedAt = Date.now();
+    PhaseUI.runProgress = { percentage: 0, phase: "Preparing StaMPS", step: 0 };
+    PhaseUI.progressLineCount = 0;
+  }
+  if (wasRunning && !state.running && state.status === "success") {
+    PhaseUI.runProgress = { ...PhaseUI.runProgress, percentage: 100, phase: "StaMPS PSI completed" };
   }
   if (!findGroup(PhaseUI.active) && !["run", "ts"].includes(PhaseUI.active)) {
     PhaseUI.active = "project";
@@ -70,6 +82,11 @@ function renderAll() {
   renderStatus();
   renderLogs();
   renderSummary();
+  renderRunProgress();
+  const pickerAvailable = Boolean(PhaseUI.state?.pickerAvailable && !PhaseUI.state?.running);
+  byId("picker-ready").classList.toggle("hidden", !pickerAvailable);
+  byId("open-ts-picker").disabled = !pickerAvailable;
+  byId("picker-unavailable").classList.toggle("hidden", pickerAvailable);
   byId("workdir").textContent = PhaseUI.state?.workDir || "No processing folder";
   byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || "6.1.0"}`;
 }
@@ -101,6 +118,7 @@ function toolNav(id, icon, title) {
 
 function switchPage(id) {
   collectVisibleForm();
+  if (id !== "ts") send("CloseTsPicker", {});
   PhaseUI.active = id;
   renderNavigation();
   renderPage();
@@ -254,6 +272,7 @@ function renderSummary() {
 function appendLog(entry) {
   if (!entry) return;
   PhaseUI.logs.push(entry);
+  updateProgressFromLine(entry.message || "");
   const consoleNode = byId("console");
   if (consoleNode) { consoleNode.appendChild(logElement(entry)); consoleNode.scrollTop = consoleNode.scrollHeight; updateLogCount(); }
 }
@@ -320,10 +339,74 @@ async function pollLiveLog() {
       .split(/\r?\n/)
       .map(line => line.trimEnd())
       .filter(line => line.trim().length > 0);
+    if (PhaseUI.liveLines.length < PhaseUI.progressLineCount) PhaseUI.progressLineCount = 0;
+    PhaseUI.liveLines.slice(PhaseUI.progressLineCount).forEach(updateProgressFromLine);
+    PhaseUI.progressLineCount = PhaseUI.liveLines.length;
     renderLogs();
+    renderRunProgress();
   } catch (_) {
     // The diary file is created when processing begins; an initial 404 is normal.
   }
+}
+
+function updateProgressFromLine(line) {
+  const progress = PhaseUI.runProgress;
+  const first = Number(PhaseUI.config.stamps_first_step || 1);
+  const last = PhaseUI.config.ph_output === "wrapped" ? 5 : Number(PhaseUI.config.stamps_last_step || 7);
+  const steps = Math.max(1,last-first+1);
+  if (/STEP 1: Data preparation started/i.test(line)) {
+    progress.phase = "Preparing StaMPS patches";
+    progress.percentage = Math.max(progress.percentage,2);
+  } else if (/STEP 1: Data preparation finished/i.test(line)) {
+    progress.phase = "StaMPS patches ready";
+    progress.percentage = Math.max(progress.percentage,12);
+  } else if (/STEP 2: StaMPS processing started/i.test(line)) {
+    progress.phase = "Running StaMPS PSI";
+    progress.percentage = Math.max(progress.percentage,12);
+  } else if (/STEP 2: StaMPS processing finished/i.test(line)) {
+    progress.phase = "StaMPS PSI finished; preparing export";
+    progress.percentage = Math.max(progress.percentage,88);
+  } else if (/STEP 3: (?:Displacement time series|Wrapped phase) export started/i.test(line)) {
+    progress.phase = PhaseUI.config.ph_output === "wrapped" ? "Exporting wrapped phase (radians)" : "Exporting displacement time series";
+    progress.percentage = Math.max(progress.percentage,90);
+  } else if (/STEP 3: (?:Displacement time series|Wrapped phase) export finished/i.test(line)) {
+    progress.phase = "Publishing CSV and XLSX results";
+    progress.percentage = Math.max(progress.percentage,98);
+  } else if (!/preflight|STEP [123]:/i.test(line)) {
+    const step = line.match(/\bStep\s+([1-8])\b/i);
+    if (step) {
+      const number = Number(step[1]);
+      if (number >= first && number <= last) {
+        progress.step = number;
+        progress.phase = `Step ${number} of ${last} · ${stampsStepLabel(number)}`;
+        progress.percentage = Math.max(progress.percentage,12 + 76*(number-first)/steps);
+      }
+    }
+    const patch = line.match(/\b(?:Directory is|Processing)\s+PATCH[_-]?(\d+)\b/i);
+    if (patch && progress.step) {
+      const index = Number(patch[1]);
+      const total = Math.max(index,Number(PhaseUI.state?.patchCount || 0));
+      progress.phase = `Step ${progress.step} · ${stampsStepLabel(progress.step)} · patch ${index}${total ? ` of ${total}` : ""}`;
+      progress.percentage = Math.max(progress.percentage,
+        12 + 76*((progress.step-first) + Math.min(index/Math.max(1,total),.99))/steps);
+    }
+  }
+  renderRunProgress();
+}
+
+function stampsStepLabel(step) {
+  return ["","Load data","Estimate phase noise","Select PS","Weed PS",
+    "Merge and correct phase","Unwrap phase","Estimate DEM error","Filter atmospheric noise"][step] || "Processing";
+}
+
+function renderRunProgress() {
+  const progress = PhaseUI.runProgress;
+  const percentage = Math.max(0,Math.min(100,Number(progress.percentage || 0)));
+  byId("processing-progress-bar").style.width = `${percentage}%`;
+  byId("processing-progress-percent").textContent = `${Math.round(percentage)}%`;
+  byId("processing-progress-phase").textContent = progress.phase || "Ready";
+  const seconds = PhaseUI.runStartedAt ? Math.max(0,Math.floor((Date.now()-PhaseUI.runStartedAt)/1000)) : 0;
+  byId("processing-elapsed").textContent = `${Math.floor(seconds/60)}m ${String(seconds%60).padStart(2,"0")}s`;
 }
 
 function save() { collectVisibleForm(); send("Save", payload()); }

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing:border-box; }
+  html,body { margin:0; width:100%; height:100%; font-family:Segoe UI,Arial,sans-serif; color:#142747; }
+  body { display:flex; align-items:center; gap:16px; padding:9px 27px; background:linear-gradient(180deg,#fff,#f8faff); border-bottom:1px solid #dbe4f2; }
+  .label { min-width:148px; }
+  .eyebrow { display:block; color:#657b9f; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+  .label strong { display:block; margin-top:4px; font-size:14px; }
+  select,button { height:43px; border:1px solid #bdceeb; border-radius:13px; background:linear-gradient(145deg,#fff,#eff5ff); color:#2c5fc9; font:700 13px Segoe UI,Arial,sans-serif; box-shadow:0 5px 16px rgba(49,81,145,.07),inset 0 1px #fff; }
+  select { flex:1; min-width:0; padding:0 14px; color:#253d65; cursor:pointer; }
+  button { flex:none; min-width:112px; padding:0 16px; cursor:pointer; }
+  button:hover,select:hover { border-color:#8dabdf; background:#eaf1ff; }
+  button:focus-visible,select:focus-visible { outline:3px solid #77a0f3; outline-offset:2px; }
+  select:disabled { opacity:.55; cursor:not-allowed; }
+  @media(max-width:700px) { body { gap:8px; padding:7px 11px; } .label { min-width:96px; } .label strong { font-size:12px; } button { min-width:70px; padding:0 8px; } }
+</style>
+</head>
+<body>
+  <div class="label"><span class="eyebrow">PHASE StaMPS PSI</span><strong>Dataset</strong></div>
+  <select id="dataset" aria-label="StaMPS dataset"><option>No project open</option></select>
+  <button id="refresh" type="button">↻ Refresh</button>
+<script>
+function setup(htmlComponent) {
+  const select = document.getElementById('dataset');
+  const render = data => {
+    if (!data || data.view !== 'datasets') return;
+    const names = Array.isArray(data.names) ? data.names : [data.names || 'No dataset'];
+    const paths = Array.isArray(data.paths) ? data.paths : [data.paths || ''];
+    select.replaceChildren();
+    names.forEach((name,index) => {
+      const option = document.createElement('option');
+      option.textContent = String(name);
+      option.value = String(paths[index] || '');
+      select.appendChild(option);
+    });
+    select.value = data.selected || '';
+    select.disabled = !paths.some(Boolean);
+  };
+  select.addEventListener('change',() => { htmlComponent.Data = {action:'select',path:select.value,nonce:Date.now()}; });
+  document.getElementById('refresh').addEventListener('click',() => { htmlComponent.Data = {action:'refresh',nonce:Date.now()}; });
+  htmlComponent.addEventListener('DataChanged',() => render(htmlComponent.Data));
+  render(htmlComponent.Data);
+}
+</script>
+</body>
+</html>

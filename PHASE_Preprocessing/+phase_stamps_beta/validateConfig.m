@@ -19,6 +19,11 @@ if ~any(strcmp(cfg.stamps_last_step, {'7','8'}))
 end
 if ~any(strcmp(cfg.ph_output, {'wrapped','unwrapped'}))
     errors{end+1} = 'Phase output must be wrapped or unwrapped.';
+elseif strcmp(cfg.ph_output,'wrapped')
+    if strcmp(cfg.stamps_first_step,'6')
+        errors{end+1} = 'Wrapped phase stops after StaMPS Step 5; first step cannot be 6.';
+    end
+    warnings{end+1} = 'Wrapped phase runs through Step 5 and exports phase in radians, not displacement.';
 end
 selectionMethod = upper(strtrim(char(string(cfg.select_method))));
 if ~any(strcmp(selectionMethod,{'PERCENT','DENSITY'}))

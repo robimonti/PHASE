@@ -12,7 +12,9 @@ classdef App < handle
         PreprocessingHost
         StampsHost
         ModelHost
-        StampsSelector
+        StampsDatasetBar
+        StampsDatasetPaths = {}
+        SelectedStampsDir = ''
         StampsPlaceholder
         PreprocessingApp = []
         StampsApp = []
@@ -73,16 +75,16 @@ classdef App < handle
                     paths = {''};
                 end
             end
-            previous = obj.CurrentStampsDir;
-            obj.StampsSelector.Items = names;
-            obj.StampsSelector.ItemsData = paths;
+            previous = obj.SelectedStampsDir;
+            obj.StampsDatasetPaths = paths;
             if ~isempty(previous) && any(strcmp(paths,previous))
-                obj.StampsSelector.Value = previous;
+                obj.SelectedStampsDir = previous;
             else
-                obj.StampsSelector.Value = paths{1};
+                obj.SelectedStampsDir = paths{1};
             end
+            obj.StampsDatasetBar.Data = struct('view','datasets', ...
+                'names',{names},'paths',{paths},'selected',obj.SelectedStampsDir);
             obj.StampsPlaceholder.Text = obj.stampsHelpText();
-            obj.StampsSelector.Enable = ternary(~isempty(paths{1}),'on','off');
             obj.updateHome();
         end
 
@@ -200,25 +202,15 @@ classdef App < handle
 
         function buildStampsTab(obj)
             layout = uigridlayout(obj.StampsTab,[2 1]);
-            layout.RowHeight = {48,'1x'};
+            layout.RowHeight = {76,'1x'};
             layout.Padding = [0 0 0 0];
             layout.RowSpacing = 0;
-            bar = uigridlayout(layout,[1 3]);
-            bar.Layout.Row = 1;
-            bar.ColumnWidth = {140,'1x',115};
-            bar.Padding = [15 6 15 6];
-            bar.BackgroundColor = [0.94 0.96 0.99];
-            label = uilabel(bar,'Text','Dataset StaMPS', ...
-                'FontWeight','bold');
-            label.Layout.Column = 1;
-            obj.StampsSelector = uidropdown(bar, ...
-                'Items',{'No project open'},'ItemsData',{''}, ...
-                'ValueChangedFcn',@(~,~) obj.loadStamps());
-            obj.StampsSelector.Layout.Column = 2;
-            refresh = uibutton(bar,'push','Text','Refresh', ...
-                'ButtonPushedFcn',@(~,~) obj.refreshDatasets());
-            refresh.Layout.Column = 3;
-            styleButton(refresh,false);
+            obj.StampsDatasetBar = uihtml(layout, ...
+                'HTMLSource',fullfile(obj.InstallRoot,'PHASE_Stamps_Dataset_UI.html'), ...
+                'DataChangedFcn',@(~,event) obj.handleDatasetAction(event));
+            obj.StampsDatasetBar.Layout.Row = 1;
+            obj.StampsDatasetBar.Data = struct('view','datasets', ...
+                'names',{{'No project open'}},'paths',{{''}},'selected','');
             obj.StampsHost = uipanel(layout,'BorderType','none', ...
                 'BackgroundColor',[1 1 1]);
             obj.StampsHost.Layout.Row = 2;
@@ -314,7 +306,7 @@ classdef App < handle
 
         function loadStamps(obj)
             if isempty(obj.ProjectRoot), return; end
-            selected = char(string(obj.StampsSelector.Value));
+            selected = obj.SelectedStampsDir;
             if isempty(selected)
                 obj.StampsPlaceholder.Visible = 'on';
                 return
@@ -325,7 +317,8 @@ classdef App < handle
             end
             if ~isempty(obj.StampsApp) && isvalid(obj.StampsApp)
                 if obj.StampsApp.IsRunning
-                    obj.StampsSelector.Value = obj.CurrentStampsDir;
+                    obj.SelectedStampsDir = obj.CurrentStampsDir;
+                    obj.refreshDatasets();
                     uialert(obj.UIFigure, ...
                         'Wait for StaMPS processing to finish before switching datasets.', ...
                         'Processing in progress');
@@ -344,6 +337,21 @@ classdef App < handle
                 obj.StampsPlaceholder.Text = ['Cannot open dataset: ' ME.message];
                 obj.StampsPlaceholder.Visible = 'on';
                 rethrow(ME)
+            end
+        end
+
+        function handleDatasetAction(obj,event)
+            data = event.Data;
+            if ~isstruct(data) || ~isfield(data,'action'), return; end
+            switch char(string(data.action))
+                case 'refresh'
+                    obj.refreshDatasets();
+                case 'select'
+                    if ~isfield(data,'path'), return; end
+                    selected = char(string(data.path));
+                    if ~any(strcmp(obj.StampsDatasetPaths,selected)), return; end
+                    obj.SelectedStampsDir = selected;
+                    obj.loadStamps();
             end
         end
 

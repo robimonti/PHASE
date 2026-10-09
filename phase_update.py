@@ -25,7 +25,7 @@ import zipfile
 API_URL = "https://api.github.com/repos/robimonti/PHASE/releases/latest"
 ASSET_NAME = "phase7-engine.zip"
 REQUIRED_FILES = (
-    "PHASE_Hub.m", "PHASE_Hub_UI.html", "PHASE_logo.png",
+    "PHASE_Hub.m", "PHASE_Hub_UI.html", "PHASE_Stamps_Dataset_UI.html", "PHASE_logo.png",
     "PHASE_mod1a.png", "PHASE_mod1b.png", "PHASE_mod2.png",
     "+phase_hub/App.m", "+phase_project/open.m",
     "+phase_project/workflowStatus.m",

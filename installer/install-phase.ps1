@@ -2741,6 +2741,7 @@ function Assert-PhaseStandaloneRuntime {
     $required = @(
         'PHASE_Hub.m',
         'PHASE_Hub_UI.html',
+        'PHASE_Stamps_Dataset_UI.html',
         'PHASE_logo.png',
         'PHASE_mod1a.png',
         'PHASE_mod1b.png',
