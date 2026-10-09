@@ -12,36 +12,40 @@
   button:focus-visible { outline:3px solid #77a0f3; outline-offset:2px; }
   .glass { background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(240,246,255,.78)); border:1px solid rgba(188,203,229,.75); box-shadow:0 8px 26px rgba(49,81,145,.08),inset 0 1px 0 rgba(255,255,255,.98); border-radius:18px; }
   .nav-shell { height:100%; padding:11px 26px 9px; background:linear-gradient(180deg,#fff 0%,#f8faff 100%); border-bottom:1px solid var(--line); }
-  .nav-top { height:62px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-  .brand { display:flex; align-items:center; gap:13px; min-width:0; }
-  .brand img { width:49px; height:49px; object-fit:contain; flex:none; }
-  .brand-title { font-size:23px; font-weight:750; color:var(--blue); line-height:1.03; letter-spacing:.01em; }
-  .brand-meta { color:var(--muted); font-size:11px; margin-top:4px; white-space:nowrap; }
+  .nav-top { height:62px; display:flex; align-items:center; justify-content:flex-end; gap:25px; }
+  .brand { display:flex; align-items:center; gap:11px; min-width:0; }
+  .brand img { width:107px; height:53px; object-fit:contain; flex:none; }
+  .brand-lines { display:flex; flex-direction:column; gap:2px; color:var(--muted); font-size:11px; white-space:nowrap; }
+  .brand-lines strong { color:var(--ink); font-size:12px; }
   .update { display:flex; align-items:center; gap:9px; min-height:40px; padding:0 16px; color:var(--blue); font-size:13px; font-weight:700; }
   .update svg { width:17px; height:17px; }
   .update:disabled { opacity:.52; cursor:not-allowed; }
   .nav-pills { display:flex; align-items:center; gap:9px; height:45px; }
-  .nav-button { min-width:145px; height:39px; padding:0 18px; color:#39577f; font-size:13px; font-weight:700; }
+  .nav-button { min-width:166px; height:39px; padding:0 18px; color:#39577f; font-size:13px; font-weight:700; }
   .nav-button:hover, .soft:hover { border-color:#9db8eb; background:#eaf1ff; }
   .nav-button.active { color:#fff; border-color:#3565cf; background:linear-gradient(145deg,#4e78d9,#285cc6); box-shadow:0 6px 16px rgba(47,91,195,.22),inset 0 1px 0 rgba(255,255,255,.24); }
   .home { height:100%; overflow:auto; padding:26px 30px 30px; background:#f7f9fd; }
-  .hero { display:flex; align-items:center; justify-content:space-between; gap:28px; min-height:153px; padding:23px 28px; background:linear-gradient(120deg,#eaf1ff 0%,#f8faff 75%,#fff 100%); }
+  .project-intro { display:grid; grid-template-columns:minmax(0,1fr) 191px; gap:14px; align-items:stretch; }
+  .hero { display:flex; align-items:center; min-height:142px; padding:23px 28px; background:rgba(230,242,251,.88); -webkit-backdrop-filter:saturate(160%) blur(22px); backdrop-filter:saturate(160%) blur(22px); }
   .eyebrow { color:var(--blue); font-size:11px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
   h1 { margin:8px 0 5px; font-size:29px; letter-spacing:-.025em; line-height:1.18; }
   .hero-sub { color:var(--muted); font-size:14px; }
-  .hero-actions { display:flex; gap:10px; flex:none; }
+  .hero-actions { display:flex; flex-direction:column; gap:10px; }
+  .hero-actions button { flex:1; display:flex; align-items:center; justify-content:center; gap:9px; }
+  .hero-actions svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   .action { min-height:43px; padding:0 18px; font-weight:700; font-size:13px; }
   .primary { color:#fff; background:linear-gradient(145deg,#4b77dc,#2c5fc9); border:1px solid #2f61cb; border-radius:13px; box-shadow:0 7px 18px rgba(48,91,196,.2); }
   .primary:hover { background:linear-gradient(145deg,#5c85e3,#3568d0); }
   .soft { color:var(--blue); border-radius:13px; background:rgba(255,255,255,.82); border:1px solid #bdceeb; box-shadow:inset 0 1px 0 #fff; }
   .section-title { margin:22px 3px 12px; font-size:11px; font-weight:800; letter-spacing:.13em; color:#61728f; }
   .workflow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
-  .card { min-height:304px; padding:20px 21px 18px; display:flex; flex-direction:column; }
+  .card { min-height:380px; padding:20px 21px 18px; display:flex; flex-direction:column; }
   .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
   .step { font-size:11px; font-weight:800; color:var(--blue); letter-spacing:.09em; }
   .icon { width:60px; height:60px; border-radius:17px; background:linear-gradient(135deg,#e8f0ff,#f6eafa); display:grid; place-items:center; flex:none; }
   .icon svg { width:42px; height:42px; fill:none; stroke:#426ed0; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
   .card h2 { margin:5px 0 8px; font-size:19px; letter-spacing:-.02em; }
+  .module-mark { width:174px; height:76px; margin:0 0 6px; object-fit:contain; object-position:left center; }
   .card ul { margin:0 0 13px; padding-left:18px; color:#4e5d74; font-size:12.5px; line-height:1.55; }
   .card li::marker { color:#5d83dc; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:auto; margin-bottom:13px; }
@@ -52,34 +56,33 @@
   .metric-label { font-size:10px; letter-spacing:.1em; font-weight:800; color:#75829a; text-transform:uppercase; }
   .metric-value { margin-top:7px; font-size:14px; font-weight:700; color:#1f3559; overflow-wrap:anywhere; }
   .status-note { margin-top:13px; color:#728099; font-size:11px; }
-  @media (max-height:830px) { .home { padding-top:18px; padding-bottom:18px; } .hero { min-height:130px; } .section-title { margin-top:15px; margin-bottom:9px; } .card { min-height:270px; } }
-  @media (max-width:1000px) { .home { padding:18px; } .hero { align-items:flex-start; flex-direction:column; } .workflow { grid-template-columns:1fr; } .card { min-height:250px; } .status-grid { grid-template-columns:repeat(2,1fr); } }
-  @media (max-width:650px) { .brand-meta { display:none; } .nav-shell { padding-left:12px; padding-right:12px; } .nav-button { min-width:0; flex:1; padding:0 5px; font-size:11px; } .update span { display:none; } .hero-actions { width:100%; } .hero-actions button { flex:1; } }
+  @media (max-height:830px) { .home { padding-top:18px; padding-bottom:18px; } .hero { min-height:130px; } .section-title { margin-top:15px; margin-bottom:9px; } .card { min-height:354px; } }
+  @media (max-width:1000px) { .home { padding:18px; } .workflow { grid-template-columns:1fr; } .card { min-height:310px; } .status-grid { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:700px) { .brand-lines { display:none; } .nav-shell { padding-left:12px; padding-right:12px; } .nav-button { min-width:0; flex:1; padding:0 5px; font-size:11px; } .update span { display:none; } .project-intro { grid-template-columns:1fr; } .hero-actions { flex-direction:row; } .hero-actions button { min-height:44px; } }
 </style>
 </head>
 <body>
 <div id="nav" class="nav-shell" hidden>
   <div class="nav-top">
-    <div class="brand"><img src="Logo_square.png" alt="PHASE logo"><div><div class="brand-title">PHASE</div><div class="brand-meta">Roberto Monti · Politecnico di Milano · <span id="version"></span></div></div></div>
     <button class="glass update" data-action="updates" title="Check for PHASE updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Check for updates</span></button>
+    <div class="brand"><img src="PHASE_logo.png" alt="PHASE logo"><div class="brand-lines"><strong>Roberto Monti</strong><span>Politecnico di Milano</span><span id="version">v7.0.0 preview</span></div></div>
   </div>
   <nav class="nav-pills" aria-label="PHASE sections">
     <button class="glass nav-button" data-action="project">Project</button>
     <button class="glass nav-button" data-action="preprocessing">Preprocessing</button>
-    <button class="glass nav-button" data-action="stamps">StaMPS</button>
-    <button class="glass nav-button" data-action="model">Model</button>
+    <button class="glass nav-button" data-action="stamps">StaMPS PSI</button>
+    <button class="glass nav-button" data-action="model">Displacement Modeling</button>
   </nav>
 </div>
 <main id="home" class="home" hidden>
-  <section class="glass hero">
+  <div class="project-intro"><section class="glass hero">
     <div><div class="eyebrow">Project workspace</div><h1 id="project-name">Start a PHASE project</h1><div id="hero-sub" class="hero-sub">Create a project or open an existing one to get started.</div></div>
-    <div class="hero-actions"><button class="action soft" data-action="open">Open project</button><button class="action primary" data-action="new">New project</button></div>
-  </section>
+  </section><div class="hero-actions"><button class="action soft" data-action="open"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3zM3 7V5h7l2 2"/></svg>Open project</button><button class="action primary" data-action="new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>New project</button></div></div>
   <div class="section-title">WORKFLOW</div>
   <section class="workflow" aria-label="PHASE workflow">
-    <article class="glass card"><div class="card-head"><div class="step">01 · PREPROCESSING</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m8 11 11 11m-4-14 8 8M6 21l14 14m4-12 11-11 5 5-11 11zM16 32c3-3 8-3 11 0m-15 4c5-5 13-5 18 0"/><circle cx="19" cy="22" r="2"/></svg></div></div><h2>Prepare SAR data</h2><ul><li>Import SAR scenes and define the AOI</li><li>Choose the master and process the stack in SNAP</li><li>Generate interferograms and StaMPS inputs</li></ul><div class="chips"><span class="chip">Sentinel-1</span><span class="chip">SNAP</span><span class="chip">ASF</span></div><button class="action soft" data-action="preprocessing">Open Preprocessing →</button></article>
-    <article class="glass card"><div class="card-head"><div class="step">02 · STAMPS</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 8v31h35M11 29l7-8 6 6 7-14 8 7"/><circle cx="11" cy="29" r="2"/><circle cx="18" cy="21" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="13" r="2"/><circle cx="39" cy="20" r="2"/></svg></div></div><h2>Run PSI analysis</h2><ul><li>Select and refine persistent scatterers</li><li>Estimate displacement time series</li><li>Apply optional TRAIN atmospheric correction</li></ul><div class="chips"><span class="chip">StaMPS</span><span class="chip">TRAIN</span><span class="chip">PSI</span></div><button class="action soft" data-action="stamps">Open StaMPS →</button></article>
-    <article class="glass card"><div class="card-head"><div class="step">03 · MODEL</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 10h34v28H7zM18 10v28m11-28v28M7 19h34M7 29h34"/><path d="M10 32c7-3 10-13 17-13 5 0 7 8 12 4" stroke="#cb2e6c" stroke-width="2.8"/></svg></div></div><h2>Model deformation</h2><ul><li>Build 1D or 2D spatio-temporal models</li><li>Map deformation, uncertainty and alerts</li><li>Export reports and GIS-ready results</li></ul><div class="chips"><span class="chip">PHASE Model</span><span class="chip">GIS</span><span class="chip">Reports</span></div><button class="action soft" data-action="model">Open Model →</button></article>
+    <article class="glass card"><div class="card-head"><div class="step">01 · PREPROCESSING</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m8 11 11 11m-4-14 8 8M6 21l14 14m4-12 11-11 5 5-11 11zM16 32c3-3 8-3 11 0m-15 4c5-5 13-5 18 0"/><circle cx="19" cy="22" r="2"/></svg></div></div><h2>Preprocessing</h2><img class="module-mark" src="PHASE_mod1a.png" alt="SAR images preprocessing module"><ul><li>Import SAR scenes and define the AOI</li><li>Choose the master and process the stack in SNAP</li><li>Generate interferograms and StaMPS inputs</li></ul><div class="chips"><span class="chip">Sentinel-1</span><span class="chip">SNAP</span><span class="chip">ASF</span></div><button class="action soft" data-action="preprocessing">Open PHASE Preprocessing →</button></article>
+    <article class="glass card"><div class="card-head"><div class="step">02 · STAMPS PSI</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 8v31h35M11 29l7-8 6 6 7-14 8 7"/><circle cx="11" cy="29" r="2"/><circle cx="18" cy="21" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="13" r="2"/><circle cx="39" cy="20" r="2"/></svg></div></div><h2>StaMPS PSI</h2><img class="module-mark" src="PHASE_mod1b.png" alt="StaMPS PSI module"><ul><li>Select and refine persistent scatterers</li><li>Estimate displacement time series</li><li>Apply optional TRAIN atmospheric correction</li></ul><div class="chips"><span class="chip">StaMPS</span><span class="chip">TRAIN</span><span class="chip">PSI</span></div><button class="action soft" data-action="stamps">Open PHASE StaMPS →</button></article>
+    <article class="glass card"><div class="card-head"><div class="step">03 · DISPLACEMENT MODELING</div><div class="icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 10h34v28H7zM18 10v28m11-28v28M7 19h34M7 29h34"/><path d="M10 32c7-3 10-13 17-13 5 0 7 8 12 4" stroke="#cb2e6c" stroke-width="2.8"/></svg></div></div><h2>Displacement Modeling</h2><img class="module-mark" src="PHASE_mod2.png" alt="Geospatial analysis module"><ul><li>Build 1D or 2D spatio-temporal models</li><li>Map deformation, uncertainty and alerts</li><li>Export reports and GIS-ready results</li></ul><div class="chips"><span class="chip">PHASE Model</span><span class="chip">GIS</span><span class="chip">Reports</span></div><button class="action soft" data-action="model">Open Displacement Modeling →</button></article>
   </section>
   <div class="section-title">PROJECT STATUS</div>
   <section class="glass status"><div class="status-grid"><div><div class="metric-label">Project folder</div><div id="folder" class="metric-value">No project open</div></div><div><div class="metric-label">SAR input files</div><div id="inputs" class="metric-value">—</div></div><div><div class="metric-label">StaMPS datasets</div><div id="datasets" class="metric-value">—</div></div><div><div class="metric-label">Export files</div><div id="exports" class="metric-value">—</div></div></div><div class="status-note">Project data and results stay in this folder. PHASE code stays in the shared installation.</div></section>

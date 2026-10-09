@@ -2731,6 +2731,10 @@ function Assert-PhaseStandaloneRuntime {
     $required = @(
         'PHASE_Hub.m',
         'PHASE_Hub_UI.html',
+        'PHASE_logo.png',
+        'PHASE_mod1a.png',
+        'PHASE_mod1b.png',
+        'PHASE_mod2.png',
         'phase_update.py',
         '+phase_hub\App.m',
         '+phase_project\open.m',

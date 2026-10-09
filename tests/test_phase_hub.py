@@ -24,6 +24,15 @@ def test_hub_home_uses_english_and_phase_visual_style(phase_root):
     assert "data-action=\"updates\"" in view
     assert "data-action=\"open\"" in view
     assert "data-action=\"new\"" in view
+    assert "PHASE_logo.png" in view
+    assert "PHASE_mod1a.png" in view
+    assert "PHASE_mod1b.png" in view
+    assert "PHASE_mod2.png" in view
+    assert "StaMPS PSI" in view
+    assert "Displacement Modeling" in view
+    assert "Open PHASE Preprocessing" in view
+    assert "Open PHASE StaMPS" in view
+    assert "Open Displacement Modeling" in view
     assert "border-radius:18px" in view
     assert "Your PHASE workspace" not in view
     assert "One project for Preprocessing" not in view

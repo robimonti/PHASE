@@ -28,6 +28,10 @@ PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely")
 REQUIRED_FILES = (
     "PHASE_Hub.m",
     "PHASE_Hub_UI.html",
+    "PHASE_logo.png",
+    "PHASE_mod1a.png",
+    "PHASE_mod1b.png",
+    "PHASE_mod2.png",
     "+phase_hub/App.m",
     "+phase_project/open.m",
     "phase_update.py",
