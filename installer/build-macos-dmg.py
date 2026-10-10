@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -22,6 +23,10 @@ def main() -> None:
     parser.add_argument("--notary-profile", help="notarytool keychain profile")
     parser.add_argument("--runtime", type=Path,
                         help="Prepared StaMPS/TRAIN runtime for a local PSI installer preview")
+    parser.add_argument("--gawk-source", type=Path,
+                        help="Matching GNU awk 5.4.0 source archive for a public runtime DMG")
+    parser.add_argument("--snaphu-source", type=Path,
+                        help="Matching SNAPHU 2.0.7 source archive for a public runtime DMG")
     args = parser.parse_args()
     if args.notary_profile and not args.sign_identity:
         parser.error("--notary-profile requires --sign-identity")
@@ -35,6 +40,33 @@ def main() -> None:
     source_spec.loader.exec_module(installer)
     installer.validate_runtime(root)
     runtime = args.runtime.expanduser().resolve() if args.runtime else None
+    gawk_source = args.gawk_source.expanduser().resolve() if args.gawk_source else None
+    snaphu_source = args.snaphu_source.expanduser().resolve() if args.snaphu_source else None
+    build_tag = installer.release_tag(root)
+    if runtime and build_tag and (not gawk_source or not snaphu_source):
+        raise RuntimeError("Tagged runtime DMG requires GNU awk and SNAPHU source archives.")
+    if gawk_source:
+        if not runtime or gawk_source.name != "gawk-5.4.0.tar.xz":
+            raise RuntimeError("GNU awk source requires the runtime and gawk-5.4.0.tar.xz.")
+        digest = hashlib.sha256(gawk_source.read_bytes()).hexdigest()
+        if digest != "3dd430f0cd3b4428c6c3f6afc021b9cd3c1f8c93f7a688dc268ca428a90b4ac1":
+            raise RuntimeError("GNU awk source archive SHA-256 mismatch.")
+        gawk_binary = runtime / "StaMPS" / "external" / "gawk" / "bin" / "gawk"
+        result = subprocess.run([str(gawk_binary), "--version"],
+                                capture_output=True, text=True, check=True)
+        if not result.stdout.startswith("GNU Awk 5.4.0,"):
+            raise RuntimeError("Bundled GNU awk binary does not match the source archive.")
+    if snaphu_source:
+        if not runtime or snaphu_source.name != "snaphu-v2.0.7.tar.gz":
+            raise RuntimeError("SNAPHU source requires the runtime and snaphu-v2.0.7.tar.gz.")
+        digest = hashlib.sha256(snaphu_source.read_bytes()).hexdigest()
+        if digest != "c03ac126f9a964321bb5d6fb5b4004728368da268d7cb8407bb295a8abe5b262":
+            raise RuntimeError("SNAPHU source archive SHA-256 mismatch.")
+        snaphu_binary = runtime / "StaMPS" / "external" / "snaphu" / "bin" / "snaphu"
+        result = subprocess.run([str(snaphu_binary), "-h"],
+                                capture_output=True, text=True, check=False)
+        if "snaphu v2.0.7" not in result.stdout + result.stderr:
+            raise RuntimeError("Bundled SNAPHU binary does not match the source archive.")
     if args.sign_identity and runtime is None:
         raise RuntimeError("Signed PHASE release requires the complete StaMPS/TRAIN runtime.")
     if runtime:
@@ -65,7 +97,6 @@ def main() -> None:
         contents.mkdir(parents=True)
         executable.parent.mkdir(parents=True)
         source = installer_dir / "PHASEInstaller.swift"
-        build_tag = installer.release_tag(root)
         if build_tag:
             generated_source = stage / "PHASEInstaller.swift"
             generated_source.write_text(
@@ -105,6 +136,13 @@ def main() -> None:
         if runtime:
             shutil.copytree(runtime / "StaMPS", contents / "StaMPS")
             shutil.copytree(runtime / "TRAIN", contents / "TRAIN")
+        if gawk_source and snaphu_source:
+            sources = volume / "Third-party sources"
+            sources.mkdir()
+            shutil.copy2(gawk_source, sources / gawk_source.name)
+            shutil.copy2(snaphu_source, sources / snaphu_source.name)
+            shutil.copy2(root / "Documenti" / "PHASE_7_THIRD_PARTY.md",
+                         sources / "README.md")
         signing = ["codesign", "--force", "--deep", "--sign",
                    args.sign_identity or "-"]
         if args.sign_identity:

@@ -1,4 +1,4 @@
-# PHASE v7.0.0 — release candidate
+# PHASE v7.0.0
 
 PHASE 7 brings Preprocessing, StaMPS PSI and Displacement Modeling into one
 project-aware hub. Install PHASE once per computer; create projects anywhere,
@@ -14,9 +14,14 @@ Displacement Modeling module was not revalidated as part of the new macOS run.
 
 Installers are provided for Windows, Apple Silicon macOS and Linux x86_64;
 MATLAB and ESA SNAP remain separate prerequisites. A compatible v7 engine
-package enables the in-app update button. The GitHub workflow creates a
-**draft release** so macOS runtime inclusion, third-party licenses, Apple
-signing/notarization and asset checks can be reviewed before publication.
+package enables the in-app update button. The macOS DMG is **unsigned and
+not notarized**; after a first blocked launch, open it through macOS
+**System Settings → Privacy & Security → Open Anyway**. Verify the download
+hash before overriding Gatekeeper; do not disable Gatekeeper globally.
+Third-party source archives and notices accompany the DMG and are described
+in [the component inventory](Documenti/PHASE_7_THIRD_PARTY.md). SNAPHU and
+Triangle have noncommercial redistribution/use restrictions in their own
+licence files. Linux remains experimental pending a real end-to-end PSI run.
 
 ## Previous release: PHASE v6.1.4
 

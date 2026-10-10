@@ -1,8 +1,8 @@
 ﻿# Installer PHASE
 
-> **Stato release candidate:** Windows e macOS Apple Silicon hanno completato
-> test guidati. Linux ha un installer e un build nativo predisposti, ma non una
-> prova PSI reale. La release pubblica 6.1.4 usa ancora i tre launcher.
+> **PHASE 7:** Windows e macOS Apple Silicon hanno completato test guidati.
+> Linux ha un installer e un build nativo predisposti, ma non una prova PSI
+> reale. Il DMG macOS pubblico non è firmato né notarizzato da Apple.
 
 ## Installazione dell'hub PHASE 7
 
@@ -91,8 +91,10 @@ SNAPHU, GNU awk e il programma Triangle di Shewchuk vanno ottenuti separatamente
 e [CMU](https://www.cs.cmu.edu/~quake/triangle.html), e dal
 [progetto GNU awk](https://www.gnu.org/software/gawk/), e compilati per arm64.
 Non usare il pacchetto Homebrew `triangle`: è un programma omonimo diverso.
-Questi componenti hanno condizioni di licenza da verificare prima di includerli in un
-DMG pubblico. Per una **preview locale** che includa il runtime già preparato:
+I componenti nel DMG pubblico devono essere accompagnati dai relativi sorgenti
+e avvisi di licenza, come descritto in
+[PHASE_7_THIRD_PARTY.md](../Documenti/PHASE_7_THIRD_PARTY.md). Per una
+**preview locale** che includa il runtime già preparato:
 
 ```bash
 python3 installer/build-macos-dmg.py \
@@ -103,8 +105,9 @@ python3 installer/build-macos-dmg.py \
 Senza `--runtime`, il DMG installa il solo motore PHASE e lo dichiara nel
 wizard. Con `--runtime`, la GUI installa StaMPS/TRAIN insieme all'app, senza
 chiedere all'utente di scegliere manualmente le loro cartelle. La pipeline PSI
-macOS è stata provata; prima di una distribuzione pubblica restano la revisione
-delle licenze dei binari terzi e la firma/notarizzazione Apple.
+macOS è stata provata. La build da un tag ufficiale richiede gli archivi
+sorgente esatti di GNU awk 5.4.0 e SNAPHU 2.0.7 con le opzioni
+`--gawk-source` e `--snaphu-source`.
 
 ### Pacchetti grafici da distribuire
 
@@ -127,8 +130,9 @@ delle licenze dei binari terzi e la firma/notarizzazione Apple.
   Gatekeeper, usare `--sign-identity` e `--notary-profile` con credenziali
   Apple Developer ID configurate. Per compilare il wizard serve la toolchain
   Swift di Xcode; l'utente finale non deve installare Xcode. Il DMG costruito
-  senza firma/notarizzazione è
-  solo una preview locale.
+  senza firma/notarizzazione richiede un'apertura esplicita tramite
+  **Impostazioni di Sistema → Privacy e sicurezza → Apri comunque** dopo il
+  primo tentativo bloccato. Non disabilitare Gatekeeper globalmente.
 - **Linux:** su Linux x86_64 o aarch64, con `appimagetool`, costruire
   `PHASE-7-linux.AppImage` tramite
   `python3 installer/build-linux-appimage.py --output /path/PHASE-7-linux.AppImage`.
@@ -139,7 +143,7 @@ delle licenze dei binari terzi e la firma/notarizzazione Apple.
 
 I pacchetti macOS/Linux includono il codice PHASE al momento della build, per
 evitare che un aggiornamento successivo di `main` cambi ciò che installano.
-Nessun pacchetto PHASE 7 è ancora allegato a una release pubblica.
+Gli asset finali sono allegati alla release GitHub con il tag corrispondente.
 
 Su macOS, Windows e Linux PHASE limita a ogni avvio di SNAP GPT la cache e il parallelismo in
 base alla RAM e all'heap Java configurato, senza cambiare i parametri

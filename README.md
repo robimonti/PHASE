@@ -10,10 +10,10 @@ and displacement analysis. Its unified hub brings **Preprocessing**, **StaMPS
 PSI** and **Displacement Modeling** into one window.
 
 > [!IMPORTANT]
-> PHASE 7 is being prepared for public release. Until a v7 release is visible
-> under [GitHub Releases](https://github.com/robimonti/PHASE/releases), the
-> published v6.1.4 Windows installer remains the stable version. Do not use
-> **Code → Download ZIP** as an installer.
+> Install from [GitHub Releases](https://github.com/robimonti/PHASE/releases),
+> not **Code → Download ZIP**. The macOS installer is not Apple Developer-ID
+> signed or notarized; see the opening instructions below. Linux remains
+> experimental until a complete PSI run is tested there.
 
 ## Install
 
@@ -30,6 +30,15 @@ Apple Intel is outside the supported scope. MATLAB and ESA SNAP are external
 prerequisites. The Linux installer also needs a C++ build toolchain, CMake,
 `snaphu`, `gawk`, `csh`, and `zenity` or `kdialog`; it builds the pinned StaMPS
 and TRAIN forks locally. See [installation requirements](installer/README.md).
+
+On macOS, open the downloaded DMG and copy/open **PHASE Installer.app**. If
+macOS blocks this unsigned app, try to open it once, then use **System Settings
+→ Privacy & Security → Open Anyway** and confirm **Open**. Only do this for
+an asset downloaded from the PHASE GitHub release; verify its published
+SHA-256 first. Do not disable Gatekeeper globally. The unsigned DMG is a
+trade-off made to avoid a paid Apple Developer membership, not a notarized
+package. The third-party source archives and license notices are supplied
+with the DMG and release downloads.
 
 Install PHASE once per computer, then create as many projects as needed in
 folders of your choice. The hub is available as **PHASE** on Windows,
@@ -76,6 +85,7 @@ deformation estimates against independent observations where possible.
 - [Release notes](RELEASE_NOTES.md)
 - [Installer and release preparation](installer/README.md)
 - [Scientific export corrections](docs/PSI_EXPORT_CORRECTIONS.md)
+- [Third-party components and source code](Documenti/PHASE_7_THIRD_PARTY.md)
 - [Archived detailed PHASE 6 guide](Documenti/PHASE6_GUIDE.md)
 
 The archived standalone PHASE 6 applications are in [`legacy/`](legacy/README.md)

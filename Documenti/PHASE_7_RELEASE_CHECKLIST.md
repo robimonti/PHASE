@@ -14,9 +14,10 @@ It creates a **draft** GitHub release only. Nothing is published automatically.
 3. Review third-party source and binary licenses, especially Triangle and
    SNAPHU, before distributing any bundled runtime. MATLAB/SNAP remain
    external prerequisites and are not included in PHASE installers.
-4. Build the full Apple Silicon DMG from the pinned runtime manifest. For
-   frictionless public installation, sign with Developer ID and notarize it;
-   an ad-hoc signed local preview is not equivalent.
+4. Build the full Apple Silicon DMG from the pinned runtime manifest. Include
+   matching GNU awk and SNAPHU source archives. This release is intentionally
+   unsigned/not notarized; document Gatekeeper's **Open Anyway** path and do
+   not describe the DMG as frictionless or Apple-verified.
 5. Ensure the version displayed in the hub, Windows EXE, macOS app/installer,
    Git tag and release notes agrees. Test a clean install and one update from
    a previous managed PHASE 7 installation.
@@ -27,9 +28,11 @@ It creates a **draft** GitHub release only. Nothing is published automatically.
 
 1. Confirm `install-phase.exe`, `PHASE-7-linux-x86_64.AppImage` and
    `phase7-engine.zip` are attached to the draft release. Attach the complete
-   signed/notarized `PHASE-7-macos-arm64.dmg` built locally; the workflow does
-   not manufacture a Mac runtime or publish an engine-only DMG.
-2. Verify SHA-256 of every uploaded asset and confirm GitHub reports a
+   `PHASE-7-macos-arm64.dmg` built locally with the complete runtime and source
+   archives; the workflow does not manufacture a Mac runtime or publish an
+   engine-only DMG.
+2. Attach `SHA256SUMS.txt`, the matching GNU awk and SNAPHU source archives,
+   verify SHA-256 of every uploaded asset, and confirm GitHub reports a
    `sha256:` digest for `phase7-engine.zip` (required by the in-app updater).
 3. Download the release assets as a user would. Check that Windows installs
    the tagged PHASE engine, macOS launches from `~/Applications/PHASE.app`,
