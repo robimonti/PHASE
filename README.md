@@ -10,8 +10,8 @@ and displacement analysis. Its unified hub brings **Preprocessing**, **StaMPS
 PSI** and **Displacement Modeling** into one window.
 
 > [!IMPORTANT]
-> Install from [GitHub Releases](https://github.com/robimonti/PHASE/releases),
-> not **Code → Download ZIP**. The macOS installer is not Apple Developer-ID
+> Install from [GitHub Releases](https://github.com/robimonti/PHASE/releases).
+> Do not use **Code → Download ZIP** as an installer. The macOS installer is not Apple Developer-ID
 > signed or notarized; see the opening instructions below. Linux remains
 > experimental until a complete PSI run is tested there.
 
