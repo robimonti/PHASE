@@ -1,0 +1,31 @@
+name: Linux StaMPS runtime smoke test
+
+on:
+  push:
+    branches:
+      - codex/phase-stamps-beta
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-runtime:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native prerequisites
+        run: |
+          sudo add-apt-repository -y multiverse
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ csh gawk snaphu
+      - name: Build pinned StaMPS and TRAIN
+        run: |
+          python3 installer/prepare-linux-runtime.py \
+            --output "$RUNNER_TEMP/phase-linux-runtime"
+          test -x "$RUNNER_TEMP/phase-linux-runtime/StaMPS/bin/calamp"
+          test -x "$RUNNER_TEMP/phase-linux-runtime/StaMPS/external/triangle/bin/triangle"
+          test -f "$RUNNER_TEMP/phase-linux-runtime/TRAIN/matlab/aps_linear.m"

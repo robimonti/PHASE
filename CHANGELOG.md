@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Unified PHASE 7 hub and one-installation/many-project workflow.
+- Apple Silicon installer and tested native StaMPS/TRAIN PSI path.
+- Linux AppImage installer with pinned local StaMPS/TRAIN build preparation.
+- In-app v7 engine update flow and draft release packaging workflow.
+- Sequential four-folder layout for new projects; existing layouts preserved.
+
+### Fixed
+- StaMPS Python module resolution on macOS and SNAP memory guards across OSes.
+- Incorrect wrapped-phase completion text after an unwrapped export.
+
 ## [6.1.1] - 2026-09-28
 ### Fixed
 - Prevented the Windows installer from hanging or leaving orphaned Git

@@ -36,8 +36,10 @@ $Script:PhaseRepo  = 'https://github.com/robimonti/PHASE.git'
 $Script:PhaseBranch = $PhaseBranch
 $Script:StampsRepo = 'https://github.com/pyccino/StaMPS.git'   # fork con TS picker + GUI fixes
 $Script:StampsBranch = 'master'
+$Script:StampsCommit = '7cabf05eddf8ebe8694e5346fe0f9d48aaef4962'
 $Script:TrainRepo  = 'https://github.com/pyccino/TRAIN.git'
 $Script:TrainBranch = 'main'
+$Script:TrainCommit = '6d0273ae67d2a9f07a696b6a14298ef2c31607d8'
 $Script:PythonUrl  = 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe'
 $Script:PythonMinMajor = 3
 $Script:PythonMinMinor = 11
@@ -623,6 +625,7 @@ function Get-GitHubBranchArchive {
     param(
         [Parameter(Mandatory)] [string]$Repo,
         [Parameter(Mandatory)] [string]$Branch,
+        [string]$Commit,
         [Parameter(Mandatory)] [string]$Destination,
         [Parameter(Mandatory)] [string]$StagingRoot,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
@@ -633,7 +636,13 @@ function Get-GitHubBranchArchive {
     $owner = $Matches[1]
     $repository = $Matches[2] -replace '\.git$', ''
     $escapedBranch = ([uri]::EscapeDataString($Branch)).Replace('%2F', '/')
-    $archiveUrl = "https://codeload.github.com/$owner/$repository/zip/refs/heads/$escapedBranch"
+    $archiveUrl = if ($Commit) {
+        "https://codeload.github.com/$owner/$repository/zip/$Commit"
+    } elseif ($Branch -match '^v\d+\.\d+\.\d+$') {
+        "https://codeload.github.com/$owner/$repository/zip/refs/tags/$escapedBranch"
+    } else {
+        "https://codeload.github.com/$owner/$repository/zip/refs/heads/$escapedBranch"
+    }
     $archiveFile = Join-Path $StagingRoot 'repository.zip'
     $extractDir = Join-Path $StagingRoot 'archive'
     & $StatusCallback 'Git clone failed; downloading the same branch as a GitHub archive...'
@@ -658,6 +667,7 @@ function Invoke-GitClone {
         [Parameter(Mandatory)] [string]$GitExe,
         [Parameter(Mandatory)] [string]$Repo,
         [Parameter(Mandatory)] [string]$Branch,
+        [string]$Commit,
         [Parameter(Mandatory)] [string]$Destination,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
@@ -685,8 +695,23 @@ function Invoke-GitClone {
         if (-not $cloneResult -or $cloneResult.ExitCode -ne 0) {
             if ($cloneResult) { & $StatusCallback "git clone returned exit code $($cloneResult.ExitCode)." }
             Remove-Item -LiteralPath $stagedRepo -Recurse -Force -ErrorAction SilentlyContinue
-            Get-GitHubBranchArchive -Repo $Repo -Branch $Branch -Destination $stagedRepo `
+            Get-GitHubBranchArchive -Repo $Repo -Branch $Branch -Commit $Commit -Destination $stagedRepo `
                 -StagingRoot $stagingRoot -StatusCallback $StatusCallback
+        } elseif ($Commit) {
+            $pinResult = Invoke-ProcessWithTimeout -FilePath $GitExe `
+                -ArgumentList @('-C', $stagedRepo, 'fetch', '--depth', '1', 'origin', $Commit) `
+                -TimeoutSeconds 600 -Description "fetch pinned revision for $Repo"
+            if ($pinResult.ExitCode -ne 0) {
+                Write-ProcessDiagnostics -Result $pinResult -StatusCallback $StatusCallback -Prefix 'git'
+                throw "Cannot fetch pinned revision $Commit for $Repo"
+            }
+            $checkoutResult = Invoke-ProcessWithTimeout -FilePath $GitExe `
+                -ArgumentList @('-C', $stagedRepo, 'checkout', '--detach', $Commit) `
+                -TimeoutSeconds 120 -Description "checkout pinned revision for $Repo"
+            if ($checkoutResult.ExitCode -ne 0) {
+                throw "Cannot check out pinned revision $Commit for $Repo"
+            }
+            & $StatusCallback "Pinned $Repo to $Commit"
         }
 
         if ($destinationAlreadyExists) {
@@ -2881,6 +2906,7 @@ function Invoke-FullSetup {
     Set-SetupProgress 30 'cloning stamps'
     Update-Task -Key 'clone-stamps' -Status 'running' -Detail $Script:StampsRepo
     Invoke-GitClone -GitExe $git -Repo $Script:StampsRepo -Branch $Script:StampsBranch `
+        -Commit $Script:StampsCommit `
         -Destination $stampsDir -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'clone-stamps' -Detail $m }
     Update-Task -Key 'clone-stamps' -Status 'done'
     Add-SetupLog "[OK] StaMPS cloned at $stampsDir"
@@ -2889,6 +2915,7 @@ function Invoke-FullSetup {
     Set-SetupProgress 45 'cloning train'
     Update-Task -Key 'clone-train' -Status 'running' -Detail $Script:TrainRepo
     Invoke-GitClone -GitExe $git -Repo $Script:TrainRepo -Branch $Script:TrainBranch `
+        -Commit $Script:TrainCommit `
         -Destination $trainDir -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'clone-train' -Detail $m }
     Update-Task -Key 'clone-train' -Status 'done'
     Add-SetupLog "[OK] TRAIN cloned at $trainDir"
@@ -3141,9 +3168,10 @@ function Invoke-FullSetup {
         -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'runtime' -Detail $m }
     Update-Task -Key 'runtime' -Status 'done'
 
+    $installedVersion = if ($Script:PhaseBranch -match '^v7\.\d+\.\d+$') { $Script:PhaseBranch } else { 'dev' }
     $installationInfo = @{
         updateSchema = 1
-        version = 'dev'
+        version = $installedVersion
         system = 'windows'
         source = "$($Script:PhaseRepo)#$($Script:PhaseBranch)"
         installedAt = [DateTime]::UtcNow.ToString('o')

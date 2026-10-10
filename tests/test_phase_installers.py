@@ -82,6 +82,18 @@ def test_unix_runtime_configs_do_not_use_upstream_example_paths(phase_root, tmp_
         subprocess.run(["bash", "-n", str(stage / "engine" / "TRAIN" / "APS_CONFIG.sh")], check=True)
 
 
+def test_unix_installer_records_release_tag_only_with_valid_manifest(phase_root, tmp_path):
+    installer = load_unix_installer(phase_root)
+    engine = tmp_path / "engine"
+    engine.mkdir()
+    assert installer.payload_version(engine) == "dev"
+    (engine / "phase-release.json").write_text('{"tag":"v7.0.0","updateSchema":1}')
+    assert installer.payload_version(engine) == "v7.0.0"
+    (engine / "phase-release.json").write_text('{"tag":"v6.1.4","updateSchema":1}')
+    with pytest.raises(RuntimeError, match="Invalid PHASE release metadata"):
+        installer.payload_version(engine)
+
+
 def test_macos_runtime_builder_never_writes_inside_source(phase_root, tmp_path, monkeypatch):
     path = phase_root / "installer" / "prepare-macos-runtime.py"
     spec = importlib.util.spec_from_file_location("phase_macos_runtime", path)

@@ -114,6 +114,7 @@ def test_production_launchers_wrap_the_validated_standalone_engines(phase_root):
     notes = (phase_root / "RELEASE_NOTES.md").read_text(encoding="utf-8")
     readme = (phase_root / "README.md").read_text(encoding="utf-8")
     assert "Do not clone the repository" in notes
-    assert "releases/latest/download/install-phase.exe" in readme
+    assert "GitHub Releases" in readme
+    assert "**Code → Download ZIP** as an installer" in readme
     assert not (phase_root / "installer" / "install-phase.exe").exists()
     assert (phase_root / "legacy" / "install-phase-pre-v6.exe").is_file()

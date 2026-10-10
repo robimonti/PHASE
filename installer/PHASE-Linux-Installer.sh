@@ -37,34 +37,62 @@ ask_path() {
     fi
 }
 
+show_info 'PHASE is installed once for all projects. Create or open project folders anywhere after launching the app. MATLAB, SNAP, Python and Linux build tools are required.'
 python_default=$(command -v python3 || true)
-python_path=$(ask_path 'Percorso Python 3.10+ con venv:' "$python_default")
+python_path=$(ask_path 'Python 3.10+ executable (with venv):' "$python_default")
 matlab_default=$(command -v matlab || true)
-matlab_path=$(ask_path 'Percorso eseguibile MATLAB (bin/matlab):' "$matlab_default")
+matlab_path=$(ask_path 'MATLAB executable (bin/matlab):' "$matlab_default")
 gpt_default=/opt/esa-snap/bin/gpt
 if [ ! -x "$gpt_default" ]; then gpt_default=/opt/snap/bin/gpt; fi
-gpt_path=$(ask_path 'Percorso eseguibile ESA SNAP gpt:' "$gpt_default")
-stamps_path=$(ask_path 'Cartella StaMPS già preparata (facoltativa):' '')
-train_path=$(ask_path 'Cartella TRAIN già preparata (facoltativa):' '')
+gpt_path=$(ask_path 'ESA SNAP gpt executable:' "$gpt_default")
+
+runtime_tmp=$(mktemp -d "${TMPDIR:-/tmp}/phase-linux-installer.XXXXXXXX")
+log_file="$runtime_tmp/install.log"
+cleanup() {
+    case "$runtime_tmp" in
+        "${TMPDIR:-/tmp}"/phase-linux-installer.*)
+            if [ -d "$runtime_tmp" ]; then rm -r -- "$runtime_tmp"; fi ;;
+    esac
+}
+trap cleanup EXIT HUP INT TERM
+
+"$python_path" "$bundle_dir/prepare-linux-runtime.py" \
+    --output "$runtime_tmp/runtime" >"$log_file" 2>&1 &
+build_pid=$!
+if [ "$dialog" = zenity ]; then
+    (while kill -0 "$build_pid" 2>/dev/null; do printf '50\n'; sleep 1; done) |
+        zenity --progress --pulsate --auto-close --no-cancel \
+            --title='PHASE Installer' --text='Preparing StaMPS and TRAIN…' || true
+fi
+if ! wait "$build_pid"; then
+    show_error "StaMPS/TRAIN preparation failed. Details:\n$(tail -n 25 "$log_file")"
+    exit 1
+fi
 
 set -- "$python_path" "$bundle_dir/install-phase-unix.py" \
     --source "$bundle_dir/engine" --python "$python_path" \
-    --matlab "$matlab_path" --gpt "$gpt_path"
-if [ -n "$stamps_path" ]; then set -- "$@" --stamps "$stamps_path"; fi
-if [ -n "$train_path" ]; then set -- "$@" --train "$train_path"; fi
+    --matlab "$matlab_path" --gpt "$gpt_path" \
+    --stamps "$runtime_tmp/runtime/StaMPS" \
+    --train "$runtime_tmp/runtime/TRAIN"
 
-log_file=$(mktemp)
-trap 'rm -f -- "$log_file"' EXIT HUP INT TERM
 "$@" >"$log_file" 2>&1 &
 install_pid=$!
 if [ "$dialog" = zenity ]; then
     (while kill -0 "$install_pid" 2>/dev/null; do printf '50\n'; sleep 1; done) |
         zenity --progress --pulsate --auto-close --no-cancel \
-            --title='PHASE Installer' --text='Installazione in corso...' || true
+            --title='PHASE Installer' --text='Installing PHASE…' || true
 fi
 if wait "$install_pid"; then
-    show_info 'PHASE è installato. Avvialo dal menu applicazioni.'
+    if [ "$dialog" = zenity ]; then
+        if zenity --question --title='PHASE Installer' \
+            --text='Installation complete. Launch PHASE now?'; then
+            "$HOME/.local/share/PHASE/launch-phase.sh" >/dev/null 2>&1 &
+        fi
+    elif kdialog --yesno 'Installation complete. Launch PHASE now?' \
+            --title 'PHASE Installer'; then
+        "$HOME/.local/share/PHASE/launch-phase.sh" >/dev/null 2>&1 &
+    fi
 else
-    show_error "Installazione non riuscita. Dettagli:\n$(tail -n 25 "$log_file")"
+    show_error "Installation failed. Details:\n$(tail -n 25 "$log_file")"
     exit 1
 fi

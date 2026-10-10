@@ -56,8 +56,10 @@ def main() -> None:
         resources = appdir / "usr" / "share" / "phase"
         resources.mkdir(parents=True)
         shutil.copy2(installer_dir / "install-phase-unix.py", resources)
+        shutil.copy2(installer_dir / "prepare-linux-runtime.py", resources)
         installer.SOURCE_FOR_COPY = root
         shutil.copytree(root, resources / "engine", ignore=installer.ignored)
+        installer.embed_release_metadata(resources / "engine", root)
         env = dict(os.environ, ARCH=platform.machine())
         subprocess.run([appimagetool, str(appdir), str(output)], check=True, env=env)
     print(output)

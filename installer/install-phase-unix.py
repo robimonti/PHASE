@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import re
 import shutil
 import shlex
 import subprocess
@@ -24,6 +25,8 @@ import venv
 
 
 PHASE_REPO = "https://github.com/robimonti/PHASE.git"
+STAMPS_COMMIT = "7cabf05eddf8ebe8694e5346fe0f9d48aaef4962"
+TRAIN_COMMIT = "6d0273ae67d2a9f07a696b6a14298ef2c31607d8"
 PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely", "certifi")
 REQUIRED_FILES = (
     "PHASE_Hub.m",
@@ -227,6 +230,37 @@ def configure_unix_runtimes(stage: Path, prefix: Path) -> None:
         )
 
 
+def release_tag(checkout: Path) -> str:
+    """Return an exact v7 release tag, or an empty string for development builds."""
+    result = subprocess.run(["git", "describe", "--tags", "--exact-match"],
+                            cwd=checkout, capture_output=True, text=True, check=False)
+    tag = result.stdout.strip() if result.returncode == 0 else ""
+    return tag if re.fullmatch(r"v7\.\d+\.\d+", tag) else ""
+
+
+def embed_release_metadata(engine: Path, checkout: Path) -> None:
+    """Mark an installer payload only when built from an exact v7 Git tag."""
+    tag = release_tag(checkout)
+    if tag:
+        (engine / "phase-release.json").write_text(json.dumps({
+            "tag": tag, "updateSchema": 1
+        }, indent=2) + "\n", encoding="utf-8")
+
+
+def payload_version(engine: Path) -> str:
+    manifest = engine / "phase-release.json"
+    if not manifest.is_file():
+        return "dev"
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        tag = data.get("tag", "")
+        if data.get("updateSchema") == 1 and re.fullmatch(r"v7\.\d+\.\d+", tag):
+            return tag
+    except (OSError, ValueError, TypeError):
+        pass
+    raise RuntimeError("Invalid PHASE release metadata in installer payload.")
+
+
 def create_macos_app(stage: Path, prefix: Path) -> None:
     bundle = stage / "PHASE.app" / "Contents"
     executable = bundle / "MacOS" / "PHASE"
@@ -242,10 +276,13 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
         resources.mkdir()
         shutil.copy2(icon, resources / "PHASE.icns")
     with (bundle / "Info.plist").open("wb") as stream:
+        version = payload_version(stage / "engine")
+        if version == "dev":
+            version = "v7.0.0"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
-            "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": "7",
-            "CFBundleShortVersionString": "7.0", "CFBundleExecutable": "PHASE",
+            "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],
+            "CFBundleShortVersionString": version[1:], "CFBundleExecutable": "PHASE",
             "CFBundlePackageType": "APPL", "LSMinimumSystemVersion": "13.0",
             "CFBundleIconFile": "PHASE.icns",
         }, stream)
@@ -361,7 +398,7 @@ def install(args: argparse.Namespace) -> dict[str, str]:
             create_linux_desktop(stage, prefix)
         (stage / "install.json").write_text(json.dumps({
             **plan, "installedAt": datetime.now(timezone.utc).isoformat(),
-            "updateSchema": 1, "version": "dev"
+            "updateSchema": 1, "version": payload_version(stage / "engine")
         }, indent=2) + "\n", encoding="utf-8")
 
         prefix.mkdir(parents=True, exist_ok=True)

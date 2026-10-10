@@ -1,4 +1,27 @@
-# PHASE 7 — Contratto dei progetti (v1)
+# PHASE 7 — Contratto dei progetti
+
+## Layout corrente (v3)
+
+I nuovi progetti usano quattro cartelle numerate in ordine di lavoro:
+
+```text
+Progetto/
+  phase-project.json
+  01_INPUT/                 # AOI e archivio SAR opzionali
+  02_PROCESSING_INTERNAL/   # intermedi Preprocessing e StaMPS; non modificare durante i run
+  03_RESULTS/               # serie PSI, modelli, figure, GIS e report finali
+  04_LOGS/                  # log e, solo se serve, catalogo import legacy
+```
+
+Il catalogo `legacy-import.json` sta in `04_LOGS` solo per i progetti creati
+tramite importazione legacy; non esiste più una cartella `IMPORTED_RESULTS`
+vuota nei nuovi progetti. Gli output legacy copiati restano nelle rispettive
+sottocartelle di `03_RESULTS`. I progetti v1/v2 già esistenti continuano a usare
+il loro layout originale; PHASE non rinomina cartelle contenenti stato di
+processing o percorsi salvati. Il test reale macOS ha completato Preprocessing,
+StaMPS PSI 1–8, export con Step 8 e export con TRAIN `a_linear` su v2.
+
+## Note storiche (v1)
 
 ## Decisioni
 

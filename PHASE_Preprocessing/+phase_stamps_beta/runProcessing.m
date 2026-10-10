@@ -1044,7 +1044,7 @@ end % source all the softwares and prepare the data
         % Change lamp color to green (success)
         app.PreprocessingstatusLamp.Color = [0, 1, 0]; % Green
 
-        if contains(ph_output,'wrapped')
+        if strcmpi(strtrim(char(string(ph_output))),'wrapped')
             updateOutput(app, ['Wrapped phase is available in EXPORT/ (radians). ', ...
                 'The TS Points displacement picker applies only to unwrapped PSI.']);
         else

@@ -1,15 +1,27 @@
-name: Publish PHASE release
+name: Prepare PHASE 7 release draft
 
 on:
   push:
     tags:
-      - "v*"
+      - "v7.*"
 
 permissions:
   contents: write
 
 jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install pytest
+      - run: python -m pytest -q
+      - run: sh -n installer/PHASE-Linux-Installer.sh
+
   windows-installer:
+    needs: tests
     runs-on: windows-latest
     steps:
       - name: Check out tagged source
@@ -19,9 +31,13 @@ jobs:
         shell: powershell
         run: Install-Module -Name ps2exe -Scope CurrentUser -Force -AllowClobber
 
-      - name: Compile PHASE installer
+      - name: Compile installer tied to this tag
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File .\installer\compile-to-exe.ps1 -Force
+        env:
+          PHASE_RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\installer\compile-to-exe.ps1 -Force `
+            -DefaultPhaseBranch $env:PHASE_RELEASE_TAG
 
       - name: Verify installer
         shell: powershell
@@ -33,28 +49,70 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: phase-windows-installer
+          name: phase7-windows-installer
           path: installer/install-phase.exe
           if-no-files-found: error
 
-  release:
-    needs: windows-installer
+  linux-installer:
+    needs: tests
     runs-on: ubuntu-latest
     steps:
-      - name: Check out tagged source
-        uses: actions/checkout@v4
-
-      - name: Download Windows installer
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - name: Install pinned AppImage builder
+        run: |
+          curl -L --fail --silent --show-error \
+            -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  '"$RUNNER_TEMP/appimagetool" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          mkdir -p "$RUNNER_TEMP/bin"
+          ln -s "$RUNNER_TEMP/appimagetool" "$RUNNER_TEMP/bin/appimagetool"
+      - name: Build x86_64 installer AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          PATH="$RUNNER_TEMP/bin:$PATH" python3 installer/build-linux-appimage.py \
+            --output "$RUNNER_TEMP/PHASE-7-linux-x86_64.AppImage"
+      - uses: actions/upload-artifact@v4
         with:
-          name: phase-windows-installer
-          path: release-assets
+          name: phase7-linux-installer
+          path: ${{ runner.temp }}/PHASE-7-linux-x86_64.AppImage
+          if-no-files-found: error
 
-      - name: Publish GitHub Release
+  update-package:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build versioned engine update
+        env:
+          PHASE_RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 installer/build-update-package.py --tag "$PHASE_RELEASE_TAG" \
+            --output "$RUNNER_TEMP/phase7-engine.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase7-engine-update
+          path: ${{ runner.temp }}/phase7-engine.zip
+          if-no-files-found: error
+
+  draft-release:
+    needs: [windows-installer, linux-installer, update-package]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: phase7-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create reviewable draft, never publish automatically
         uses: softprops/action-gh-release@v2
         with:
-          name: PHASE v6.0
+          draft: true
+          name: PHASE ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
-          files: release-assets/install-phase.exe
+          files: release-assets/*
           fail_on_unmatched_files: true
-          make_latest: true

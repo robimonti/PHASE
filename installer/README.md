@@ -1,18 +1,17 @@
 ﻿# Installer PHASE
 
-> **Stato:** queste istruzioni per l'hub PHASE 7 descrivono il branch di sviluppo.
-> La release pubblica 6.1.4 usa ancora i tre launcher precedenti. Non è ancora
-> stata pubblicata una release PHASE 7 né validata una pipeline PSI completa su
-> ciascun sistema operativo.
+> **Stato release candidate:** Windows e macOS Apple Silicon hanno completato
+> test guidati. Linux ha un installer e un build nativo predisposti, ma non una
+> prova PSI reale. La release pubblica 6.1.4 usa ancora i tre launcher.
 
 ## Installazione dell'hub PHASE 7
 
 Una sola installazione del codice serve più progetti. L'hub crea/apre cartelle
 di progetto separate, con dati e output nel progetto; il motore MATLAB resta
 nell'installazione. MATLAB e ESA SNAP devono essere già installati e licenziati
-se necessario. Per il calcolo PSI servono inoltre runtime StaMPS e, se usato,
-TRAIN funzionanti sul sistema: l'installer macOS/Linux può incorporare copie
-**già preparate**, ma non le compila o ne certifica il funzionamento.
+se necessario. Per il calcolo PSI servono StaMPS e TRAIN: il DMG macOS può
+includere runtime arm64 già preparati; l'AppImage Linux scarica le revisioni
+testate dei fork e compila i binari nativi sulla macchina dell'utente.
 
 ### macOS Apple Silicon e Linux
 
@@ -49,9 +48,13 @@ sono conservati in `<prefix>/backups/`; le cartelle dei progetti non vengono
 toccate. Se esiste già un collegamento `PHASE.app` o `phase.desktop` non gestito,
 l'installer lo lascia intatto e indica il launcher diretto.
 
-L'installer macOS rifiuta Apple Intel. Linux non è ancora stato testato con
-un'installazione completa su una macchina Linux; il wrapper e la preparazione
-dei file non equivalgono a una verifica end-to-end del processing.
+L'installer macOS rifiuta Apple Intel. Linux richiede `git`, `cmake` 3.20+,
+`ctest`, un compilatore C++, `snaphu`, `gawk`, `csh`, `zenity` o `kdialog`,
+oltre a MATLAB, SNAP e Python. L'AppImage prepara StaMPS e TRAIN
+automaticamente. Le revisioni fissate sono StaMPS
+`7cabf05eddf8ebe8694e5346fe0f9d48aaef4962` e TRAIN
+`6d0273ae67d2a9f07a696b6a14298ef2c31607d8`. Un build riuscito non
+equivale ancora a una prova end-to-end della pipeline su Linux.
 
 #### Stato del porting PSI su macOS Apple Silicon
 
@@ -69,6 +72,8 @@ Per preparare un runtime di prova prima di integrare tutto nel DMG:
 brew install cmake
 git clone https://github.com/pyccino/StaMPS.git /path/to/StaMPS-source
 git clone https://github.com/pyccino/TRAIN.git /path/to/TRAIN-source
+git -C /path/to/StaMPS-source checkout 7cabf05eddf8ebe8694e5346fe0f9d48aaef4962
+git -C /path/to/TRAIN-source checkout 6d0273ae67d2a9f07a696b6a14298ef2c31607d8
 python3 installer/prepare-macos-runtime.py \
   --stamps-source /path/to/StaMPS-source \
   --train-source /path/to/TRAIN-source \
@@ -97,9 +102,9 @@ python3 installer/build-macos-dmg.py \
 
 Senza `--runtime`, il DMG installa il solo motore PHASE e lo dichiara nel
 wizard. Con `--runtime`, la GUI installa StaMPS/TRAIN insieme all'app, senza
-chiedere all'utente di scegliere manualmente le loro cartelle. La preview non
-è una release pubblica: mancano una prova della pipeline PSI su dati reali
-macOS, una revisione delle licenze/distribuzione e firma/notarizzazione.
+chiedere all'utente di scegliere manualmente le loro cartelle. La pipeline PSI
+macOS è stata provata; prima di una distribuzione pubblica restano la revisione
+delle licenze dei binari terzi e la firma/notarizzazione Apple.
 
 ### Pacchetti grafici da distribuire
 
@@ -107,8 +112,8 @@ macOS, una revisione delle licenze/distribuzione e firma/notarizzazione.
   `compile-to-exe.ps1`. Il wizard scarica le dipendenze Windows che gestisce
   già e crea `PHASE.lnk` sia sul desktop sia nella cartella installata,
   usando `Logo_square.png` convertito in `PHASE.ico`. Il `.exe` non incorpora
-  MATLAB o la licenza. Non è ancora stato compilato o provato su Windows per
-  PHASE 7.
+  MATLAB o la licenza. Il wizard PHASE 7 è stato provato su Windows; la build
+  associata al tag della release va comunque verificata prima della pubblicazione.
   Per una prova del branch prima della release, il workflow
   `Build PHASE 7 Windows test installer` produce un artefatto EXE con
   `codex/phase-stamps-beta` incorporato. Lo ZIP degli artefatti GitHub contiene
@@ -128,15 +133,15 @@ macOS, una revisione delle licenze/distribuzione e firma/notarizzazione.
   `PHASE-7-linux.AppImage` tramite
   `python3 installer/build-linux-appimage.py --output /path/PHASE-7-linux.AppImage`.
   All'avvio mostra un'interfaccia con `zenity` o `kdialog` e installa il motore
-  nel profilo utente. Richiede Python 3 con `venv`, MATLAB e SNAP; StaMPS/TRAIN
-  vanno forniti come runtime già preparati. Builder e AppImage richiedono ancora
-  una prova su Linux.
+  nel profilo utente. Richiede Python 3 con `venv`, MATLAB, SNAP e le dipendenze
+  native elencate sopra. StaMPS/TRAIN vengono preparati durante l'installazione.
+  Builder, AppImage e pipeline PSI richiedono ancora una prova su Linux.
 
 I pacchetti macOS/Linux includono il codice PHASE al momento della build, per
 evitare che un aggiornamento successivo di `main` cambi ciò che installano.
 Nessun pacchetto PHASE 7 è ancora allegato a una release pubblica.
 
-Su macOS PHASE limita a ogni avvio di SNAP GPT la cache e il parallelismo in
+Su macOS, Windows e Linux PHASE limita a ogni avvio di SNAP GPT la cache e il parallelismo in
 base alla RAM e all'heap Java configurato, senza cambiare i parametri
 scientifici: su un Mac da 8 GB con heap GPT da 5 GB, una configurazione
 `-c 26G -q 8` viene eseguita come `-c 512M -q 2 -x` e il valore effettivo
@@ -147,7 +152,7 @@ pipeline su 8 GB dipende anche dalle dimensioni delle acquisizioni e dell'AOI.
 
 ### Aggiornamenti dall'hub
 
-Il pulsante **Cerca update** interroga l'ultima release stabile GitHub di
+Il pulsante **Check for updates** interroga l'ultima release stabile GitHub di
 `robimonti/PHASE`. Richiede un asset `phase7-engine.zip` della serie v7 e una
 impronta SHA-256 negli asset della release. L'hub scarica, verifica e prepara
 l'archivio; il launcher applica l'aggiornamento al successivo avvio, prima di

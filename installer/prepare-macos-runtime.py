@@ -10,6 +10,7 @@ to install-phase-unix.py after the native build passes.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import platform
@@ -22,6 +23,15 @@ CORE_TOOLS = (
     "calamp", "cpxsum", "pscphase", "pscdem", "psclonlat",
     "selpsc_patch", "selsbc_patch",
 )
+STAMPS_COMMIT = "7cabf05eddf8ebe8694e5346fe0f9d48aaef4962"
+TRAIN_COMMIT = "6d0273ae67d2a9f07a696b6a14298ef2c31607d8"
+
+
+def require_revision(path: Path, expected: str, label: str) -> None:
+    result = subprocess.run(["git", "-C", str(path), "rev-parse", "HEAD"],
+                            capture_output=True, text=True, check=False)
+    if result.returncode != 0 or result.stdout.strip() != expected:
+        raise RuntimeError(f"{label} must be checked out at pinned commit {expected}.")
 
 
 def arm64_executable(path: Path) -> bool:
@@ -44,6 +54,8 @@ def prepare(stamps_source: Path, train_source: Path, snaphu: Path,
     if any(output == root or root in output.parents or output in root.parents
            for root in (stamps_source, train_source)):
         raise RuntimeError("Output and source checkouts must be separate.")
+    require_revision(stamps_source, STAMPS_COMMIT, "StaMPS")
+    require_revision(train_source, TRAIN_COMMIT, "TRAIN")
     for required in ("src/CMakeLists.txt", "matlab/stamps.m", "bin/mt_prep_snap"):
         if not (stamps_source / required).is_file():
             raise RuntimeError(f"Incomplete StaMPS source: {required}")
@@ -91,6 +103,10 @@ def prepare(stamps_source: Path, train_source: Path, snaphu: Path,
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source.expanduser().resolve(), destination)
             destination.chmod(destination.stat().st_mode | 0o111)
+        (stage / "phase-runtime.json").write_text(json.dumps({
+            "stampsCommit": STAMPS_COMMIT, "trainCommit": TRAIN_COMMIT,
+            "platform": "macos-arm64"
+        }, indent=2) + "\n", encoding="utf-8")
         stage.rename(output)
     return output
 

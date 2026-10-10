@@ -304,13 +304,14 @@ def test_new_project_layout_is_readable_and_old_layout_stays_supported(phase_roo
     paths = _text(package / "paths.m")
     create = _text(package / "create.m")
     opener = _text(package / "open.m")
-    assert "00_INPUT" in paths
-    assert "10_PROCESSING_INTERNAL" in paths
-    assert "20_RESULTS" in paths
-    assert "phase-project-v1" in paths and "phase-project-v2" in paths
+    assert "01_INPUT" in paths
+    assert "02_PROCESSING_INTERNAL" in paths
+    assert "03_RESULTS" in paths
+    assert "04_LOGS" in paths
+    assert all(layout in paths for layout in ("phase-project-v1", "phase-project-v2", "phase-project-v3"))
     assert "README_PROJECT.txt" in create
-    assert "schemaVersion',2" in create
-    assert "phase-project-v1" in opener and "phase-project-v2" in opener
+    assert "schemaVersion',3" in create
+    assert all(layout in opener for layout in ("phase-project-v1", "phase-project-v2", "phase-project-v3"))
 
 
 def test_beta_provides_a_matlab_side_smoke_test(phase_root):

@@ -82,6 +82,9 @@ $ps2exeArgs = @{
     requireAdmin = $false
     STA        = $true
 }
+if ($DefaultPhaseBranch -match '^v(7\.\d+\.\d+)$') {
+    $ps2exeArgs.version = "$($Matches[1]).0"
+}
 if ($IconFile -and (Test-Path $IconFile)) {
     $ps2exeArgs.iconFile = $IconFile
 }
@@ -98,6 +101,9 @@ try {
             throw "Expected default branch declaration not found in $Source"
         }
         $scriptText = $scriptText.Replace($marker, "[string]`$PhaseBranch = '$DefaultPhaseBranch'")
+        if ($DefaultPhaseBranch -match '^v7\.\d+\.\d+$') {
+            $scriptText = $scriptText.Replace('v7.0.0 preview', $DefaultPhaseBranch)
+        }
         Write-Host "Embedded PHASE branch: $DefaultPhaseBranch"
     }
     $logoPath = Join-Path $scriptDir 'PHASE_logo.png'

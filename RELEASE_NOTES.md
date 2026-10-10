@@ -1,4 +1,24 @@
-# PHASE v6.1.4
+# PHASE v7.0.0 — release candidate
+
+PHASE 7 brings Preprocessing, StaMPS PSI and Displacement Modeling into one
+project-aware hub. Install PHASE once per computer; create projects anywhere,
+with inputs, internal processing, results and logs kept separate. New projects
+use `01_INPUT`, `02_PROCESSING_INTERNAL`, `03_RESULTS` and `04_LOGS`; existing
+project layouts remain readable and are never renamed in place.
+
+Windows and Apple Silicon macOS have completed guided preprocessing/PSI tests.
+On macOS, StaMPS Step 8 and TRAIN `a_linear` have both completed and exported
+time series. The Linux installer builds native StaMPS/TRAIN from the same
+pinned fork revisions, but a real Linux PSI run remains unverified. The
+Displacement Modeling module was not revalidated as part of the new macOS run.
+
+Installers are provided for Windows, Apple Silicon macOS and Linux x86_64;
+MATLAB and ESA SNAP remain separate prerequisites. A compatible v7 engine
+package enables the in-app update button. The GitHub workflow creates a
+**draft release** so macOS runtime inclusion, third-party licenses, Apple
+signing/notarization and asset checks can be reviewed before publication.
+
+## Previous release: PHASE v6.1.4
 
 PHASE v6.1.4 fixes an upstream StaMPS Step 3 defect exposed by non-zero
 `gamma_stdev_reject` and preserves two decimal places in the weeding standard

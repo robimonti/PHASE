@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import os
 from pathlib import Path
 import platform
@@ -34,10 +35,21 @@ def main() -> None:
     source_spec.loader.exec_module(installer)
     installer.validate_runtime(root)
     runtime = args.runtime.expanduser().resolve() if args.runtime else None
+    if args.sign_identity and runtime is None:
+        raise RuntimeError("Signed PHASE release requires the complete StaMPS/TRAIN runtime.")
     if runtime:
         missing = installer.macos_psi_missing(runtime / "StaMPS", runtime / "TRAIN")
         if missing:
             raise RuntimeError("Incomplete Apple Silicon PSI runtime: " + ", ".join(missing))
+        manifest = runtime / "phase-runtime.json"
+        if args.sign_identity and not manifest.is_file():
+            raise RuntimeError("Signed release requires a pinned phase-runtime.json manifest.")
+        if manifest.is_file():
+            metadata = json.loads(manifest.read_text(encoding="utf-8"))
+            if (metadata.get("stampsCommit") != installer.STAMPS_COMMIT or
+                    metadata.get("trainCommit") != installer.TRAIN_COMMIT or
+                    metadata.get("platform") != "macos-arm64"):
+                raise RuntimeError("macOS runtime revisions do not match PHASE release pins.")
     output = args.output.expanduser().resolve()
     if root in output.parents:
         raise RuntimeError("Build the DMG outside the source checkout.")
@@ -52,13 +64,21 @@ def main() -> None:
         executable = bundle / "MacOS" / "PHASEInstaller"
         contents.mkdir(parents=True)
         executable.parent.mkdir(parents=True)
+        source = installer_dir / "PHASEInstaller.swift"
+        build_tag = installer.release_tag(root)
+        if build_tag:
+            generated_source = stage / "PHASEInstaller.swift"
+            generated_source.write_text(
+                source.read_text(encoding="utf-8").replace("v7.0.0 preview", build_tag),
+                encoding="utf-8")
+            source = generated_source
         build_env = os.environ.copy()
         if "DEVELOPER_DIR" not in build_env and Path("/Applications/Xcode.app/Contents/Developer").is_dir():
             build_env["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
         subprocess.run([
             "xcrun", "swiftc", "-parse-as-library", "-O", "-target", "arm64-apple-macos13.0",
             "-module-cache-path", str(stage / "swift-module-cache"),
-            "-o", str(executable), str(installer_dir / "PHASEInstaller.swift")
+            "-o", str(executable), str(source)
         ], env=build_env, check=True)
         shutil.copy2(installer_dir / "install-phase-unix.py", contents)
         shutil.copy2(installer_dir / "find-python-macos.sh", contents)
@@ -69,8 +89,8 @@ def main() -> None:
             "CFBundleName": "PHASE Installer",
             "CFBundleDisplayName": "PHASE Installer",
             "CFBundleIdentifier": "org.phaseinsar.phase.installer",
-            "CFBundleVersion": "7.0.0",
-            "CFBundleShortVersionString": "7.0.0",
+            "CFBundleVersion": build_tag[1:] if build_tag else "7.0.0",
+            "CFBundleShortVersionString": build_tag[1:] if build_tag else "7.0.0",
             "CFBundleExecutable": "PHASEInstaller",
             "CFBundlePackageType": "APPL",
             "CFBundleIconFile": "PHASE.icns",
@@ -81,6 +101,7 @@ def main() -> None:
             plistlib.dump(plist, stream)
         installer.SOURCE_FOR_COPY = root
         shutil.copytree(root, contents / "engine", ignore=installer.ignored)
+        installer.embed_release_metadata(contents / "engine", root)
         if runtime:
             shutil.copytree(runtime / "StaMPS", contents / "StaMPS")
             shutil.copytree(runtime / "TRAIN", contents / "TRAIN")
