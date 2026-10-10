@@ -24,7 +24,7 @@ import venv
 
 
 PHASE_REPO = "https://github.com/robimonti/PHASE.git"
-PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely")
+PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely", "certifi")
 REQUIRED_FILES = (
     "PHASE_Hub.m",
     "PHASE_Hub_UI.html",

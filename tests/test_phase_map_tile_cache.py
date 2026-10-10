@@ -29,8 +29,9 @@ def test_tile_cache_downloads_once_and_reuses_local_file(phase_root, tmp_path, m
     module = _module(phase_root)
     calls = []
 
-    def fake_urlopen(request, timeout):
+    def fake_urlopen(request, timeout, context):
         calls.append((request.full_url, timeout))
+        assert context.verify_mode == 2
         return _Response(b"\xff\xd8\xff" + b"phase-map")
 
     monkeypatch.setattr(module, "urlopen", fake_urlopen)

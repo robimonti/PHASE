@@ -182,7 +182,11 @@ final class InstallerModel: ObservableObject {
 
     func launch() {
         let app = URL(fileURLWithPath: destination).appendingPathComponent("PHASE.app")
-        NSWorkspace.shared.open(app)
+        if NSWorkspace.shared.open(app) {
+            NSApplication.shared.terminate(nil)
+        } else {
+            error = "PHASE was installed, but could not launch automatically. Open it from ~/Applications."
+        }
     }
 }
 

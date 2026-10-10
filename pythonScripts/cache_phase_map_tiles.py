@@ -4,10 +4,16 @@
 import argparse
 import json
 import os
+import ssl
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+try:
+    import certifi
+except ImportError:
+    certifi = None
 
 
 SERVICES = {
@@ -56,7 +62,9 @@ def cache_one(cache_root, tile, timeout=25):
     destination.parent.mkdir(parents=True, exist_ok=True)
     url = f'{SERVICES[tile["layer"]]}/{tile["z"]}/{tile["y"]}/{tile["x"]}'
     request = Request(url, headers={"User-Agent": "PHASE-InSAR/1.0 map tile cache"})
-    with urlopen(request, timeout=timeout) as response:
+    tls_context = (ssl.create_default_context(cafile=certifi.where())
+                   if certifi is not None else ssl.create_default_context())
+    with urlopen(request, timeout=timeout, context=tls_context) as response:
         payload = response.read()
     if not valid_image(payload):
         raise RuntimeError("Map service returned data that is not a PNG or JPEG image.")

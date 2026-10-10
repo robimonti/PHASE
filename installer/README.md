@@ -136,6 +136,15 @@ I pacchetti macOS/Linux includono il codice PHASE al momento della build, per
 evitare che un aggiornamento successivo di `main` cambi ciò che installano.
 Nessun pacchetto PHASE 7 è ancora allegato a una release pubblica.
 
+Su macOS PHASE limita a ogni avvio di SNAP GPT la cache e il parallelismo in
+base alla RAM e all'heap Java configurato, senza cambiare i parametri
+scientifici: su un Mac da 8 GB con heap GPT da 5 GB, una configurazione
+`-c 26G -q 8` viene eseguita come `-c 512M -q 2 -x` e il valore effettivo
+compare nel Run monitor. Dopo un errore di memoria nello Step 3, mantenere i
+prodotti degli Step 1–2 e ripartire da **First preprocessing step = 3**.
+Il limite riduce la pressione sulla memoria, ma il completamento di una
+pipeline su 8 GB dipende anche dalle dimensioni delle acquisizioni e dell'AOI.
+
 ### Aggiornamenti dall'hub
 
 Il pulsante **Cerca update** interroga l'ultima release stabile GitHub di
