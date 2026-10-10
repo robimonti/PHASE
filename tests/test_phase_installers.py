@@ -74,6 +74,7 @@ def test_unix_runtime_configs_do_not_use_upstream_example_paths(phase_root, tmp_
     train = (stage / "engine" / "TRAIN" / "APS_CONFIG.sh").read_text()
     assert str(prefix / "engine" / "StaMPS") in stamps
     assert str(prefix / "engine" / "TRAIN") in train
+    assert 'export PYTHONPATH="$STAMPS/python${PYTHONPATH:+:$PYTHONPATH}"' in stamps
     assert "/home/ahooper" not in stamps
     assert "/nfs/see-fs" not in train
     if shutil.which("bash"):

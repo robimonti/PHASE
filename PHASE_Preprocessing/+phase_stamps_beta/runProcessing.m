@@ -324,10 +324,23 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         % DEFINITION OF THE TASKS
         if isunix
             source_stamps = ['source ' phase_stamps_beta.quotePosix(stamps_path)];
-            source_snap = strjoin({mt_prep_snap, ...
+            stamps_python = getenv('PHASE_PYTHON');
+            if isempty(stamps_python) || ~isfile(stamps_python)
+                stamps_python = 'python3';
+            else
+                stamps_python = phase_stamps_beta.quotePosix(stamps_python);
+            end
+            % The StaMPS shim otherwise resolves an arbitrary login-shell Python
+            % (often Anaconda on macOS). Keep the Python package alongside the
+            % installed StaMPS runtime discoverable even after an in-app update.
+            stamps_pythonpath = ['export PYTHONPATH=' ...
+                phase_stamps_beta.quotePosix(fullfile(installation_folder,'python')) ...
+                '"${PYTHONPATH:+:$PYTHONPATH}"'];
+            source_snap = strjoin({stamps_python, '-m', 'stamps.mt_prep_snap', ...
                 phase_stamps_beta.quotePosix(master_date), ...
                 phase_stamps_beta.quotePosix(s2s_export_path), ...
                 phase_stamps_beta.quotePosix(amplitude_threshold)},' ');
+            source_stamps = strjoin({source_stamps, stamps_pythonpath}, ' && ');
         else
             source_stamps = [source space stamps_path ' -echo'];
             source_snap = [mt_prep_snap space master_date space s2s_export_path space amplitude_threshold];

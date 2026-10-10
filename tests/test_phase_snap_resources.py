@@ -1,4 +1,4 @@
-"""Runtime resource guards for SNAP GPT on Apple Silicon."""
+"""Runtime resource guards for SNAP GPT on supported platforms."""
 
 import importlib.util
 
@@ -34,3 +34,20 @@ def test_macos_gpt_guard_does_not_rewrite_other_commands(phase_root):
     helper = _helper(phase_root)
     command = ["python3", "script.py", "-c", "26G", "-q", "8"]
     assert helper.macos_gpt_command(command) == (command, "")
+
+
+def test_gpt_guard_applies_to_windows_executable(phase_root):
+    helper = _helper(phase_root)
+    command, notice = helper.safe_gpt_command(
+        ["gpt.exe", "graph.xml", "-c", "26G", "-q", "8"],
+        physical_bytes=16 * 1024 ** 3, heap_bytes=4 * 1024 ** 3)
+    assert command == ["gpt.exe", "graph.xml", "-c", "512M", "-q", "4", "-x"]
+    assert "SNAP memory guard" in notice
+
+
+def test_gpt_guard_applies_to_linux_executable(phase_root):
+    helper = _helper(phase_root)
+    command, _ = helper.safe_gpt_command(
+        ["/opt/esa-snap/bin/gpt", "graph.xml", "-c", "26G", "-q", "8"],
+        physical_bytes=32 * 1024 ** 3, heap_bytes=8 * 1024 ** 3)
+    assert command == ["/opt/esa-snap/bin/gpt", "graph.xml", "-c", "1024M", "-q", "8", "-x"]

@@ -202,6 +202,9 @@ def test_beta_run_monitor_streams_matlab_and_external_output_without_cmd_windows
     assert "pathKey = 'Path'" in runner
     assert "cmd.exe" in runner
     assert "phase_stamps_beta.runCommandHidden" in backend
+    assert "stamps.mt_prep_snap" in backend
+    assert "getenv('PHASE_PYTHON')" in backend
+    assert "export PYTHONPATH=" in backend
     assert "mt_prep_snap_status = system" not in backend
     assert "dos('where snaphu')" not in backend
     assert "PHASE Run monitor" in backend

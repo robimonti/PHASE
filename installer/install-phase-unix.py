@@ -211,6 +211,7 @@ def configure_unix_runtimes(stage: Path, prefix: Path) -> None:
             "# PHASE-managed StaMPS environment.\n"
             f"export STAMPS={shlex.quote(str(prefix / 'engine' / 'StaMPS'))}\n"
             'export MATLABPATH="$STAMPS/matlab${MATLABPATH:+:$MATLABPATH}"\n'
+            'export PYTHONPATH="$STAMPS/python${PYTHONPATH:+:$PYTHONPATH}"\n'
             'export PATH="$STAMPS/bin:$STAMPS/external/snaphu/bin:'
             '$STAMPS/external/triangle/bin:$STAMPS/external/gawk/bin:$PATH"\n',
             encoding="utf-8",
