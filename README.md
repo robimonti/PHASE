@@ -81,7 +81,7 @@ end-to-end software run establishes operational compatibility, not scientific
 accuracy for every dataset; users should inspect warnings and validate
 deformation estimates against independent observations where possible.
 
-- [PHASE 6 manual (historical; PHASE 7 revision pending)](PHASE_Manual.pdf)
+- [PHASE 7 user manual](PHASE_Manual.pdf) ([editable LaTeX source](Documenti/PHASE_Manual_LaTeX/main.tex))
 - [Release notes](RELEASE_NOTES.md)
 - [Installer and release preparation](installer/README.md)
 - [Scientific export corrections](docs/PSI_EXPORT_CORRECTIONS.md)

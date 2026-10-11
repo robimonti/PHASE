@@ -1,0 +1,206 @@
+\documentclass[a4paper,12pt]{report}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{top=3cm, bottom=3cm, left=3cm, right=3cm}
+\setlength{\emergencystretch}{3em}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{bibentry}
+\usepackage{csquotes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+
+% --- FONT: Roboto (Modern Sans-Serif) ---
+\usepackage[sfdefault]{roboto}
+
+% --- Custom Colors ---
+\definecolor{PhaseBlue}{RGB}{73, 96, 209}
+\definecolor{PhaseGray}{RGB}{85, 85, 85}
+\definecolor{PhaseMagenta}{RGB}{189, 41, 107}
+
+% --- HEADING STYLING ---
+\usepackage{titlesec}
+
+% 1. PART Styling (e.g., "Module 1") -> PHASE BLUE
+\titleformat{\part}[display]
+  {\bfseries\fontsize{60}{50}\selectfont\color{PhaseBlue}\centering} % Format
+  {}
+  {20pt}                % Spacing
+  {\Huge}               % Title size
+
+% 2. CHAPTER Styling (e.g., "Automated SAR...") -> PHASE MAGENTA
+\titleformat{\chapter}[display]
+  {\bfseries\Huge\color{PhaseMagenta}} % Format: Bold, Huge, Magenta
+  {\filleft\fontsize{60}{60}\selectfont\color{PhaseMagenta!30}\thechapter} % Number: Giant, faded magenta, right
+  {1ex}
+  {\titlerule[2pt]\vspace{1.5ex}\filleft} % Line: Thick, aligned right
+  [\vspace{1ex}]
+
+% 3. SECTION Styling (Standard Black/Dark Grey)
+\titleformat{\section}
+  {\Large\bfseries\color{black}}
+  {\thesection}{1em}{}
+
+% --- Header/Footer Setup ---
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\fancyhf{}
+\fancyhead[L]{\textcolor{PhaseGray}{\small PHASE Manual}}
+\fancyhead[R]{\textcolor{PhaseGray}{\small \leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{PhaseGray}{RGB}{100, 100, 100}
+
+\begin{document}
+\nobibliography*
+
+% --- TITLE PAGE ---
+\begin{titlepage}
+    \centering
+    \vspace*{1cm} % Adjusted spacing
+
+    % Logo
+    \includegraphics[width=0.8\textwidth]{images/PHASE_logo.png}
+
+    \vspace{4cm}
+
+    %\noindent\makebox[\linewidth]{\rule{\textwidth}{1pt}} \\[0.5cm]
+
+    {\fontsize{40}{48}\selectfont \textbf{USER MANUAL}}\\[0.5cm]
+    {\Large \textcolor{PhaseGray}{Version 7.0.0}}
+
+    \vspace{3cm}
+
+    % Icons
+    \includegraphics[width=0.8\textwidth]{images/Icons.png}
+
+    \vfill
+
+    \textbf{\large Authors}\\[0.2cm]
+    \large Roberto Monti, Lorenzo Rossi, Mirko Reguzzoni\\[0.2cm]
+    \textit{\color{PhaseBlue}\large Politecnico di Milano}\\[1cm]
+
+    {\small Last update: \today}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% --- Content Starts Here ---
+
+\chapter{Introduction}
+
+PHASE (Persistent Scatterer Highly Automated Suite for Environmental Monitoring) is an end-to-end application for SAR preprocessing, Persistent Scatterer Interferometry (PSI), and displacement modeling. Version 7 brings the three stages into one hub: \textbf{Preprocessing}, \textbf{StaMPS PSI}, and \textbf{Displacement Modeling}. The pipeline supports Sentinel-1 and COSMO-SkyMed (CSK/CSG) products and guides the user from SAR scenes to line-of-sight (LOS) displacement time series and modeled products. PHASE automates many operations but does not replace scientific quality control or independent validation.
+
+\begin{figure}[htbp]
+        \centering
+        \includegraphics[width=1\textwidth]{images/PHASE_workf1.jpg}
+        \caption{Conceptual PHASE workflow. The three stages are accessed from one application in version 7.}
+\end{figure}
+
+\subsection*{What changed in version 7}
+PHASE is installed \emph{once per computer}; a project contains data and outputs, not another copy of the application. The hub keeps the same project open across all three modules, shows stage status, and provides a \textbf{Check for updates} control. The Preprocessing and StaMPS run monitors display progress and diagnostics. The optional TS Points picker is integrated into StaMPS PSI; complete time-series exports are produced automatically. PSI exports now offer an explicit standard/corrected choice, documented in Chapter 3.
+
+\vspace{\baselineskip}
+\noindent This manual covers the version 7 user workflow and the principal scientific choices. Consult the original SNAP, StaMPS and TRAIN documentation for full algorithmic details and parameter definitions.
+
+\vspace{\baselineskip}
+\section{Installation, projects and updates}
+Download the installer for your system from \url{https://github.com/robimonti/PHASE/releases}. Use the release asset, not GitHub's \emph{Code--Download ZIP}. MATLAB and ESA SNAP are external prerequisites; follow the installer's checks and the current release notes for the supported versions and remaining dependencies.
+
+\begin{itemize}
+    \item \textbf{Windows 10/11:} run \texttt{install-phase.exe}. The guided installer and end-to-end workflow have been tested.
+    \item \textbf{macOS Apple Silicon:} open the PHASE DMG and install PHASE. The preprocessing and StaMPS PSI pipelines, including Step 8 and TRAIN \texttt{a\_linear}, have been tested. Apple Intel is outside this release's supported scope. The app is not Developer-ID signed or notarized. If Gatekeeper blocks it, verify that the DMG came from the official release, attempt to open it, then use \emph{System Settings $\rightarrow$ Privacy \& Security $\rightarrow$ Open Anyway}. Do not disable Gatekeeper globally.
+    \item \textbf{Linux x86\_64:} the AppImage/native build path is experimental. An end-to-end PSI run has not yet been validated on Linux. Consult the release notes and installer requirements before relying on it for research.
+\end{itemize}
+
+The app is installed only once. Launch \textbf{PHASE}, then select \textbf{New project} or \textbf{Open project}. Project folders may reside wherever you have sufficient space and write permission. Do not copy the PHASE engine or individual \texttt{.mlapp} files into each project.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{images/Screenshot 2026-10-11 alle 23.03.21.png}
+    \caption{PHASE 7 hub before opening a project. The four navigation buttons, workflow cards, project actions and update control are part of one application.}
+    \label{fig:phase7-hub}
+\end{figure}
+
+\noindent New projects use this top-level structure:
+\begin{description}[leftmargin=3.3cm,style=nextline]
+    \item[\texttt{01\_INPUT}] User-supplied SAR archives and AOI input files.
+    \item[\texttt{02\_PROCESSING\_INTERNAL}] Intermediate SNAP and StaMPS work products. Do not modify while a run is in progress.
+    \item[\texttt{03\_RESULTS}] Final PSI time series, modeling products, figures, GIS data and reports.
+    \item[\texttt{04\_LOGS}] Execution logs and, if applicable, a legacy-import catalog.
+\end{description}
+
+Existing projects retain their original folder names because processing state may refer to those paths. In the hub, a green stage indicator means PHASE found outputs for that stage; it does not certify scientific quality. The highlighted stage is a suggested next action. Use \textbf{Check for updates} to download a compatible stable engine; close and relaunch PHASE to apply it. Projects and installed StaMPS/TRAIN runtimes are kept separate from the update. See the release notes for update availability and platform-specific instructions.
+
+%\vspace{\baselineskip}
+\subsection*{References and acknowledgments}
+\noindent When utilizing PHASE Module 1 for your research, please ensure you refer to and cite the foundational works that make this pipeline possible:
+\begin{itemize}
+    \item \bibentry{monti2025phase}
+    \item \bibentry{foumelis2018snap}
+    \item \bibentry{hooper2008multi}
+    \item (if TRAIN is used) \bibentry{bekaert2015statistical}
+\end{itemize}
+
+\vspace{\baselineskip}
+\noindent The Authors express their gratitude to Jose Manuel Delgado Blasco and Dr. Michael Foumelis for the development of the snap2stamps tool and Prof. Andy Hooper for the development of StaMPS.
+
+\part{Module 1}
+\input{Chapters/1. Preprocessing.tex}
+\input{Chapters/2. StaMPS.tex}
+
+\part{Module 2}
+\input{Chapters/3. Geospatial.tex}
+
+
+% --- Appendix Starts Here ---
+\part{Appendix}
+\appendix
+\chapter{Preprocessing with External DEM}
+
+When employing an external Digital Elevation Model (DEM) in the \texttt{snap2stamps} procedure, it is mandatory that the file is in the correct format.
+
+\section{File Requirements}
+\begin{itemize}
+    \item \textbf{File Type:} \texttt{.tif} (GeoTIFF)
+    \item \textbf{Reference System:} WGS 84 - EPSG:4326
+\end{itemize}
+
+\section{Preparation Procedure (QGIS)}
+To prepare the DEM, you can use QGIS to reproject the input DEM according to the source data requirements.
+
+\begin{enumerate}
+    \item Open QGIS and load your DEM.
+    \item Open the \textbf{Warp (Reproject)} tool.
+    \item Set the \textbf{Target CRS} to \texttt{EPSG:4326}.
+    \item \textbf{Important:} Define \texttt{0} as the \enquote{Nodata value} in the reproject toolbox settings. \textit{(Note: While 0 is not a standard NoData value in general GIS practices, it is strictly required here because the value 0.0 is hardcoded into the snap2stamps XML graph parameters. Using any other value will cause SNAP to crash during processing).}
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/qgis_reproject.png}
+    \caption{QGIS Reprojection Settings.}
+\end{figure}
+
+\begin{quote}
+    \textcolor{cyan}{\textbf{SUGGESTION:}} For successful processing, it is recommended that the External DEM covers an area that is approximately \textbf{10\% larger} than the Area of Interest (AOI) set for the subset of the SAR images.
+\end{quote}
+
+\bibliographystyle{plainnat}
+\nobibliography{references} % This matches the filename 'references.bib'
+
+\end{document}
