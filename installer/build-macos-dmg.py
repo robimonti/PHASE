@@ -74,14 +74,20 @@ def main() -> None:
         if missing:
             raise RuntimeError("Incomplete Apple Silicon PSI runtime: " + ", ".join(missing))
         manifest = runtime / "phase-runtime.json"
-        if args.sign_identity and not manifest.is_file():
-            raise RuntimeError("Signed release requires a pinned phase-runtime.json manifest.")
-        if manifest.is_file():
-            metadata = json.loads(manifest.read_text(encoding="utf-8"))
-            if (metadata.get("stampsCommit") != installer.STAMPS_COMMIT or
-                    metadata.get("trainCommit") != installer.TRAIN_COMMIT or
-                    metadata.get("platform") != "macos-arm64"):
-                raise RuntimeError("macOS runtime revisions do not match PHASE release pins.")
+        if not manifest.is_file():
+            raise RuntimeError("macOS runtime requires a pinned phase-runtime.json manifest.")
+        metadata = json.loads(manifest.read_text(encoding="utf-8"))
+        if (metadata.get("stampsCommit") != installer.STAMPS_COMMIT or
+                metadata.get("trainCommit") != installer.TRAIN_COMMIT or
+                metadata.get("platform") != "macos-arm64"):
+            raise RuntimeError("macOS runtime revisions do not match PHASE release pins.")
+        hashes = metadata.get("binarySha256")
+        if not isinstance(hashes, dict) or set(hashes) != set(installer.MACOS_PSI_TOOLS):
+            raise RuntimeError("macOS runtime requires SHA-256 for all bundled PSI tools.")
+        for relative in installer.MACOS_PSI_TOOLS:
+            digest = hashlib.sha256((runtime / "StaMPS" / relative).read_bytes()).hexdigest()
+            if digest != hashes[relative]:
+                raise RuntimeError(f"macOS runtime checksum mismatch: {relative}")
     output = args.output.expanduser().resolve()
     if root in output.parents:
         raise RuntimeError("Build the DMG outside the source checkout.")
@@ -100,7 +106,7 @@ def main() -> None:
         if build_tag:
             generated_source = stage / "PHASEInstaller.swift"
             generated_source.write_text(
-                source.read_text(encoding="utf-8").replace("v7.0.0 preview", build_tag),
+                source.read_text(encoding="utf-8").replace("v7.0.1 preview", build_tag),
                 encoding="utf-8")
             source = generated_source
         build_env = os.environ.copy()
@@ -120,8 +126,8 @@ def main() -> None:
             "CFBundleName": "PHASE Installer",
             "CFBundleDisplayName": "PHASE Installer",
             "CFBundleIdentifier": "org.phaseinsar.phase.installer",
-            "CFBundleVersion": build_tag[1:] if build_tag else "7.0.0",
-            "CFBundleShortVersionString": build_tag[1:] if build_tag else "7.0.0",
+            "CFBundleVersion": build_tag[1:] if build_tag else "7.0.1",
+            "CFBundleShortVersionString": build_tag[1:] if build_tag else "7.0.1",
             "CFBundleExecutable": "PHASEInstaller",
             "CFBundlePackageType": "APPL",
             "CFBundleIconFile": "PHASE.icns",
@@ -136,6 +142,7 @@ def main() -> None:
         if runtime:
             shutil.copytree(runtime / "StaMPS", contents / "StaMPS")
             shutil.copytree(runtime / "TRAIN", contents / "TRAIN")
+            shutil.copy2(runtime / "phase-runtime.json", contents / "phase-runtime.json")
         if gawk_source and snaphu_source:
             sources = volume / "Third-party sources"
             sources.mkdir()

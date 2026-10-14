@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from types import SimpleNamespace
 
 
@@ -180,3 +181,51 @@ def test_failed_image_does_not_block_the_remaining_queue(phase_root, tmp_path, m
     progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
     assert progress["percentage"] == 100
     assert progress["currentIndex"] == 2
+
+
+def test_atomic_json_retries_transient_windows_permission_error(phase_root, tmp_path, monkeypatch):
+    module = _module(phase_root)
+    original_replace = os.replace
+    attempts = []
+
+    def briefly_locked(source, destination):
+        attempts.append((source, destination))
+        if len(attempts) < 3:
+            raise PermissionError(5, "Access denied", str(destination))
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(module.os, "replace", briefly_locked)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    destination = tmp_path / "progress.json"
+
+    module.atomic_json(destination, {"phase": "downloading"})
+
+    assert len(attempts) == 3
+    assert json.loads(destination.read_text(encoding="utf-8")) == {
+        "phase": "downloading"
+    }
+    assert not list(tmp_path.glob("progress.json.*.tmp"))
+
+
+def test_locked_progress_file_does_not_retry_image(phase_root, tmp_path, monkeypatch):
+    module = _module(phase_root)
+    args = _args(
+        tmp_path,
+        [{"name": "scene.zip", "url": "https://example.test/scene.zip", "sizeBytes": 3}],
+    )
+    original_atomic_json = module.atomic_json
+
+    def locked_progress(path, payload):
+        if str(path) == args.progress:
+            raise PermissionError(5, "Access denied", str(path))
+        return original_atomic_json(path, payload)
+
+    monkeypatch.setattr(module, "atomic_json", locked_progress)
+    session = _Session([_Response([b"abc"], headers={"Content-Length": "3"})])
+
+    result = module.run(args, session=session)
+
+    assert result["status"] == "completed"
+    assert len(session.requests) == 1
+    assert (tmp_path / "slaves" / "scene.zip").read_bytes() == b"abc"
+    assert json.loads((tmp_path / "result.json").read_text())["status"] == "completed"

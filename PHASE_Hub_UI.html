@@ -71,7 +71,7 @@
 <body>
 <div id="nav" class="nav-shell" hidden>
   <div class="nav-top">
-    <div class="brand"><img src="PHASE_logo.png" alt="PHASE logo"><div class="brand-lines"><strong>Roberto Monti</strong><span>Politecnico di Milano</span><span id="version">v7.0.0 preview</span></div></div>
+    <div class="brand"><img src="PHASE_logo.png" alt="PHASE logo"><div class="brand-lines"><strong>Roberto Monti</strong><span>Politecnico di Milano</span><span id="version"></span></div></div>
     <button class="glass update" data-action="updates" title="Check for PHASE updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Check for updates</span></button>
   </div>
   <nav class="nav-pills" aria-label="PHASE sections">
@@ -102,7 +102,7 @@ function setup(htmlComponent) {
     document.getElementById('nav').hidden = !isNav;
     document.getElementById('home').hidden = isNav;
     if (isNav) {
-      document.getElementById('version').textContent = data.version || 'v7.0.0 preview';
+      document.getElementById('version').textContent = data.version || '';
       document.querySelector('.update').disabled = !data.updateEnabled;
       document.querySelectorAll('.nav-button').forEach(button => {
         const active = button.dataset.action === data.active;

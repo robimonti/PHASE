@@ -1,4 +1,4 @@
-% GENERATED FROM PHASE_Preprocessing.mlapp.
+% ARCHIVED historical App Designer source; not part of PHASE 7 runtime.
 % Run tools/extract_preprocessing_beta_engine.py after changing the stable app.
 % The complete formerly embedded App Designer source follows as editable text.
 

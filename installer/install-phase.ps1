@@ -1566,7 +1566,7 @@ function Invoke-StampsBinariesDownload {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.0.0 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.0.1 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2797,6 +2797,7 @@ function Assert-PhaseStandaloneRuntime {
         'phase_update.py',
         '+phase_hub\App.m',
         '+phase_project\open.m',
+        '+phase_project\displayVersion.m',
         '+phase_project\create.m',
         '+phase_project\workflowStatus.m',
         'PHASE_Preprocessing.m',
@@ -2806,10 +2807,12 @@ function Assert-PhaseStandaloneRuntime {
         'PHASE_Model_beta.m',
         'PHASE_Preprocessing\PHASE_StaMPS_beta.m',
         'PHASE_Preprocessing\+phase_preprocessing_beta\App.m',
+        'PHASE_Preprocessing\+phase_preprocessing_beta\ProcessingEngine.m',
         'PHASE_Preprocessing\+phase_stamps_beta\App.m',
+        'PHASE_Preprocessing\+phase_stamps_beta\ProcessingContext.m',
         'PHASE_Preprocessing\+phase_stamps_beta\runProcessing.m',
         '+phase_model_beta\App.m',
-        '+phase_model_beta\LegacyEngine.m',
+        '+phase_model_beta\ProcessingEngine.m',
         '+phase_model_beta\exportFigure.m',
         '+phase_model_beta\throwIfStopped.m',
         '+phase_model_beta\mapBase.m',

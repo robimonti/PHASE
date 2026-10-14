@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -29,6 +31,9 @@ def test_unix_installer_copies_only_runtime_files(phase_root, tmp_path):
     assert installer.ignored(str(phase_root / "tools"), [
         "srtm_precache.py", "snap_dim_version_check.py", "dev.py"
     ]) == {"dev.py"}
+    assert installer.ignored(str(phase_root / "Documenti"), [
+        "PHASE_Manual_Overleaf_v7.0.0.zip", "README.md"
+    ]) == {"PHASE_Manual_Overleaf_v7.0.0.zip"}
     installer.validate_runtime(phase_root)
 
 
@@ -119,9 +124,9 @@ def test_macos_installer_reports_missing_native_psi_tools(phase_root, tmp_path):
     stamps.mkdir()
     missing = installer.macos_psi_missing(stamps, None)
     assert "StaMPS/bin/calamp" in missing
-    assert "snaphu" in missing
-    assert "triangle" in missing
-    assert "gawk" in missing
+    assert "StaMPS/external/snaphu/bin/snaphu" in missing
+    assert "StaMPS/external/triangle/bin/triangle" in missing
+    assert "StaMPS/external/gawk/bin/gawk" in missing
     assert any("TRAIN runtime" in item for item in missing)
 
 
@@ -147,6 +152,46 @@ def test_macos_installer_accepts_complete_arm64_psi_runtime(phase_root, tmp_path
     assert installer.macos_psi_missing(stamps, train) == []
 
 
+def test_macos_trusted_tools_are_pinned_and_scoped(phase_root, tmp_path, monkeypatch):
+    installer = load_unix_installer(phase_root)
+    runtime = tmp_path / "runtime"
+    stamps = runtime / "StaMPS"
+    train = runtime / "TRAIN"
+    train.mkdir(parents=True)
+    staged = tmp_path / "staged" / "StaMPS"
+    hashes = {}
+    for relative in installer.MACOS_PSI_TOOLS:
+        payload = relative.encode("utf-8")
+        for root in (stamps, staged):
+            binary = root / relative
+            binary.parent.mkdir(parents=True, exist_ok=True)
+            binary.write_bytes(payload)
+            binary.chmod(0o755)
+        hashes[relative] = hashlib.sha256(payload).hexdigest()
+    (runtime / "phase-runtime.json").write_text(json.dumps({
+        "platform": "macos-arm64",
+        "stampsCommit": installer.STAMPS_COMMIT,
+        "trainCommit": installer.TRAIN_COMMIT,
+        "binarySha256": hashes,
+    }), encoding="utf-8")
+    cleared = []
+    def fake_run(args, **kwargs):
+        if args[0] == "lipo":
+            return subprocess.CompletedProcess(args, 0, "arm64\n", "")
+        if args[:2] == ["/usr/bin/xattr", "-d"]:
+            cleared.append((Path(args[3]).relative_to(staged).as_posix(), args[2]))
+            return subprocess.CompletedProcess(args, 0, "", "")
+        return subprocess.CompletedProcess(args, 0, "com.apple.quarantine\n", "")
+    monkeypatch.setattr(installer.subprocess, "run", fake_run)
+    assert installer.trust_bundled_macos_tools(stamps, train, staged) == 10
+    assert {relative for relative, _ in cleared} == set(installer.MACOS_PSI_TOOLS)
+    assert {name for _, name in cleared} == {"com.apple.quarantine"}
+
+    (staged / installer.MACOS_PSI_TOOLS[0]).write_bytes(b"changed")
+    with pytest.raises(RuntimeError, match="checksum mismatch"):
+        installer.trust_bundled_macos_tools(stamps, train, staged)
+
+
 def test_windows_installer_has_one_hub_shortcut(phase_root):
     script = (phase_root / "installer" / "install-phase.ps1").read_text(encoding="utf-8-sig")
     assert "@{ Name = 'PHASE'; Launcher = 'PHASE_Hub.m'; Function = 'PHASE_Hub' }" in script
@@ -161,13 +206,13 @@ def test_windows_installer_has_one_hub_shortcut(phase_root):
     assert "Start-Process -FilePath $launcher -ErrorAction Stop" in script
     assert "Join-Path (Join-Path $Script:State.InstallDir 'PHASE') 'PHASE.lnk'" in script
     assert "OpenFolderBtn" not in script
-    assert "v7.0.0 preview" in script
+    assert "v7.0.1 preview" in script
     assert "Roberto Monti · pyccino" in script
     assert "Install once. Work on any number of projects." in script
     assert "Each project can live in any folder or drive" in script
     assert "Persistent scatterer Highly Automated Suite for Environmental monitoring" in script
     assert "$Script:EmbeddedLogoBase64 = ''" in script
     compiler = (phase_root / "installer" / "compile-to-exe.ps1").read_text(encoding="utf-8-sig")
-    assert "version    = '7.0.0.0'" in compiler
+    assert "version    = '7.0.1.0'" in compiler
     assert "company    = 'Roberto Monti and pyccino'" in compiler
     assert "[Convert]::ToBase64String([IO.File]::ReadAllBytes($logoPath))" in compiler

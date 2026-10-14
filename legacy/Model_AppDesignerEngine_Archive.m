@@ -1,3 +1,5 @@
+% Archived historical App Designer backend. PHASE 7 uses
+% +phase_model_beta/ProcessingEngine.m and never loads this class.
 classdef LegacyEngine < matlab.apps.AppBase
 
     % Properties that correspond to app components
@@ -2158,49 +2160,40 @@ classdef LegacyEngine < matlab.apps.AppBase
                 % Visualization of the imported data and prepration of the required
                 % variables
 
-                % - 4.1) Projected coordinates
-                [xIN, yIN, utmZone] = deg2utm(lonlatIN(:,2), lonlatIN(:,1));
-                utmZone = utmZone(1,:);
-                xyIN = [xIN, yIN];
-
-
-                % - 4.2) Filter PS inside the given AOI
+                % - 4.1) Geographic AOI, from the map or an explicit .prj
                 switch flag_AOIbb
                     case true
-                    % a) polygon drawn in the standalone map, with the
-                    % legacy numeric bounding box retained as fallback
-                    lonlatAOI = app.aoi_polygon_lonlat;
-                    if size(lonlatAOI,2) ~= 2 || size(lonlatAOI,1) < 3
-                        lonlatAOI = [
-                            lonMinAOI, latMinAOI;
-                            lonMaxAOI, latMinAOI;
-                            lonMaxAOI, latMaxAOI;
-                            lonMinAOI, latMaxAOI;
-                            lonMinAOI, latMinAOI
-                        ];
-                    elseif ~isequal(lonlatAOI(1,:),lonlatAOI(end,:))
-                        lonlatAOI(end+1,:) = lonlatAOI(1,:);
-                    end
-
-                    % convert coordinates to UTM
-                    [xAOI, yAOI] = deg2utm(lonlatAOI(:,2), lonlatAOI(:,1));
-                    xyAOI = [xAOI, yAOI];     % UTM coordinates for the bounding box
-
+                        lonlatAOI = app.aoi_polygon_lonlat;
+                        if size(lonlatAOI,2) ~= 2 || size(lonlatAOI,1) < 3
+                            lonlatAOI = [
+                                lonMinAOI, latMinAOI;
+                                lonMaxAOI, latMinAOI;
+                                lonMaxAOI, latMaxAOI;
+                                lonMinAOI, latMaxAOI;
+                                lonMinAOI, latMinAOI
+                            ];
+                        elseif ~isequal(lonlatAOI(1,:),lonlatAOI(end,:))
+                            lonlatAOI(end+1,:) = lonlatAOI(1,:);
+                        end
                     case false
-                    % b) shapefile
-                    % Use the same multipart-aware geographic geometry shown
-                    % in the standalone map.
-                    [lonlatAOI,~,aoiInfo] = phase_model_beta.readAoiShapefile( ...
-                        filepathAOI,filepathIN);
-                    fprintf('The shapefile AOI coordinates are %s.\n',aoiInfo.coordinateType);
-                    fprintf('AOI polygon parts: %d\n',aoiInfo.partCount);
-                    finiteAOI = all(isfinite(lonlatAOI),2);
-                    xyAOI = NaN(size(lonlatAOI));
-                    [xAOI,yAOI] = deg2utm( ...
-                        lonlatAOI(finiteAOI,2),lonlatAOI(finiteAOI,1));
-                    xyAOI(finiteAOI,:) = [xAOI,yAOI];
-
+                        [lonlatAOI,~,aoiInfo] = phase_model_beta.readAoiShapefile( ...
+                            filepathAOI,filepathIN);
+                        fprintf('AOI coordinates: %s; polygon parts: %d\n', ...
+                            aoiInfo.coordinateType,aoiInfo.partCount);
                 end
+
+                % - 4.2) Select the dominant UTM zone once for the AOI.
+                [projectCRS,utmZone,epsgCode] = ...
+                    phase_model_beta.selectProjectUtm(lonlatAOI);
+                [xIN,yIN] = phase_model_beta.projectWgs84(projectCRS,lonlatIN);
+                xyIN = [xIN,yIN];
+                finiteAOI = all(isfinite(lonlatAOI),2);
+                xyAOI = NaN(size(lonlatAOI));
+                [xAOI,yAOI] = phase_model_beta.projectWgs84( ...
+                    projectCRS,lonlatAOI(finiteAOI,:));
+                xyAOI(finiteAOI,:) = [xAOI,yAOI];
+                fprintf('Project coordinate reference: EPSG:%d (%s)\n', ...
+                    epsgCode,utmZone);
 
                 % check which PS are inside the AOI
                 xyIN_AOI_flag = inpolygon(xyIN(:,1), xyIN(:,2), xyAOI(:,1), xyAOI(:,2));
@@ -2293,7 +2286,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                         xy_grid = [x_grid_AOI, y_grid_AOI];
 
                         % convert to geographic coordinates for plotting
-                        [lat_grid_AOI, lon_grid_AOI] = utm2deg(x_grid_AOI, y_grid_AOI, repmat(utmZone, size(x_grid_AOI, 1), 1));
+                        [lat_grid_AOI, lon_grid_AOI] = projinv(projectCRS,x_grid_AOI,y_grid_AOI);
                         lonlat_grid_AOI = [lon_grid_AOI, lat_grid_AOI];
                         centerline_data = [];
                 end
@@ -2535,12 +2528,18 @@ classdef LegacyEngine < matlab.apps.AppBase
                         coords = EXTR_table{:, coord_columns};
 
                         % check if the columns are lat/lon or x/y and assign to appropriate variables
-                        if any(contains(coord_columns, 'lat')) && any(contains(coord_columns, 'lon'))
-                            latEXTR = coords(:, 1);    % first column (latitude)
-                            lonEXTR = coords(:, 2);    % second column (longitude)
-                        elseif any(contains(coord_columns, 'x')) && any(contains(coord_columns, 'y'))
-                            xEXTR = coords(:, 1);      % first column (X)
-                            yEXTR = coords(:, 2);      % second column (Y)
+                        lowerColumns = lower(string(coord_columns));
+                        latColumn = find(contains(lowerColumns,'lat'),1);
+                        lonColumn = find(contains(lowerColumns,'lon'),1);
+                        xColumn = find(lowerColumns=="x" | startsWith(lowerColumns,"x_"),1);
+                        yColumn = find(lowerColumns=="y" | startsWith(lowerColumns,"y_"),1);
+                        if ~isempty(latColumn) && ~isempty(lonColumn)
+                            latEXTR = coords(:,latColumn);
+                            lonEXTR = coords(:,lonColumn);
+                        elseif ~isempty(xColumn) && ~isempty(yColumn)
+                            % X/Y are explicitly in the selected project CRS.
+                            xEXTR = coords(:,xColumn);
+                            yEXTR = coords(:,yColumn);
                         else
                             error('Coordinates are not in lat/lon or x/y format.');
                         end
@@ -2557,11 +2556,12 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                     % check that EXTR coordinates are inside the AOI
                     if exist('latEXTR', 'var') && exist('lonEXTR', 'var')
-                        [xEXTR, yEXTR] = deg2utm(latEXTR, lonEXTR);
+                        [xEXTR, yEXTR] = phase_model_beta.projectWgs84( ...
+                            projectCRS,[lonEXTR,latEXTR]);
                         inside_AOI_flag = inpolygon(xEXTR, yEXTR, xyAOI(:,1), xyAOI(:,2));
                     elseif exist('xEXTR', 'var') && exist('yEXTR', 'var')
                         inside_AOI_flag = inpolygon(xEXTR, yEXTR, xyAOI(:,1), xyAOI(:,2));
-                        [latEXTR, lonEXTR] = utm2deg(xEXTR, yEXTR, repmat(utmZone, size(yEXTR,1), 1));
+                        [latEXTR,lonEXTR] = projinv(projectCRS,xEXTR,yEXTR);
                     else
                         error('Coordinates not found or incorrect format.');
                     end
@@ -2815,30 +2815,15 @@ classdef LegacyEngine < matlab.apps.AppBase
                     close(f);
 
 
-                % - 7.6) Construct the information table for the uncertainties
-                % initialize fields for the table
-                avg_std = zeros(num_PS, 1);           % average velocity in mm/year
-
-                % compute average velocity for each PS
-                for i = 1:num_PS
-                    p = polyfit(t_relFIN, stdAOI_FIN(i, :), 1);
-                    avg_std(i) = p(1) * 365.25;
-                end
-
-                % combine all data into a table
-                headers_FIN = [{'ID new', 'Longitude', 'Latitude', 'X (UTM)', 'Y (UTM)', 'Avg. std [mm]'}, ...
+                % - 7.6) Time-average model prediction uncertainty [mm]
+                avg_std = mean(stdAOI_FIN,2,'omitnan');
+                headers_STD = [{'ID new', 'Longitude', 'Latitude', ...
+                    'X (UTM)', 'Y (UTM)', 'Mean prediction std [mm]'}, ...
                     cellstr(datestr(t_dateFIN))'];
-
-                % create the main table
                 table_stdFIN = [num2cell(PSidIN_FIN), ...
-                                    num2cell(lonlatIN_AOI_FIN), ...
-                                    num2cell(xyIN_AOI_FIN), ...
-                                    num2cell(avg_std), ...
-                                    num2cell(stdAOI_FIN)];
-
-                % add headers
-                fullTable_stdFIN = [headers_FIN', table_FIN'];
-
+                    num2cell(lonlatIN_AOI_FIN), num2cell(xyIN_AOI_FIN), ...
+                    num2cell(avg_std), num2cell(stdAOI_FIN)];
+                fullTable_stdFIN = [headers_STD',table_stdFIN'];
 
                 % - 7.7) Make the figure of the uncertainties over the AOI
 
@@ -2849,84 +2834,35 @@ classdef LegacyEngine < matlab.apps.AppBase
                     geoplot(lonlatAOI(:,2), lonlatAOI(:,1), 'k-', 'LineWidth', 2);
                     geoscatter(lonlatIN_AOI_FIN(:,2), lonlatIN_AOI_FIN(:,1), markerSize, avg_std, 'filled');
                     c = colorbar;
-                    c.Label.String = 'Average LOS uncertainty [mm]';
+                    c.Label.String = 'Mean model prediction std [mm]';
                     set(gca, 'FontSize', 15)
-                    title('Time-average uncertainty over AOI', 'FontSize', 20);
+                    title('Time-average model prediction uncertainty over AOI', 'FontSize', 20);
                     fig5_filename = fullfile(figsDir, 'AOI_uncertainty.png');
                     phase_model_beta.exportFigure(f,fig5_filename);
                     close(f);
 
 
-                % - 7.8) Thresholding for warnings
-                % confidence level
-                alpha_sig = 5;
-
-                % a) average velocity
-                mean_avgVel = mean(avg_velocity, 'omitnan');
-                std_avgVel = std(avg_velocity, 'omitnan');
-
-                % standardize velocities and thresholds
-                avgVel_standard = abs((avg_velocity - mean_avgVel) / std_avgVel);
-                zlim = norminv(1 - (alpha_sig/100) / 2);
-                zshift = norminv(1 - (50/100) / 2);
-
-                % sensitivity factor for exponential curve
-                a = 1.5;
-
-                % initialize risk array
-                avgVel_risk = zeros(size(avg_velocity));
-
-                % compute risks based on standardized values
-                for i = 1:length(avgVel_standard)
-                    z = avgVel_standard(i);
-                    if z <= zlim && z >= zshift
-                        % low to moderate risk: 0% to 100%
-                        avgVel_risk(i) = 100 * (1 - exp(-a * ((z - zshift) / (zlim - zshift))));
-                    elseif z > zlim
-                        % high risk: over 100%
-                        avgVel_risk(i) = 100 + (z - zlim) * 50;
-                    end
-                end
-
-
-                % b) cumulative displacement
-                cumDisplacement = sum(abs(displAOI_FIN), 2);
-                mean_cumDisplacement = mean(cumDisplacement, 'omitnan');
-                std_cumDisplacement = std(cumDisplacement, 'omitnan');
-
-                % standardize cumulative displacement
-                cumD_standard = abs((cumDisplacement - mean_cumDisplacement) / std_cumDisplacement);
-
-                % initialize risk array for cumulative displacement
-                cumD_risk = zeros(size(cumDisplacement));
-
-                % compute risks for cumulative displacement
-                for i = 1:length(cumD_standard)
-                    z = cumD_standard(i);
-                    if z <= zlim && z >= zshift
-                        % low to moderate risk: 0% to 100%
-                        cumD_risk(i) = 100 * (1 - exp(-a * ((z - zshift) / (zlim - zshift))));
-                    elseif z > zlim
-                        % high risk: over 100%
-                        cumD_risk(i) = 100 + (z - zlim) * 50;
-                    end
-                end
-
-
-                % c) global risk
-                global_risk = 0.5 * avgVel_risk + 0.5 * cumD_risk;
-                risk_table = table(PSidIN_FIN, lonlatIN_AOI_FIN(:,1), lonlatIN_AOI_FIN(:,2), xyIN_AOI_FIN(:,1), xyIN_AOI_FIN(:,2), ...
-                    avg_velocity, avgVel_risk, cumDisplacement, cumD_risk, global_risk, ...
-                    'VariableNames', {'ID new', 'Longitude', 'Latitude', 'X (UTM)', 'Y (UTM)', 'Avg velocity [mm/yr]', ...
-                    'Velocity risk [%]', 'Cumulative displ. [mm]', 'Cumulative displ. risk [%]', 'Global risk [%]'});
-
+                % - 7.8) Descriptive anomalies of the full modelled field.
+                % These scores are relative to the AOI, not hazard probabilities.
+                anomaly = phase_model_beta.modelAnomalies( ...
+                    displAOI_FIN,stdAOI_FIN);
+                anomaly_table = table(PSidIN_FIN, ...
+                    lonlatIN_AOI_FIN(:,1),lonlatIN_AOI_FIN(:,2), ...
+                    xyIN_AOI_FIN(:,1),xyIN_AOI_FIN(:,2), ...
+                    avg_velocity,anomaly.peakDeviationMm, ...
+                    anomaly.peakContrast,100*anomaly.persistence, ...
+                    string(anomaly.class), ...
+                    'VariableNames', {'ID new','Longitude','Latitude', ...
+                    'X (UTM)','Y (UTM)','Avg velocity [mm/yr]', ...
+                    'Peak AOI deviation [mm]','Peak normalized contrast', ...
+                    'Persistence [%]','Model anomaly'});
 
                 % - 7.9) Shapefile creation and export
                 % Check input consistency
                 if size(lonlatIN_AOI_FIN, 1) ~= size(xyIN_AOI_FIN, 1) || ...
                    size(lonlatIN_AOI_FIN, 1) ~= size(PSidIN_FIN, 1) || ...
                    size(lonlatIN_AOI_FIN, 1) ~= size(avg_velocity, 1) || ...
-                   size(lonlatIN_AOI_FIN, 1) ~= size(global_risk, 1) || ...
+                   size(lonlatIN_AOI_FIN, 1) ~= size(anomaly.peakContrast, 1) || ...
                    size(lonlatIN_AOI_FIN, 1) ~= size(displAOI_FIN, 1)
                     error('Input arrays have inconsistent sizes.');
                 end
@@ -2940,7 +2876,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                                    'UTM_Y', num2cell(xyIN_AOI_FIN(:, 2)), ... % UTM Y
                                    'AvgVel', num2cell(avg_velocity), ...      % Average velocity
                                    'AvgStd', num2cell(avg_std), ...           % Average uncertainty
-                                   'GlobRisk', num2cell(global_risk));        % Global risk
+                                   'AnomPeak', num2cell(anomaly.peakContrast), ... % AOI-relative contrast
+                                   'AnomClass', anomaly.class);         % Model anomaly
 
                 % Create a FieldNameMap for .dbf field names
                 FieldNameMap = containers.Map;
@@ -2949,7 +2886,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 FieldNameMap('UTM_Y') = 'Y_UTM';
                 FieldNameMap('AvgVel') = 'Avg_Vel';
                 FieldNameMap('AvgStd') = 'Avg_Std';
-                FieldNameMap('GlobRisk') = 'Glob_Risk';
+                FieldNameMap('AnomPeak') = 'Anom_Peak';
 
                 % Add displacement fields for each date
                 for j = 1:size(displAOI_FIN, 2)
@@ -2993,8 +2930,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                 save(fullfile(filesDir, 'mat', 'PHASEresults.mat'), 'PHASEresults');
 
 
-                % - 7.11) Export multi-band GeoTIFF (only for 2D spatial models)
-                if strcmp(projDim, '2D')
+                % - 7.11) Export multi-band GeoTIFF for 2D gridded models
+                if strcmp(projDim, '2D') && ~strcmp(procType,'temporal')
                     fprintf('Exporting multi-band GeoTIFF of the 2D spatio-temporal model...\n');
 
                     % 7.11.1) Dimensions
@@ -3003,7 +2940,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                     n_times = size(displAOI_FIN, 2);
 
                     % 7.11.2) Pre-allocate 3D rasters (NaN automatically acts as NoData outside the AOI)
-                    tiff_matrix = NaN(n_rows, n_cols, n_times);
+                    tiff_matrix_displ = NaN(n_rows, n_cols, n_times);
                     tiff_matrix_std   = NaN(n_rows, n_cols, n_times);
 
                     % 7.11.3) Fill the matrix epoch by epoch
@@ -3028,28 +2965,16 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                     R = maprefcells(x_limits, y_limits, [n_rows, n_cols]);
 
-                    % 7.11.5) Extract EPSG code from utmZone string (e.g., '32 T')
+                    % 7.11.5) Write rasters in the selected project CRS
                     filenameOUT_tiff_displ = fullfile(filesDir, strcat(filenameOUT, '_model.tif'));
                     filenameOUT_tiff_std   = fullfile(filesDir, strcat(filenameOUT, '_uncertainty.tif'));
 
-                    try
-                        zone_num = sscanf(utmZone, '%d');
-                        if any(upper(utmZone) >= 'N')
-                            epsg_code = 32600 + zone_num; % Northern hemisphere
-                        else
-                            epsg_code = 32700 + zone_num; % Southern hemisphere
-                        end
-
-                        geotiffwrite(filenameOUT_tiff_displ, tiff_matrix_displ, R, 'CoordRefSysCode', epsg_code);
-                        geotiffwrite(filenameOUT_tiff_std, tiff_matrix_std, R, 'CoordRefSysCode', epsg_code);
-                        fprintf('GeoTIFFs (Model and Uncertainty) exported successfully.\n');
-                    catch ME
-                        % Fallback if EPSG extraction fails
-                        geotiffwrite(filenameOUT_tiff_displ, tiff_matrix_displ, R);
-                        geotiffwrite(filenameOUT_tiff_std, tiff_matrix_std, R);
-                        fprintf('GeoTIFFs exported (without explicit EPSG tag): %s\n', ME.message);
+                    geotiffwrite(filenameOUT_tiff_displ,tiff_matrix_displ,R, ...
+                        'CoordRefSysCode',epsgCode);
+                    geotiffwrite(filenameOUT_tiff_std,tiff_matrix_std,R, ...
+                        'CoordRefSysCode',epsgCode);
+                    fprintf('GeoTIFFs exported with EPSG:%d.\n',epsgCode);
                     end
-                end
 
                 pause(10)
                 app.notifyBetaProgress(80, 'Extrapolating time series...');
@@ -3166,7 +3091,8 @@ classdef LegacyEngine < matlab.apps.AppBase
                     OUTmunicipality, '';                               % municipality
                     OUTcountry, '';                                    % country
                     '', '';                                            % blank row
-                    ['Chosen modelling: ', OUTprojDim], '';            % project spatial dimension
+                    ['Chosen modelling: ', OUTprojDim], '';
+                    ['Project CRS: EPSG:', num2str(epsgCode)], '';            % project spatial dimension
                     '', '';                                            % blank row
                     'Unwrapping parameters', '';
                     ['Reference latitude [deg]: ', OUTreflat], '';     % reference latitude
@@ -3261,7 +3187,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 title_s2 = 'Raw displacement time series';
                 subtitle1_s2 = ['Each PS displacement time series is obtained subtracting the value ' ...
                     'of the modelled trend displacement at the first epoch, to the whole time series.'];
-                subtitle2_s2 = 'Coordinates are given in WGS84 (geographic [deg]) and UTM (projected [m] - according to the proper fuse).';
+                subtitle2_s2 = 'Coordinates are WGS84 [deg] and project UTM [m]; see the EPSG code in General.';
                 subtitle3_s2 = 'Displacement is given along the satellite Line Of Sight (LOS) [mm].';
                 subtitle4_s2 = 'Persistent Scatterer data - inside the AOI';
 
@@ -3316,7 +3242,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 title_s3 = 'Modelled displacement time series';
                 subtitle1_s3 = ['Each PS displacement modelled time series is obtained through the ' ...
                     'contribution of a cubic splines deterministic trend and a stochastic component.'];
-                subtitle2_s3 = 'Coordinates are given in WGS84 (geographic [deg]) and UTM (projected [m] - according to the proper fuse).';
+                subtitle2_s3 = 'Coordinates are WGS84 [deg] and project UTM [m]; see the EPSG code in General.';
                 subtitle3_s3 = 'Displacement is given along the satellite Line Of Sight (LOS) [mm]. The average velocity is in [mm/year].';
                 subtitle4_s3 = 'Persistent Scatterer modelled data - inside the AOI';
 
@@ -3369,10 +3295,15 @@ classdef LegacyEngine < matlab.apps.AppBase
 
                 % define the placeholders for the title, subtitles, and figure space
                 title_s4 = 'Uncertainty of modelled displacement time series';
-                subtitle1_s4 = ['Each PS displacement time series uncertainty is obtained through the ' ...
-                    'contribution of all the components present in the modelled displacement.'];
-                subtitle2_s4 = 'Coordinates are given in WGS84 (geographic [deg]) and UTM (projected [m] - according to the proper fuse).';
-                subtitle3_s4 = 'Displacement is given along the satellite Line Of Sight (LOS) [mm]. The average velocity is in [mm/year].';
+                if strcmp(procType,'temporal&NNI')
+                    subtitle1_s4 = ['NNI interpolates the temporal model standard deviations ' ...
+                        'at grid locations; no interpolation covariance is propagated.'];
+                else
+                    subtitle1_s4 = ['Per-epoch prediction standard deviation follows the final ' ...
+                        'modelling stage; the summary is its arithmetic mean over time.'];
+                end
+                subtitle2_s4 = 'Coordinates are WGS84 [deg] and project UTM [m]; see the EPSG code in General.';
+                subtitle3_s4 = 'Prediction standard deviation is in LOS millimetres [mm].';
                 subtitle4_s4 = 'Persistent Scatterer modelled data uncertainty - inside the AOI';
 
                 % combine all data into a cell array for the third sheet
@@ -3420,14 +3351,14 @@ classdef LegacyEngine < matlab.apps.AppBase
 
 
                 % - 10.7) Prepare and fill the fifth sheet: 'Alerts'
-                sheetName5 = 'Alerts';
+                sheetName5 = 'AOI anomalies';
 
                 % define the placeholders for the title and subtitles
-                title_s5 = 'Automatic alerts';
-                subtitle1_s5 = ['Alerts thresholds are computed considering both average velocity ' ...
-                    'and cumulative displacement, for each PS.'];
-                subtitle2_s5 = 'Threshold values are obtained considering a significance level of 5%.';
-                subtitle3_s5 = 'Automatic alerts for PS - inside the AOI';
+                title_s5 = 'Modelled deformation anomalies relative to the AOI';
+                subtitle1_s5 = ['The full modelled time series is compared with the ' ...
+                    'AOI median at each epoch. Scores are descriptive, not hazard probabilities.'];
+                subtitle2_s5 = 'Persistent/transient labels require two adjacent epochs above three robust AOI scales.';
+                subtitle3_s5 = 'Modelled positions inside the AOI';
 
                 % combine all data into a cell array for the fourth sheet
                 dataSheet5 = {
@@ -3444,7 +3375,7 @@ classdef LegacyEngine < matlab.apps.AppBase
                 % write the table below the titles
                 startTableRow = size(dataSheet5, 1) + 1;
                 startTableCell = sprintf('A%d', startTableRow);
-                writetable(risk_table, filenameOUT_e, 'Sheet', sheetName5, 'Range', startTableCell);
+                writetable(anomaly_table, filenameOUT_e, 'Sheet', sheetName5, 'Range', startTableCell);
 
                 disp('Fifth sheet placeholders and table written successfully.');
 

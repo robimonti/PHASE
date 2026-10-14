@@ -1,5 +1,5 @@
 classdef App < handle
-    %APP Modern controller around the complete text-extracted preprocessing engine.
+    %APP Modern controller around the headless MATLAB preprocessing engine.
 
     properties (SetAccess = private)
         UIFigure
@@ -115,13 +115,11 @@ classdef App < handle
             try
                 obj.appendLog(pythonNotice);
                 obj.appendLog(gptNotice);
-                obj.appendLog('Initialising the proven preprocessing engine and map services…');
+                obj.appendLog('Initialising the preprocessing engine and map services…');
                 obj.Engine = phase_preprocessing_beta.ProcessingEngine( ...
                     obj.ProjectDir,obj.RootDir);
                 obj.Engine.ExternalLogCallback = @(message) obj.appendLog(message);
                 obj.Engine.ExternalProgressCallback = @(progress) obj.onEngineProgress(progress);
-                obj.Engine.UIFigure.CloseRequestFcn = @(~,~) obj.hideEngine();
-                phase_preprocessing_beta.themeLegacyEngine(obj.Engine);
                 phase_preprocessing_beta.applyConfig(obj.Engine, obj.Config);
                 obj.Status = ternary(obj.IsDirty, 'idle', 'saved');
                 obj.StatusDetail = ternary(obj.IsDirty, ...
@@ -154,7 +152,6 @@ classdef App < handle
             try, obj.stopDownloadTransfer(true); catch, end
             try
                 if ~isempty(obj.Engine) && isvalid(obj.Engine)
-                    obj.Engine.UIFigure.CloseRequestFcn = [];
                     delete(obj.Engine);
                 end
             catch
@@ -296,7 +293,7 @@ classdef App < handle
             mkdirWarning = warning('off','MATLAB:MKDIR:DirectoryExists');
             warningCleanup = onCleanup(@() warning(mkdirWarning)); %#ok<NASGU>
             try
-                obj.Engine.StartButtonPushed([]);
+                obj.Engine.run();
                 obj.IsRunning = false;
                 phase_preprocessing_beta.saveConfig(obj.ProjectDir,candidate);
                 if obj.StopRequested
@@ -632,7 +629,11 @@ classdef App < handle
             end
 
             pythonExecutable = phase_preprocessing_beta.resolvePython(obj.Config.python);
-            obj.TransferDirectory = tempname;
+            transferBase = fullfile(obj.ProjectDir,'downloadasf');
+            if ~isfolder(transferBase), mkdir(transferBase); end
+            % Keep transfer control files with the writable project rather
+            % than MATLAB's system tempdir (which can resolve to C:\ on Windows).
+            obj.TransferDirectory = tempname(transferBase);
             mkdir(obj.TransferDirectory);
             manifestPath = fullfile(obj.TransferDirectory,'manifest.json');
             progressPath = fullfile(obj.TransferDirectory,'progress.json');
@@ -990,16 +991,7 @@ classdef App < handle
         end
 
         function applyDownloaderAoi(obj)
-            if isempty(obj.Engine) || ~isvalid(obj.Engine) || size(obj.MapPolygon, 1) < 4
-                return;
-            end
-            obj.Engine.DownloaderAOIType = "polygon";
-            obj.Engine.DownloaderPolygonCoords = obj.MapPolygon;
-            obj.Engine.DownloaderAOICorners = [];
-            obj.Engine.MinLongitudeEditField.Value = obj.Config.lon_min;
-            obj.Engine.MaxLongitudeEditField.Value = obj.Config.lon_max;
-            obj.Engine.MinLatitudeEditField.Value = obj.Config.lat_min;
-            obj.Engine.MaxLatitudeEditField.Value = obj.Config.lat_max;
+            % The visible controller owns the AOI; the runner reads saved config.
         end
 
         function [status, output] = runPython(obj, scriptPath, arguments)
@@ -1017,20 +1009,15 @@ classdef App < handle
             [status,output] = system(command);
         end
 
-        function hideEngine(obj)
-            try, obj.Engine.UIFigure.Visible = 'off'; catch, end
-        end
-
         function applyToEngine(obj)
             obj.requireEngine();
             phase_preprocessing_beta.applyConfig(obj.Engine, obj.Config);
         end
 
         function requireEngine(obj)
-            if isempty(obj.Engine) || ~isvalid(obj.Engine) || ...
-                    isempty(obj.Engine.UIFigure) || ~isvalid(obj.Engine.UIFigure)
+            if isempty(obj.Engine) || ~isvalid(obj.Engine)
                 error('PHASE_Preprocessing_beta:engineUnavailable', ...
-                    'The preprocessing engine is not available. Restart the beta app.');
+                    'The preprocessing engine is not available. Restart PHASE.');
             end
         end
 
@@ -1168,7 +1155,7 @@ classdef App < handle
                 'footprints',{obj.MapFootprints},'polygon',obj.MapPolygon);
             updateState = struct('context',obj.UpdateContext, ...
                 'results',{obj.UpdateResults},'status',obj.UpdateStatus,'busy',obj.UpdateBusy);
-            state = struct('kind','state','version','6.1.0', ...
+            state = struct('kind','state','version',phase_project.displayVersion(obj.RootDir), ...
                 'workDir',phase_preprocessing_beta.dataFolder(obj.ProjectDir), ...
                 'configPath',fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),'input_preprocessing.mat'), ...
                 'schema',phase_preprocessing_beta.schema(), ...

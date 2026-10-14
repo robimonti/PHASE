@@ -3,8 +3,8 @@ function [lonlat,segments,info] = readAoiShapefile(filepathAOI,filepathIN)
 %
 % The standalone map and the numerical engine call this same function so
 % the geometry displayed to the user is the geometry used to select PS.
-% Projected shapefiles retain the legacy assumption that they use the UTM
-% zone of the displacement dataset.
+% The source CRS is read from its .prj file; it is never inferred from
+% numeric coordinate ranges or from the displacement dataset.
 
 if nargin < 2, filepathIN = ''; end
 filepathAOI = char(string(filepathAOI));
@@ -14,6 +14,22 @@ if isempty(strtrim(filepathAOI)) || ~isfile(filepathAOI)
         'The AOI shapefile does not exist: %s',filepathAOI);
 end
 
+sourceInfo = shapeinfo(filepathAOI);
+sourceCRS = sourceInfo.CoordinateReferenceSystem;
+if isempty(sourceCRS)
+    error('PHASE_Model_beta:missingAoiCrs', ...
+        'The AOI shapefile has no readable CRS (.prj). Define its CRS before import.');
+end
+if isa(sourceCRS,'projcrs')
+    geographicCRS = sourceCRS.GeographicCRS;
+else
+    geographicCRS = sourceCRS;
+end
+if ~isa(geographicCRS,'geocrs') || ...
+        ~contains(lower(string(geographicCRS.Name)),'wgs 84')
+    error('PHASE_Model_beta:unsupportedAoiDatum', ...
+        'The AOI CRS must be WGS84 geographic or WGS84-based projected CRS.');
+end
 features = shaperead(filepathAOI);
 if isempty(features) || ~isfield(features,'X') || ~isfield(features,'Y')
     error('PHASE_Model_beta:emptyShapefile', ...
@@ -45,27 +61,14 @@ if isempty(rawSegments)
         'The AOI shapefile contains no valid polygon with at least three vertices.');
 end
 
-isGeographic = all(allCoordinates(:,1)>=-180 & allCoordinates(:,1)<=180) && ...
-    all(allCoordinates(:,2)>=-90 & allCoordinates(:,2)<=90);
-if isGeographic
+if isa(sourceCRS,'geocrs')
     segments = rawSegments;
     coordinateType = 'geographic';
 else
-    if isempty(strtrim(filepathIN)) || ~isfile(filepathIN)
-        error('PHASE_Model_beta:projectedShapefileNeedsPsFile', ...
-            ['The AOI shapefile uses projected coordinates. Select the displacement ', ...
-             'file first so PHASE can determine its UTM zone.']);
-    end
-    bounds = phase_model_beta.estimatePsBoundingBox(filepathIN);
-    centreLon = mean(bounds(1:2));
-    centreLat = mean(bounds(3:4));
-    [~,~,utmZone] = deg2utm(centreLat,centreLon);
-    utmZone = utmZone(1,:);
     segments = cell(size(rawSegments));
     for partIndex = 1:numel(rawSegments)
         xy = rawSegments{partIndex};
-        [lat,lon] = utm2deg(xy(:,1),xy(:,2), ...
-            repmat(utmZone,size(xy,1),1));
+        [lat,lon] = projinv(sourceCRS,xy(:,1),xy(:,2));
         segments{partIndex} = [lon(:),lat(:)];
     end
     coordinateType = 'projected';

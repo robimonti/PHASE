@@ -79,17 +79,16 @@ classdef App < handle
             obj.sendState();
 
             try
-                obj.appendLog('Initialising the standalone PHASE Model engine…');
-                obj.Engine = phase_model_beta.LegacyEngine();
-                obj.Engine.ConfigRoot = obj.ProjectDir;
+                obj.appendLog('Initialising the native PHASE Model engine…');
+                outputRoot = '';
                 if ~strcmp(obj.ProjectDir,obj.RootDir)
                     projectPaths = phase_project.paths(obj.ProjectDir);
-                    obj.Engine.OutputRoot = projectPaths.model;
+                    outputRoot = projectPaths.model;
                 end
+                obj.Engine = phase_model_beta.ProcessingEngine( ...
+                    obj.Config,obj.ProjectDir,outputRoot);
                 obj.Engine.ExternalLogCallback = @(message) obj.appendLog(message);
                 obj.Engine.ExternalProgressCallback = @(progress) obj.onProgress(progress);
-                obj.Engine.UIFigure.CloseRequestFcn = @(~,~) obj.hideEngine();
-                obj.Engine.UIFigure.Visible = 'off';
                 phase_model_beta.applyConfigToEngine(obj.Engine,obj.Config);
                 if info.exists && ~obj.IsDirty
                     obj.Status = 'saved';
@@ -138,7 +137,6 @@ classdef App < handle
             obj.endDiary();
             try
                 if ~isempty(obj.Engine) && isvalid(obj.Engine)
-                    obj.Engine.UIFigure.CloseRequestFcn = [];
                     delete(obj.Engine);
                 end
             catch
@@ -232,7 +230,6 @@ classdef App < handle
             obj.refreshMapAoi(true);
             obj.IsDirty = false;
             phase_model_beta.applyConfigToEngine(obj.Engine,candidate);
-            obj.Engine.UIFigure.Visible = 'off';
             obj.Status = 'saved';
             obj.StatusDetail = 'Configuration saved and ready';
             obj.appendLog(['Saved configuration: ' pathValue]);
@@ -254,7 +251,6 @@ classdef App < handle
             obj.applyDefaultPsBounds(false);
             obj.refreshMapAoi(true);
             phase_model_beta.applyConfigToEngine(obj.Engine,obj.Config);
-            obj.Engine.UIFigure.Visible = 'off';
             obj.Status = ternary(obj.IsDirty,'idle','saved');
             obj.StatusDetail = ternary(obj.IsDirty, ...
                 'Default PS extent detected; save before starting', ...
@@ -290,9 +286,7 @@ classdef App < handle
             obj.sendState();
             try
                 phase_model_beta.applyConfigToEngine(obj.Engine,candidate);
-                obj.Engine.UIFigure.Visible = 'off';
-                obj.Engine.StartButtonPushed([]);
-                obj.Engine.UIFigure.Visible = 'off';
+                obj.Engine.run();
                 obj.IsRunning = false;
                 obj.Status = 'success';
                 if isempty(obj.Engine.outputDir)
@@ -599,7 +593,7 @@ classdef App < handle
                 'footprints',{mapFootprints},'polygon',obj.MapPolygon);
             state = struct( ...
                 'kind','state', ...
-                'version','6.1.0', ...
+                'version',phase_project.displayVersion(obj.RootDir), ...
                 'schema',phase_model_beta.schema(), ...
                 'config',phase_model_beta.configToUi(obj.Config), ...
                 'rootDir',obj.ProjectDir, ...
@@ -694,10 +688,6 @@ classdef App < handle
                 error('PHASE_Model_beta:mapRuntimeCopyFailed', ...
                     'Could not prepare the local Model map runtime: %s', message);
             end
-        end
-
-        function hideEngine(obj)
-            try, obj.Engine.UIFigure.Visible = 'off'; catch, end
         end
 
         function showError(obj,titleText,message)

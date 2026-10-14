@@ -27,10 +27,13 @@ ASSET_NAME = "phase7-engine.zip"
 REQUIRED_FILES = (
     "PHASE_Hub.m", "PHASE_Hub_UI.html", "PHASE_Stamps_Dataset_UI.html", "PHASE_logo.png",
     "PHASE_mod1a.png", "PHASE_mod1b.png", "PHASE_mod2.png",
-    "+phase_hub/App.m", "+phase_project/open.m",
+    "+phase_hub/App.m", "+phase_project/open.m", "+phase_project/displayVersion.m",
     "+phase_project/workflowStatus.m",
     "PHASE_Preprocessing_beta.m", "+phase_model_beta/App.m",
+    "+phase_model_beta/ProcessingEngine.m",
+    "PHASE_Preprocessing/+phase_preprocessing_beta/ProcessingEngine.m",
     "PHASE_Preprocessing/+phase_stamps_beta/App.m",
+    "PHASE_Preprocessing/+phase_stamps_beta/ProcessingContext.m",
 )
 RELEASE_TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 MAX_ARCHIVE_BYTES = 1_000_000_000

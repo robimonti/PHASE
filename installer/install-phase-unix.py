@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,12 @@ PHASE_REPO = "https://github.com/robimonti/PHASE.git"
 STAMPS_COMMIT = "7cabf05eddf8ebe8694e5346fe0f9d48aaef4962"
 TRAIN_COMMIT = "6d0273ae67d2a9f07a696b6a14298ef2c31607d8"
 PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely", "certifi")
+MACOS_PSI_TOOLS = (
+    "bin/calamp", "bin/cpxsum", "bin/pscphase", "bin/pscdem",
+    "bin/psclonlat", "bin/selpsc_patch", "bin/selsbc_patch",
+    "external/snaphu/bin/snaphu", "external/triangle/bin/triangle",
+    "external/gawk/bin/gawk",
+)
 REQUIRED_FILES = (
     "PHASE_Hub.m",
     "PHASE_Hub_UI.html",
@@ -38,12 +45,16 @@ REQUIRED_FILES = (
     "PHASE_mod2.png",
     "+phase_hub/App.m",
     "+phase_project/open.m",
+    "+phase_project/displayVersion.m",
     "+phase_project/workflowStatus.m",
     "phase_update.py",
     "PHASE_Preprocessing_beta.m",
     "PHASE_Preprocessing/+phase_preprocessing_beta/App.m",
+    "PHASE_Preprocessing/+phase_preprocessing_beta/ProcessingEngine.m",
     "PHASE_Preprocessing/+phase_stamps_beta/App.m",
+    "PHASE_Preprocessing/+phase_stamps_beta/ProcessingContext.m",
     "+phase_model_beta/App.m",
+    "+phase_model_beta/ProcessingEngine.m",
 )
 ROOT_IGNORED = {
     ".git", ".github", ".gitignore", ".pytest_cache", ".codex", ".agents", "legacy",
@@ -140,26 +151,61 @@ def macos_psi_missing(stamps: Path | None, train: Path | None) -> list[str]:
     if stamps is None:
         missing.append("StaMPS runtime")
     else:
-        for name in ("calamp", "cpxsum", "pscphase", "pscdem", "psclonlat",
-                     "selpsc_patch", "selsbc_patch"):
-            if not native(stamps / "bin" / name):
-                missing.append(f"StaMPS/bin/{name}")
-        for name in ("snaphu", "triangle", "gawk"):
-            if not native(stamps / "external" / name / "bin" / name):
-                missing.append(name)
+        for name in MACOS_PSI_TOOLS:
+            if not native(stamps / name):
+                missing.append(f"StaMPS/{name}")
     if train is None or not (train / "matlab" / "aps_linear.m").is_file():
         missing.append("TRAIN runtime (optional if correction is disabled)")
     return missing
 
 
+def trust_bundled_macos_tools(stamps_source: Path, train_source: Path,
+                              staged_stamps: Path) -> int:
+    """Clear quarantine only for explicitly approved, pinned PSI executables.
+
+    This is an opt-in alternative to macOS's per-tool Open Anyway prompts for
+    the unsigned release. It does not modify Gatekeeper or unrelated files.
+    """
+    if stamps_source.parent != train_source.parent:
+        raise RuntimeError("StaMPS and TRAIN must belong to the same prepared runtime.")
+    manifest = stamps_source.parent / "phase-runtime.json"
+    if not manifest.is_file():
+        raise RuntimeError("Trusted-tool option requires a pinned PHASE runtime manifest.")
+    info = json.loads(manifest.read_text(encoding="utf-8"))
+    if (info.get("platform") != "macos-arm64" or
+            info.get("stampsCommit") != STAMPS_COMMIT or
+            info.get("trainCommit") != TRAIN_COMMIT):
+        raise RuntimeError("Trusted-tool option requires the pinned macOS PSI runtime.")
+    hashes = info.get("binarySha256")
+    if not isinstance(hashes, dict) or set(hashes) != set(MACOS_PSI_TOOLS):
+        raise RuntimeError("Trusted-tool option requires checksums for every PSI executable.")
+    cleared = 0
+    for relative in MACOS_PSI_TOOLS:
+        binary = staged_stamps / relative
+        if binary.is_symlink() or not binary.is_file() or not os.access(binary, os.X_OK):
+            raise RuntimeError(f"Invalid bundled PSI executable: {relative}")
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        if digest != hashes[relative]:
+            raise RuntimeError(f"Bundled PSI executable checksum mismatch: {relative}")
+        arches = subprocess.run(["lipo", "-archs", str(binary)],
+                                capture_output=True, text=True, check=True)
+        if "arm64" not in arches.stdout.split():
+            raise RuntimeError(f"Not an Apple Silicon PSI executable: {relative}")
+        attributes = subprocess.run(["/usr/bin/xattr", str(binary)],
+                                    capture_output=True, text=True, check=True)
+        if "com.apple.quarantine" in attributes.stdout.splitlines():
+            subprocess.run(["/usr/bin/xattr", "-d", "com.apple.quarantine",
+                            str(binary)], check=True)
+            cleared += 1
+    return cleared
+
+
 def ignored(directory: str, names: list[str]) -> set[str]:
     current = Path(directory)
     blocked = {name for name in names if name in {"__pycache__", ".DS_Store"}
-               or name.endswith(".pyc")}
+               or name.endswith((".pyc", ".docx", ".zip"))}
     if current == SOURCE_FOR_COPY:
         blocked.update(ROOT_IGNORED.intersection(names))
-        blocked.update(name for name in names if name.endswith(".docx")
-                       or name.startswith("transfer_PHASE_") and name.endswith(".zip"))
     if current.name == "tools":
         blocked.update(name for name in names if name not in {
             "srtm_precache.py", "snap_dim_version_check.py"
@@ -278,7 +324,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.0.0"
+            version = "v7.0.1"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],
@@ -345,6 +391,8 @@ def install(args: argparse.Namespace) -> dict[str, str]:
         validate_runtime(source)
     stamps = validate_external(args.stamps, "stamps")
     train = validate_external(args.train, "train")
+    if args.trust_bundled_macos_tools and (system != "macos" or not stamps or not train):
+        raise RuntimeError("Trusted-tool option requires the bundled macOS StaMPS/TRAIN runtime.")
     psi_missing = macos_psi_missing(stamps, train) if system == "macos" else []
     if stamps and not args.dry_run and any(item != "TRAIN runtime (optional if correction is disabled)"
                                       for item in psi_missing):
@@ -357,6 +405,7 @@ def install(args: argparse.Namespace) -> dict[str, str]:
         "stamps": str(stamps) if stamps else "not supplied",
         "train": str(train) if train else "not supplied",
         "psiRuntimeMissing": psi_missing,
+        "trustedBundledTools": bool(args.trust_bundled_macos_tools),
         "pythonDependencies": "skipped" if args.skip_python_deps else ", ".join(PYTHON_PACKAGES),
     }
     if args.dry_run:
@@ -380,6 +429,9 @@ def install(args: argparse.Namespace) -> dict[str, str]:
             shutil.copytree(stamps, stage / "engine" / "StaMPS")
         if train:
             shutil.copytree(train, stage / "engine" / "TRAIN")
+        if args.trust_bundled_macos_tools:
+            plan["quarantinedToolsApproved"] = str(trust_bundled_macos_tools(
+                stamps, train, stage / "engine" / "StaMPS"))
         configure_unix_runtimes(stage, prefix)
         if args.skip_python_deps:
             installed_python = python
@@ -447,6 +499,8 @@ def main() -> int:
     parser.add_argument("--python", help="Python 3.10+ executable")
     parser.add_argument("--stamps", help="Prepared StaMPS runtime to bundle")
     parser.add_argument("--train", help="Prepared TRAIN runtime to bundle")
+    parser.add_argument("--trust-bundled-macos-tools", action="store_true",
+                        help="With explicit user consent, clear quarantine only on the ten pinned bundled PSI executables")
     parser.add_argument("--skip-python-deps", action="store_true", help="Development only")
     parser.add_argument("--no-shortcut", action="store_true", help="Do not create an app-menu shortcut")
     parser.add_argument("--dry-run", action="store_true", help="Validate without writing")

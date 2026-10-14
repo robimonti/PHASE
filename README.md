@@ -40,6 +40,16 @@ trade-off made to avoid a paid Apple Developer membership, not a notarized
 package. The third-party source archives and license notices are supplied
 with the DMG and release downloads.
 
+The bundled StaMPS PSI runtime also contains ten separate command-line
+executables (including `snaphu`, `triangle` and the `ps*` helpers). Because the
+DMG is not notarized, macOS may ask you to approve several of them on the first
+PSI run. The installer offers an **optional, unchecked** trust control: after
+verifying the pinned runtime and each executable's SHA-256, it removes the
+quarantine attribute only from those ten bundled PHASE tools. This does not
+disable Gatekeeper for other software. If you leave it off, confirm each
+expected tool under the PHASE installation via **Privacy & Security → Open
+Anyway**; never approve an unfamiliar name or location. See [Apple's guidance](https://support.apple.com/guide/mac-help/open-an-app-by-overriding-security-settings-mh40617/mac).
+
 Install PHASE once per computer, then create as many projects as needed in
 folders of your choice. The hub is available as **PHASE** on Windows,
 `~/Applications/PHASE.app` on macOS, and in the application menu on Linux.

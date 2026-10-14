@@ -79,8 +79,8 @@ PHASE_Model
 ```
 
 The complete processing implementation is readable in
-`+phase_model_beta\LegacyEngine.m`; the launcher does not load a legacy app.
-The backend stays hidden behind the same modern shell as Modules 1A and 1B.
+`+phase_model_beta\ProcessingEngine.m`; the launcher does not load a legacy app.
+The headless backend runs behind the same modern shell as Modules 1A and 1B.
 Verify that its calendar, conditional parameter cards and **Run monitor**
 remain inside the PHASE Model window and that report formatting opens no CMD
 window.

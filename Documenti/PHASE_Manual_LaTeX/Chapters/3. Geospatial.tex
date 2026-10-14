@@ -47,7 +47,7 @@ Additionally, the date of the first observation in the time series must be speci
 
 
 \subsection{Area of interest}
-The second step involves defining the AOI, which delineates the spatial boundaries for computing and modeling displacements. This AOI can be specified either through a shapefile (recommended for its flexibility in accommodating arbitrary shapes) or a simple bounding box defined by minimum and maximum longitude and latitude coordinates. The code automatically detects whether the input coordinates are in a projected system (e.g., UTM) or geographic (lat/lon) and handles any necessary transformations to ensure consistency. For shapefiles, it reads the geometry, checks the coordinate reference system (CRS), and converts between systems if needed. Points outside the AOI are filtered to focus processing only on relevant PS.
+The second step involves defining the AOI, which delineates the spatial boundaries for computing and modeling displacements. This AOI can be specified on the map or by a shapefile. A shapefile must include a readable \texttt{.prj} defining WGS84 geographic coordinates or a WGS84-based projected CRS; coordinates are never guessed from their numeric range. PHASE projects the AOI, PS and optional query points into one common UTM CRS. If the AOI crosses two adjacent UTM zones, it chooses the zone covering the larger part of the AOI. Very wide, polar, equator-crossing and antimeridian-crossing AOIs require a different projection and are rejected explicitly rather than processed with inconsistent coordinates. Points outside the AOI are filtered to focus processing only on relevant PS.
 
 
 \subsection{Processing options}
@@ -275,7 +275,7 @@ Following the general overview, the core results are organized into three dedica
 \begin{itemize}
     \item \textbf{Raw displacement:} contains the input PS time series after the initial detrending (subtraction of the modeled value at the first epoch). It includes a plot of the spatially averaged displacement time series over the AOI with an overlaid linear trend to identify macroscopic subsidence or uplift phenomena.
     \item \textbf{Modeled displacement:} contains the final result of the spatio-temporal modeling (stochastic or deterministic). It includes the full set of estimated displacement time series for all positions in the AOI based on the chosen spatial resolution. A map showing the average velocity (in mm/year) is embedded to provide an immediate overview of deformation rates (Figure~\ref{fig:sheet_modeled}).
-    \item \textbf{Uncertainty:} mirroring the modeled displacement, this sheet reports the estimated standard deviation for every epoch and point. It includes a map of the time-average uncertainty, allowing you to identify areas where the model is less reliable (e.g., due to low PS density or high noise).
+    \item \textbf{Uncertainty:} mirroring the modeled displacement, this sheet reports the final-stage prediction standard deviation for every epoch and point, following the convention explained above. Its summary column and map show the arithmetic time mean of those standard deviations, not a propagated variance or an independent uncertainty estimate. This helps identify areas where predictions are less precise, for example near sparse PS coverage. In temporal-plus-NNI mode, the values at new grid locations are directly interpolated standard deviations; no interpolation covariance is propagated, so treat them as an uncertainty proxy rather than a rigorous prediction interval.
 \end{itemize}
 
 \begin{figure}[H]
@@ -291,41 +291,15 @@ If you provide a set of specific target coordinates (e.g., GNSS stations or crit
 \subsection{Modelled PS sheet (optional)}
 If you flag this option, this sheet reports the displacement time series extracted from the continuous spatio-temporal model at the observed PS coordinates.
 
-\subsection{Alerts sheet (risk assessment)}
-Beyond numerical data, the software provides an \textit{Alerts} sheet featuring a quick risk assessment for every monitored point. The software computes a global score based on two indicators: average velocity and cumulative displacement.
+\subsection{AOI anomalies sheet (descriptive comparison)}
+The \textit{AOI anomalies} sheet compares each complete \emph{modelled} LOS displacement series with the AOI median at each epoch. This highlights locations whose fitted deformation differs from the rest of the AOI without treating a noisy raw-observation residual as a deformation anomaly. For regularly spaced 1D centerlines or 2D grids, each modelled location has equal length or area weight in this comparison.
 
-For each point, these metrics are standardized (Z-score normalization) based on the statistics of the entire population. To prioritize only statistically significant deviations, a risk percentage ($R_\text{A}$) is calculated using a formulation that maps the standardized values to probability thresholds:
-
-\begin{equation}
-    R_\text{A} =
-    \begin{cases}
-    0 & \text{if } z < z_{25} \\
-    100 \cdot \left(1 - \exp\left(-a \cdot \frac{z - z_{25}}{z_{2.5} - z_{25}}\right)\right) & \text{if } z_{25} \le z \le z_{2.5} \\
-    100 + (z - z_{2.5}) \cdot 50 & \text{if } z > z_{2.5},
-\end{cases}
-\end{equation}
-
-\noindent where:
-\begin{itemize}
-    \item $z$ is the absolute standardized value of the metric (velocity or cumulative displacement).
-    \item $z_{2.5}$ is the critical value of the normal distribution corresponding to a significance level $\alpha=5\%$ (two-tailed), representing the threshold for the 95\% confidence interval ($z_{2.5} \approx 1.96$).
-    \item $z_{25}$ is the critical value corresponding to a significance level $\alpha=50\%$ (two-tailed), representing the threshold for the 50\% confidence interval ($z_{25} \approx 0.67$).
-    \item $a$ is a sensitivity coefficient (set to 1.5).
-\end{itemize}
-
-This formulation ensures that points falling within the interquartile range of the distribution ($z < z_{25}$) differ negligibly from the mean behavior and are assigned 0\% risk. Conversely, points exceeding the 95\% confidence threshold ($z > z_{2.5}$) are considered statistical outliers and are assigned a critical risk. The exponential function provides a smooth transition between these two states (Figure~\ref{fig:sheet_alerts}).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{images/sheet_alerts.png}
-    \caption{Example of the \textit{Alerts} sheet, highlighting points with anomalous velocity or cumulative displacement.}
-    \label{fig:sheet_alerts}
-\end{figure}
+At each epoch $t$, the reference is the spatial median $m(t)$ of modelled displacement $\hat d_i(t)$. The robust AOI scale is $1.4826\,\operatorname{median}_i|\hat d_i(t)-m(t)|$, bounded below by the spatial median of the reported prediction standard deviations. The output lists the maximum absolute deviation in millimetres, the maximum deviation divided by this scale, and the fraction of epochs with normalized contrast at least three. A \textit{transient} or \textit{persistent} label requires two consecutive modelled epochs above that descriptive threshold; persistence of at least 20\% of epochs yields \textit{persistent}. Average velocity remains available as context, but does not determine the label. These scores are relative to the selected AOI and are neither hazard probabilities nor formal significance tests. Changing the AOI can change the reference and the labels.
 
 \subsection{GIS and data export}
 Finally, in addition to the Excel report, the software automatically exports the results in GIS-compatible formats to facilitate integration with other geospatial workflows:
 \begin{itemize}
-    \item \textbf{ESRI Shapefile (\texttt{.shp}):} a vector point file containing all points with their attributes (ID, coordinates, average velocity, risk score) and the full displacement time series as additional columns (one for each date). A \texttt{.prj} file is automatically generated to define the Coordinate Reference System (WGS84).
+    \item \textbf{ESRI Shapefile (\texttt{.shp}):} a vector point file containing all points with their attributes (ID, coordinates, average velocity, time-mean prediction standard deviation and descriptive AOI-anomaly class/contrast) and the full displacement time series as additional columns (one for each date). A \texttt{.prj} file defines the output coordinates as WGS84.
     \item \textbf{MATLAB data (\texttt{.mat}):} a structure array containing the same data for advanced post-processing directly in MATLAB.
     \item \textbf{GeoTIFF (\texttt{.tif}):} a multi-band GeoTIFF file containing the georeferenced displacement and uncertainty maps at each query epoch.
 \end{itemize}

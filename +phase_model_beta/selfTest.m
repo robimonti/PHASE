@@ -5,7 +5,7 @@ rootDir = phase_model_beta.projectRoot();
 required = {
     fullfile(rootDir, 'PHASE_Model_beta.m')
     fullfile(rootDir, '+phase_model_beta', 'App.m')
-    fullfile(rootDir, '+phase_model_beta', 'LegacyEngine.m')
+    fullfile(rootDir, '+phase_model_beta', 'ProcessingEngine.m')
     fullfile(rootDir, '+phase_model_beta', 'applyConfigToEngine.m')
     fullfile(rootDir, '+phase_model_beta', 'estimatePsBoundingBox.m')
     fullfile(rootDir, '+phase_model_beta', 'readAoiShapefile.m')
@@ -35,9 +35,9 @@ if ~isempty(missing)
 end
 
 launcher = fileread(fullfile(rootDir, 'PHASE_Model_beta.m'));
-engine = fileread(fullfile(rootDir, '+phase_model_beta', 'LegacyEngine.m'));
+engine = fileread(fullfile(rootDir, '+phase_model_beta', 'ProcessingEngine.m'));
 if ~contains(launcher, 'phase_model_beta.App') || ...
-        ~contains(engine, 'function StartButtonPushed(app')
+        ~contains(engine, 'function run(app)')
     error('PHASE_Model_beta:selfTestInvalidRuntime', ...
         'Standalone Model launcher or processing backend is invalid.');
 end
@@ -74,7 +74,7 @@ assert(bounds(1) < 9 && bounds(2) > 11 && ...
 result = struct( ...
     'ok', true, ...
     'message', 'PHASE Model beta standalone self-test passed.', ...
-    'engine', fullfile(rootDir, '+phase_model_beta', 'LegacyEngine.m'));
+    'engine', fullfile(rootDir, '+phase_model_beta', 'ProcessingEngine.m'));
 fprintf('%s\n', result.message);
 end
 

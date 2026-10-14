@@ -1,9 +1,7 @@
-classdef LegacyAppAdapter < handle
-    %LEGACYAPPADAPTER Text-based bridge for the proven processing callback.
-    %
-    % The first beta deliberately runs the same Start logic as the stable
-    % MLAPP. These lightweight properties replace App Designer controls while
-    % logging, status and TS-picker actions are delegated to the new app.
+classdef ProcessingContext < handle
+    %PROCESSINGCONTEXT Bridge between the StaMPS .m runner and the hub.
+    % Lightweight properties preserve the runner's parameter interface;
+    % logging, status and TS-picker actions belong to the visible app.
 
     properties
         Owner
@@ -36,7 +34,7 @@ classdef LegacyAppAdapter < handle
     end
 
     methods
-        function obj = LegacyAppAdapter(owner, cfg)
+        function obj = ProcessingContext(owner, cfg)
             obj.Owner = owner;
             obj.WorkDir = owner.WorkDir;
             obj.UIFigure = owner.UIFigure;

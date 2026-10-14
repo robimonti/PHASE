@@ -10,6 +10,7 @@ to install-phase-unix.py after the native build passes.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -103,9 +104,17 @@ def prepare(stamps_source: Path, train_source: Path, snaphu: Path,
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source.expanduser().resolve(), destination)
             destination.chmod(destination.stat().st_mode | 0o111)
+        binaries = [f"bin/{name}" for name in CORE_TOOLS] + [
+            "external/snaphu/bin/snaphu", "external/triangle/bin/triangle",
+            "external/gawk/bin/gawk",
+        ]
         (stage / "phase-runtime.json").write_text(json.dumps({
             "stampsCommit": STAMPS_COMMIT, "trainCommit": TRAIN_COMMIT,
-            "platform": "macos-arm64"
+            "platform": "macos-arm64",
+            "binarySha256": {
+                name: hashlib.sha256((stamps / name).read_bytes()).hexdigest()
+                for name in binaries
+            },
         }, indent=2) + "\n", encoding="utf-8")
         stage.rename(output)
     return output

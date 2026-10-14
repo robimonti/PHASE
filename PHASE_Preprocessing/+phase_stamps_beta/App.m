@@ -84,7 +84,7 @@ classdef App < handle
                 obj.IsDirty = true;
             end
             obj.StatusDetail = ternary(obj.IsDirty, ...
-                'Review detected values and save before starting', ...
+                'Review detected values; Start will save them automatically', ...
                 'Configuration loaded');
             drawnow;
             obj.sendState();
@@ -212,7 +212,7 @@ classdef App < handle
                 ~isempty(info.migratedFields) || ~info.exists;
             obj.Status = 'idle';
             obj.StatusDetail = ternary(obj.IsDirty, ...
-                'Loaded; detected or migrated values require Save', ...
+                'Loaded; detected or migrated values will be saved on Start', ...
                 'Configuration loaded from input_StaMPS.mat');
             if info.exists
                 obj.appendLog(['Loaded configuration: ' info.path]);
@@ -249,11 +249,13 @@ classdef App < handle
             if ~isempty(errors)
                 error('PHASE_StaMPS_beta:invalidConfiguration', '%s', strjoin(errors, newline));
             end
-            if isempty(obj.SavedConfig) || ...
-                    ~phase_stamps_beta.configsEqual(candidate, obj.SavedConfig)
-                error('PHASE_StaMPS_beta:unsavedConfiguration', ...
-                    ['The visible configuration differs from input_StaMPS.mat. ' ...
-                     'Press Save before Start.']);
+            savedBeforeRun = obj.IsDirty || ~isfile(fullfile(obj.WorkDir,'input_StaMPS.mat')) || ...
+                isempty(obj.SavedConfig) || ...
+                ~phase_stamps_beta.configsEqual(candidate, obj.SavedConfig);
+            if savedBeforeRun
+                phase_stamps_beta.saveConfig(obj.WorkDir, candidate);
+                obj.SavedConfig = candidate;
+                obj.IsDirty = false;
             end
 
             runtimeMessages = phase_stamps_beta.prepareRuntime(candidate);
@@ -271,13 +273,16 @@ classdef App < handle
             obj.beginLiveDiary();
             diaryCleanup = onCleanup(@() obj.endLiveDiary()); %#ok<NASGU>
             obj.sendState();
+            if savedBeforeRun
+                obj.appendLog('Configuration automatically saved before processing.');
+            end
             for k = 1:numel(warnings), obj.appendLog(['Warning: ' warnings{k}]); end
             for k = 1:numel(runtimeMessages), obj.appendLog(runtimeMessages{k}); end
             obj.appendLog(sprintf('Starting StaMPS steps %s -> %s in %s', ...
                 candidate.stamps_first_step, candidate.stamps_last_step, obj.WorkDir));
             drawnow;
 
-            adapter = phase_stamps_beta.LegacyAppAdapter(obj, candidate);
+            adapter = phase_stamps_beta.ProcessingContext(obj, candidate);
             try
                 result = phase_stamps_beta.runProcessing(adapter);
             catch ME
@@ -381,7 +386,7 @@ classdef App < handle
             if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
             state = struct();
             state.kind = 'state';
-            state.version = '6.1.0';
+            state.version = phase_project.displayVersion(fileparts(obj.LauncherDir));
             state.workDir = obj.WorkDir;
             state.configPath = fullfile(obj.WorkDir, 'input_StaMPS.mat');
             state.schema = phase_stamps_beta.schema();

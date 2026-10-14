@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import traceback
 from pathlib import Path
@@ -23,12 +24,32 @@ class StopRequested(Exception):
 def atomic_json(path, payload):
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_name(destination.name + ".tmp")
-    with temporary.open("w", encoding="utf-8") as stream:
-        json.dump(payload, stream, indent=2)
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temporary, destination)
+    temporary = None
+    try:
+        # A unique name avoids a stale or externally locked progress.json.tmp
+        # from blocking a new transfer on Windows.
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=destination.parent,
+            prefix=destination.name + ".", suffix=".tmp", delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(payload, stream, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        for attempt in range(5):
+            try:
+                os.replace(temporary, destination)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def load_json(path):
@@ -105,6 +126,7 @@ class Progress:
         self.message = "Preparing download…"
         self.phase = "preparing"
         self.last_write = 0
+        self.last_write_warning = 0
         self.expected_total = sum(item["sizeBytes"] for item in entries)
 
     def percentage(self):
@@ -139,8 +161,15 @@ class Progress:
     def write(self, force=False):
         now = time.monotonic()
         if force or now - self.last_write >= PROGRESS_INTERVAL:
-            atomic_json(self.path, self.payload())
             self.last_write = now
+            try:
+                atomic_json(self.path, self.payload())
+            except OSError as exc:
+                # Telemetry is best-effort: a temporary Windows file lock must
+                # never restart or abort the actual SAR image transfer.
+                if now - self.last_write_warning >= 10:
+                    print(f"Progress update unavailable: {exc}", file=sys.stderr)
+                    self.last_write_warning = now
 
 
 def stop_if_requested(stop_path):

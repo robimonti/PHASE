@@ -1,5 +1,5 @@
 function applyConfigToEngine(engine,config)
-%APPLYCONFIGTOENGINE Apply typed configuration without using hidden widgets.
+%APPLYCONFIGTOENGINE Apply typed configuration to the native model runner.
 
 if isempty(engine) || ~isvalid(engine)
     error('PHASE_Model_beta:engineUnavailable', ...
@@ -10,12 +10,5 @@ if ~isstruct(config) || ~isscalar(config)
         'The PHASE Model configuration must be a scalar structure.');
 end
 
-names = fieldnames(config);
-for k = 1:numel(names)
-    name = names{k};
-    if isprop(engine,name)
-        engine.(name) = config.(name);
-    end
-end
-engine.pythonPath = phase_model_beta.resolvePythonPath(engine.pythonPath);
+engine.applyConfig(config);
 end

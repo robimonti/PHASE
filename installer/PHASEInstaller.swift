@@ -28,6 +28,7 @@ final class InstallerModel: ObservableObject {
     @Published var details = ""
     @Published var installing = false
     @Published var installed = false
+    @Published var trustBundledTools = false
     private var activeProcess: Process?
 
     var bundledRuntime: Bool {
@@ -143,6 +144,9 @@ final class InstallerModel: ObservableObject {
         if bundledRuntime {
             process.arguments! += ["--stamps", resources.appendingPathComponent("StaMPS").path,
                                    "--train", resources.appendingPathComponent("TRAIN").path]
+            if trustBundledTools {
+                process.arguments!.append("--trust-bundled-macos-tools")
+            }
         }
         let log = FileManager.default.temporaryDirectory
             .appendingPathComponent("phase-install-\(UUID().uuidString).log")
@@ -318,7 +322,7 @@ private struct InstallerView: View {
                         .font(.system(size: 10)).foregroundStyle(Theme.faint)
                 }
             }.padding(.bottom, 14)
-            Text("PHASE  v7.0.0 preview  ·  Roberto Monti · pyccino")
+            Text("PHASE  v7.0.1 preview  ·  Roberto Monti · pyccino")
                 .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.faint)
         }
         .padding(24)
@@ -392,6 +396,12 @@ private struct InstallerView: View {
                     Text(model.bundledRuntime ? "StaMPS PSI runtime included" : "StaMPS PSI runtime not included in this installer")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(model.bundledRuntime ? Theme.green : .orange)
+                    if model.bundledRuntime {
+                        Toggle("Trust the 10 bundled StaMPS command-line tools", isOn: $model.trustBundledTools)
+                            .font(.system(size: 12, weight: .medium))
+                        Text("Optional. After checking their bundled SHA-256 hashes, the installer removes quarantine only from these PHASE tools. This avoids separate macOS approval prompts during PSI; Gatekeeper stays enabled for everything else. Leave off to approve each tool manually.")
+                            .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                    }
                 }
             }
         case 5:
@@ -418,6 +428,10 @@ private struct InstallerView: View {
                     Text(model.destination).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                     Text("Create or open a project from PHASE; project folders can be anywhere.")
                         .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    if model.bundledRuntime && !model.trustBundledTools {
+                        Text("On the first PSI run, macOS may ask you to approve individual StaMPS tools. Check their names and paths under the PHASE installation before using Open Anyway.")
+                            .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                    }
                 }
             }
         }

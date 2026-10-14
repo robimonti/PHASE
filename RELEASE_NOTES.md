@@ -1,4 +1,30 @@
-# PHASE v7.0.0
+# PHASE v7.0.1
+
+PHASE v7.0.1 is a complete PHASE 7 installer/update, not a standalone script
+patch. It keeps the unified Project / Preprocessing / StaMPS PSI / Displacement
+Modeling hub and the one-installation, multiple-project workflow.
+
+- Fixed ASF downloads that could fail on Windows when `progress.json.tmp` was
+  locked during an atomic progress update. Progress writes now use unique
+  temporary files, retry a transient lock, and cannot restart a SAR download.
+  Download control files live inside the writable project rather than a
+  machine-dependent system Temp location.
+- StaMPS PSI saves validated configuration automatically when Start is pressed;
+  an explicit Save remains available but is no longer required.
+- All module sidebars and the hub read the installed PHASE release version,
+  rather than showing stale 6.x module labels. The installers display v7.0.1.
+- Preprocessing and Displacement Modeling now run from UI-independent MATLAB
+  source engines. StaMPS uses a native processing context. Archived App
+  Designer code remains under `legacy/` for reference and is not executed.
+- Improved AOI CRS handling and scientifically descriptive displacement-model
+  anomaly/report terminology. Existing PHASE 7 projects are not renamed.
+
+**Upgrading from PHASE 6.x:** the in-app updater only supports managed PHASE 7
+installations. Use the v7.0.1 installer once, then create or open a PHASE 7
+project. Keep any old PHASE 6 installation and projects until the new workflow
+has been verified; do not copy the old engine into the new installation.
+
+## Previous release: PHASE v7.0.0
 
 PHASE 7 brings Preprocessing, StaMPS PSI and Displacement Modeling into one
 project-aware hub. Install PHASE once per computer; create projects anywhere,
@@ -107,7 +133,7 @@ PHASE v6.1 added an optional, traceable diagnostic export for the StaMPS
 candidate-selection workflow while retaining the complete standalone PHASE 6
 application suite introduced in v6.0.
 
-## Windows installation — important
+## Historical PHASE 6 Windows installation notes (not PHASE 7 instructions)
 
 **Windows users should download and run `install-phase.exe` attached to this
 release. Do not clone the repository for a normal Windows installation.**

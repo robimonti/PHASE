@@ -5,13 +5,9 @@
 for backward compatibility. At runtime it neither loads nor copies
 `PHASE_Preprocessing.mlapp` or `PHASE_StaMPS.mlapp`.
 
-The formerly embedded class is generated as readable MATLAB source in
-`PHASE_Preprocessing/+phase_preprocessing_beta/LegacyEngine.m`. Regenerate it
-after stable MLAPP changes with:
-
-```text
-python tools/extract_preprocessing_beta_engine.py
-```
+The processing runner is now the editable headless MATLAB class
+`PHASE_Preprocessing/+phase_preprocessing_beta/ProcessingEngine.m`. The former
+App Designer class is archived for historical reference, not loaded at runtime.
 
 The modern HTML interface covers the processing configuration, save/load,
 execution, stop requests, live logs and data actions. Images is the first
@@ -53,9 +49,8 @@ on the next matching download, and transient network failures are retried up to
 three times. **Force stop download** terminates the active transfer and leaves
 the partial file available for resumption.
 
-All of these controls call the existing PHASE search and authentication
-backends; the extracted legacy engine remains hidden and is used only to run the
-proven preprocessing callbacks.
+All of these controls call the PHASE search and authentication backends; the
+headless `.m` runner executes the preprocessing steps.
 
 ## Processing configuration refinements
 
@@ -92,8 +87,8 @@ Coherence and local incidence angle now have independent output switches. When
 either is requested, the stable terrain-correction step runs; the unrequested
 branch is not reprojected and is removed from the final output.
 
-`+phase_preprocessing_beta/ProcessingEngine.m` subclasses the reproducibly
-extracted legacy engine and corrects its GeoTIFF reprojection. The beta now
+`+phase_preprocessing_beta/ProcessingEngine.m` owns the processing sequence and
+GeoTIFF reprojection. PHASE
 builds a target projected grid, inverse-projects its cell centres, resamples the
 source raster in bounded memory blocks and atomically replaces the original
 file. This is a true raster warp; it does not merely attach projected limits to
@@ -120,29 +115,22 @@ On Windows a configured `...\snap\bin\gpt` value is resolved to the existing
 installer points to `pythonw.exe`, the beta uses the sibling `python.exe`
 silently so Python and SNAP messages remain capturable in Run monitor.
 
-After a successful export the beta explicitly creates the generated orbit/date
-dataset directory. If `input_StaMPS.mat` is available, it is copied and
-`PHASE_StaMPS_beta` opens normally. If it is not configured yet, preprocessing
-still completes successfully, retains the new dataset directory and opens
-`PHASE_StaMPS_beta` with an initial configuration. The StaMPS beta detects the
-PHASE project and acquisition metadata when available; the user selects the
-StaMPS installation folder and presses Save to create `input_StaMPS.mat`.
+After a successful export PHASE creates the generated orbit/date dataset
+directory and retains it in the project. The hub marks preprocessing complete;
+the user opens the StaMPS PSI section when ready. No second app window is
+launched automatically.
 
 ## Runtime independence
 
 The two betas are self-contained with their editable backends:
 
-- preprocessing uses `+phase_preprocessing_beta/LegacyEngine.m`;
+- preprocessing uses `+phase_preprocessing_beta/ProcessingEngine.m`;
 - StaMPS uses `+phase_stamps_beta/runProcessing.m`;
-- after preprocessing, the beta calls `PHASE_StaMPS_beta` directly and does not
-  copy a legacy app into the generated `ASC_*`/`DSC_*` folder;
-- the handoff invokes the canonical launcher from `PHASE_Preprocessing`, so an
-  older manually copied launcher inside a dataset folder cannot shadow it.
+- no legacy app is copied into a generated `ASC_*`/`DSC_*` dataset folder;
+- the hub opens the installed StaMPS module against the chosen dataset.
 
-The stable MLAPPs remain in the repository for production users and as the
-provenance used by the developer extraction/regression tools. Those tools may
-read the MLAPPs when regenerating or comparing source, but neither beta reads
-them during normal execution.
+The old MLAPPs and generated App Designer classes are archived under `legacy`
+for provenance. No production module loads or regenerates code from them.
 
 On Windows, the preprocessing beta resolves Python 3 in this order: an
 explicit executable selected in Setup, the interpreter recorded by the

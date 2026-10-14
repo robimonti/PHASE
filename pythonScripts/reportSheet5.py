@@ -1,7 +1,6 @@
 import sys
 import openpyxl
-from openpyxl.drawing.image import Image
-from openpyxl.styles import Font, Alignment, numbers, PatternFill
+from openpyxl.styles import Font, Alignment, PatternFill
 
 def format_excel_sheet5(report_path, sheet_name):
     # Load the workbook and select the sheet
@@ -21,33 +20,25 @@ def format_excel_sheet5(report_path, sheet_name):
             if cell.value is not None:
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.number_format = '0.000'  # Three decimals
-    # Risks
-    for row in sheet.iter_rows(min_row=subtitle_row+2, max_row=sheet.max_row, min_col=6, max_col=sheet.max_column):
+    # Model-derived contrast, displacement, and persistence metrics.
+    for row in sheet.iter_rows(min_row=subtitle_row+2, max_row=sheet.max_row, min_col=6, max_col=9):
         for cell in row:
             if cell.value is not None:
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.number_format = '0.0'  # One decimals
 
-    # Color fills based on global risk values
-    green_fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
-    yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    orange_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
-    red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
-    purple_fill = PatternFill(start_color="800080", end_color="800080", fill_type="solid")
-
-    # Global risk is in column 10 (index 10)
+    # The classification is descriptive, not a risk percentage.
+    fills = {
+        "typical": PatternFill(start_color="DCEFE5", end_color="DCEFE5", fill_type="solid"),
+        "transient": PatternFill(start_color="FFF1CF", end_color="FFF1CF", fill_type="solid"),
+        "persistent": PatternFill(start_color="FADBDD", end_color="FADBDD", fill_type="solid"),
+    }
     for row in sheet.iter_rows(min_row=subtitle_row+2, max_row=sheet.max_row, min_col=10, max_col=10):
         for cell in row:
-            risk_value = cell.value
-            cell.font = Font(size=14, bold=True)
-            if risk_value < 50:
-                cell.fill = green_fill
-            elif 50 <= risk_value < 100:
-                cell.fill = yellow_fill
-            elif 100 <= risk_value < 125:
-                cell.fill = orange_fill
-            elif risk_value >= 125:
-                cell.fill = purple_fill
+            cell.font = Font(size=12, bold=True)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            if cell.value is not None:
+                cell.fill = fills.get(str(cell.value).lower(), fills["typical"])
 
     # Format the title (A1)
     sheet['A1'].font = Font(size=20, bold=True)

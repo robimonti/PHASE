@@ -262,23 +262,7 @@ classdef App < handle
         end
 
         function value = displayVersion(obj)
-            value = 'v7.0.0 preview';
-            metadata = fullfile(fileparts(obj.InstallRoot),'install.json');
-            if ~isfile(metadata), return; end
-            try
-                info = jsondecode(fileread(metadata));
-                if isfield(info,'version')
-                    installed = char(string(info.version));
-                    if ~isempty(installed) && ~strcmp(installed,'dev')
-                        if startsWith(installed,'v')
-                            value = installed;
-                        else
-                            value = ['v' installed];
-                        end
-                    end
-                end
-            catch
-            end
+            value = phase_project.displayVersion(obj.InstallRoot);
         end
 
         function activateTab(obj, tab)

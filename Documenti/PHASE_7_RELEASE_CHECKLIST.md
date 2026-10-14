@@ -17,12 +17,15 @@ It creates a **draft** GitHub release only. Nothing is published automatically.
 4. Build the full Apple Silicon DMG from the pinned runtime manifest. Include
    matching GNU awk and SNAPHU source archives. This release is intentionally
    unsigned/not notarized; document Gatekeeper's **Open Anyway** path and do
-   not describe the DMG as frictionless or Apple-verified.
+   not describe the DMG as frictionless or Apple-verified. Confirm the runtime
+   manifest contains SHA-256 values for all ten StaMPS tools. On a clean Mac,
+   test both installer choices: individual tool approvals, and the explicit
+   opt-in that removes quarantine only from those verified PHASE executables.
 5. Ensure the version displayed in the hub, Windows EXE, macOS app/installer,
    Git tag and release notes agrees. Test a clean install and one update from
    a previous managed PHASE 7 installation.
-6. Review the downloadable user manual: the current PDF predates the PHASE 7
-   unified workflow and should be updated or clearly labeled historical.
+6. Rebuild and review the downloadable manual from the PHASE 7 LaTeX source,
+   including the macOS tool-approval note and current screenshots.
 
 ## Draft-release review
 

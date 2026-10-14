@@ -68,7 +68,7 @@ PHASE_Preprocessing/
 │   ├── configToUi.m / uiToConfig.m     typed UI conversion
 │   ├── validateConfig.m                safety checks
 │   ├── autoDetectConfig.m              SNAP metadata detection
-│   ├── LegacyAppAdapter.m              stable-engine compatibility
+│   ├── ProcessingContext.m             runner-to-hub parameter bridge
 │   ├── runProcessing.m                 editable StaMPS engine
 │   ├── runCommandHidden.m               no-console streamed commands
 │   └── openTsPicker.m                  TS Points integration

@@ -133,6 +133,11 @@ sorgente esatti di GNU awk 5.4.0 e SNAPHU 2.0.7 con le opzioni
   senza firma/notarizzazione richiede un'apertura esplicita tramite
   **Impostazioni di Sistema → Privacy e sicurezza → Apri comunque** dopo il
   primo tentativo bloccato. Non disabilitare Gatekeeper globalmente.
+  Il runtime StaMPS include dieci eseguibili separati (`snaphu`, `triangle`,
+  `gawk` e sette helper). L'installer offre una scelta facoltativa, disattivata
+  per impostazione predefinita, per autorizzare solo questi strumenti dopo
+  averne verificato gli SHA-256 nel runtime preparato. Se non la si seleziona,
+  macOS puo chiedere un'approvazione distinta durante la prima elaborazione PSI.
 - **Linux:** su Linux x86_64 o aarch64, con `appimagetool`, costruire
   `PHASE-7-linux.AppImage` tramite
   `python3 installer/build-linux-appimage.py --output /path/PHASE-7-linux.AppImage`.

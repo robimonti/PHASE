@@ -124,12 +124,10 @@ def test_beta_backend_preserves_stable_setparm_and_stamps_calls(phase_root):
     assert "stamps(stamps_first_step,7)" not in backend
 
 
-def test_beta_controller_requires_save_before_start(phase_root):
+def test_beta_controller_runs_native_psi_engine(phase_root):
     controller = _text(
         phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta" / "App.m"
     )
-    assert "phase_stamps_beta.configsEqual(candidate, obj.SavedConfig)" in controller
-    assert "Press Save before Start" in controller
     assert "phase_stamps_beta.runProcessing(adapter)" in controller
 
 
@@ -368,10 +366,27 @@ def test_beta_contains_every_primary_user_action(phase_root):
         assert f'id="{element_id}"' in html
 
 
-def test_beta_legacy_adapter_covers_all_engine_app_properties(phase_root):
+def test_start_saves_validated_psi_configuration_automatically(phase_root):
+    controller = _text(
+        phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta" / "App.m"
+    )
+    start = controller.split("function startFromPayload(obj, payload)", 1)[1].split(
+        "function ", 1
+    )[0]
+    assert start.index("validateConfig(candidate, true)") < start.index(
+        "saveConfig(obj.WorkDir, candidate)"
+    ) < start.index("prepareRuntime(candidate)")
+    assert "unsavedConfiguration" not in start
+    ui = _text(
+        phase_root / "PHASE_Preprocessing" / "phase_stamps_beta_ui" / "app.js"
+    )
+    assert 'byId("start-button").disabled = Boolean(PhaseUI.state?.running)' in ui
+
+
+def test_processing_context_covers_all_engine_app_properties(phase_root):
     package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
     backend = _text(package / "runProcessing.m")
-    adapter = _text(package / "LegacyAppAdapter.m")
+    adapter = _text(package / "ProcessingContext.m")
     referenced = set(re.findall(r"app\.(\w+)", backend))
     helper_methods = {"log", "openTsPicker"}
     declared = set(re.findall(r"^\s{8}(\w+)\s*$", adapter, re.M)) | helper_methods

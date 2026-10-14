@@ -88,7 +88,7 @@ function renderAll() {
   byId("open-ts-picker").disabled = !pickerAvailable;
   byId("picker-unavailable").classList.toggle("hidden", pickerAvailable);
   byId("workdir").textContent = PhaseUI.state?.workDir || "No processing folder";
-  byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || "6.1.0"}`;
+  byId("version").textContent = `PHASE StaMPS ${PhaseUI.state?.version || ""}`.trim();
 }
 
 function renderNavigation() {
@@ -252,9 +252,9 @@ function renderStatus() {
   const dirty = PhaseUI.localDirty;
   byId("status-dot").className = `status-dot ${status}`;
   byId("status-title").textContent = dirty && status !== "running" ? "Unsaved" : status;
-  byId("status-detail").textContent = dirty && status !== "running" ? "Save before starting" : detail;
+  byId("status-detail").textContent = dirty && status !== "running" ? "Changes will be saved on Start" : detail;
   byId("dirty-banner").classList.toggle("hidden", !dirty || PhaseUI.state?.running);
-  byId("start-button").disabled = dirty || PhaseUI.state?.running;
+  byId("start-button").disabled = Boolean(PhaseUI.state?.running);
   byId("save-button").disabled = PhaseUI.state?.running;
   byId("load-button").disabled = PhaseUI.state?.running;
   const first = Number(PhaseUI.config.stamps_first_step || 1);

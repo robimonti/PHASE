@@ -1,15 +1,8 @@
-import importlib.util
 import re
-import zipfile
 
 
 def _text(path):
     return path.read_text(encoding="utf-8")
-
-
-def _stable_xml(phase_root):
-    with zipfile.ZipFile(phase_root / "legacy/PHASE_Preprocessing.mlapp") as app:
-        return app.read("matlab/document.xml").decode("utf-8")
 
 
 def test_preprocessing_beta_has_text_launcher_and_preserves_stable_app(phase_root):
@@ -23,11 +16,11 @@ def test_preprocessing_beta_has_text_launcher_and_preserves_stable_app(phase_roo
 def test_preprocessing_project_engine_separates_code_from_generated_data(phase_root):
     package = phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta"
     controller = _text(package / "App.m")
-    engine = _text(package / "LegacyEngine.m")
-    extractor = _text(phase_root / "tools" / "extract_preprocessing_beta_engine.py")
+    engine = _text(package / "ProcessingEngine.m")
     command = _text(package / "scriptCommand.m")
     assert "obj.ProjectDir,obj.RootDir" in controller
-    assert "app@phase_preprocessing_beta.LegacyEngine(projectRoot,installRoot)" in _text(package / "ProcessingEngine.m")
+    assert "classdef ProcessingEngine < handle" in engine
+    assert "obj.Engine.run()" in controller
     assert "app.ProjectRoot = char(string(projectRoot))" in engine
     assert "cd(obj.ProjectDir)" in controller
     assert "phase_preprocessing_beta.dataFolder(app.ProjectRoot)" in engine
@@ -37,50 +30,20 @@ def test_preprocessing_project_engine_separates_code_from_generated_data(phase_r
     assert "Open the StaMPS PSI section in the PHASE hub when ready." in engine
     assert "phase_preprocessing_beta.launchStampsBeta(" not in engine
     assert "set -e\\n" in engine
-    assert "system(chmod);" not in engine[engine.index("function StartButtonPushed"):]
-    assert "_replace_checked" in extractor
+    assert "system(chmod);" not in engine[engine.index("function run(app)"):]
     assert "exit /b 1" in command
     assert "PHASE_ASF_DATA_DIR" in controller
     assert "PHASE_ASF_DATA_DIR" in _text(phase_root / "downloadasf" / "functionality.py")
 
 
-def test_preprocessing_engine_is_reproducibly_extracted_from_mlapp(phase_root):
-    tool_path = phase_root / "tools" / "extract_preprocessing_beta_engine.py"
-    spec = importlib.util.spec_from_file_location("extract_preprocessing_beta_engine", tool_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    generated = _text(
-        phase_root
-        / "PHASE_Preprocessing"
-        / "+phase_preprocessing_beta"
-        / "LegacyEngine.m"
-    )
-    assert generated == module.extract(_stable_xml(phase_root))
-
-
-def test_preprocessing_engine_exposes_every_stable_callback_as_text(phase_root):
-    stable = _stable_xml(phase_root)
-    engine = _text(
-        phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta" / "LegacyEngine.m"
-    )
-    stable_functions = re.findall(r"^\s*function\s+(?:\[[^]]+\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*\(", stable, re.M)
-    engine_functions = re.findall(r"^\s*function\s+(?:\[[^]]+\]\s*=\s*|\w+\s*=\s*)?(\w+)\s*\(", engine, re.M)
-    # The beta constructor now accepts a project root before startup runs.
-    assert len(engine_functions) == len(stable_functions) + 1
-    for callback in (
-        "StartButtonPushed",
-        "SearchASFButtonPushed",
-        "DownloadSelectedButtonPushed",
-        "ImportSENButtonPushed",
-        "ImportCSKButtonPushed",
-        "runSENUpdateAfterDownload",
-        "initializeDownloaderMap",
-    ):
-        assert callback in engine_functions
+def test_preprocessing_engine_is_native_matlab_source(phase_root):
+    engine = _text(phase_root / "PHASE_Preprocessing" / "+phase_preprocessing_beta" / "ProcessingEngine.m")
+    for method in ("run", "forceStopActiveProcess", "isolateSENUpdateWorkspace", "reprojectGeoTiffIfGeographic"):
+        assert re.search(rf"function\s+(?:\w+\s*=\s*)?{method}\s*\(", engine)
+    assert "matlab.apps.AppBase" not in engine
+    assert "UIFigure" not in engine
+    assert "StartButtonPushed" not in engine
     assert engine.count("Open the StaMPS PSI section in the PHASE hub when ready.") == 2
-    assert "canonical_stamps_app" not in engine
-    assert "dest_mlapp" not in engine
-    assert "copyfile(canonical_stamps_app" not in engine
 
 
 def test_preprocessing_default_config_is_fully_represented_in_schema(phase_root):
@@ -156,7 +119,7 @@ def test_preprocessing_controller_requires_save_and_uses_extracted_engine(phase_
     assert "phase_preprocessing_beta.ProcessingEngine" in controller
     assert "phase_preprocessing_beta.configsEqual(candidate, obj.SavedConfig)" in controller
     assert "Press Save before Start" in controller
-    assert "obj.Engine.StartButtonPushed([])" in controller
+    assert "obj.Engine.run()" in controller
     assert "obj.Engine.StopFlag = true" in controller
     assert "obj.Engine.UIFigure.Visible = 'on'" not in controller
     assert "case 'openadvanced'" not in controller
@@ -255,9 +218,8 @@ def test_preprocessing_beta_map_is_embedded_and_updates_both_aoi_contracts(phase
     assert "phase_preprocessing_beta.collectFootprints" in controller
     assert "obj.Config.lon_min = values(1)" in controller
     assert "obj.Config.lon_max = values(2)" in controller
-    assert 'obj.Engine.DownloaderAOIType = "polygon"' in controller
-    assert "obj.Engine.DownloaderPolygonCoords = obj.MapPolygon" in controller
-    assert "obj.Engine.DownloaderAOICorners = []" in controller
+    assert "obj.MapPolygon" in controller
+    assert "obj.Engine.DownloaderAOIType" not in controller
     assert "search_summary.json" not in footprints
     assert "downloadasf" not in footprints
     assert "phase_preprocessing_beta.dataFolder(rootDir)" in footprints
@@ -283,7 +245,6 @@ def test_preprocessing_beta_map_is_embedded_and_updates_both_aoi_contracts(phase
 def test_betas_have_no_runtime_mlapp_dependency(phase_root):
     preprocessing = phase_root / "PHASE_Preprocessing"
     controller = _text(preprocessing / "+phase_preprocessing_beta" / "App.m")
-    engine = _text(preprocessing / "+phase_preprocessing_beta" / "LegacyEngine.m")
     processing_engine = _text(
         preprocessing / "+phase_preprocessing_beta" / "ProcessingEngine.m"
     )
@@ -292,11 +253,13 @@ def test_betas_have_no_runtime_mlapp_dependency(phase_root):
     stamps_backend = _text(preprocessing / "+phase_stamps_beta" / "runProcessing.m")
 
     assert "phase_preprocessing_beta.ProcessingEngine" in controller
-    assert "phase_preprocessing_beta.LegacyEngine" in processing_engine
+    assert "classdef ProcessingEngine < handle" in processing_engine
+    assert "UIFigure" not in processing_engine
+    assert not (preprocessing / "+phase_preprocessing_beta" / "LegacyEngine.m").exists()
     assert "PHASE_Preprocessing.mlapp" not in controller
-    assert "canonical_stamps_app" not in engine
-    assert "dest_mlapp" not in engine
-    assert "phase_preprocessing_beta.launchStampsBeta" not in engine
+    assert "canonical_stamps_app" not in processing_engine
+    assert "dest_mlapp" not in processing_engine
+    assert "phase_preprocessing_beta.launchStampsBeta" not in processing_engine
     assert "phase_stamps_beta.App" in stamps_launcher
     assert "phase_stamps_beta.runProcessing" in stamps_controller
     assert "run(" not in stamps_launcher
@@ -348,8 +311,8 @@ def test_preprocessing_dependencies_step_range_cleanup_and_output_contract(phase
     assert "removeProcessingFolder('coreg'" in controller
     assert "removeProcessingFolder('ifg'" in controller
     apply_config = _text(package / "applyConfig.m")
-    assert "engine.slaves_removal_SEN = 1" in apply_config
-    assert "engine.slaves_removal_CSK = 1" in apply_config
+    assert "engine.GenerateCoherence = logical(cfg.generate_coherence)" in apply_config
+    assert "engine.GenerateLia = logical(cfg.generate_lia)" in apply_config
     assert ".field.inactive" in css
 
 
@@ -357,7 +320,7 @@ def test_preprocessing_live_monitor_and_silent_process_contract(phase_root):
     preprocessing = phase_root / "PHASE_Preprocessing"
     package = preprocessing / "+phase_preprocessing_beta"
     controller = _text(package / "App.m")
-    engine = _text(package / "LegacyEngine.m")
+    engine = _text(package / "ProcessingEngine.m")
     runner = _text(package / "runCommandLive.m")
     resolver = _text(package / "resolveGpt.m")
     schema = _text(package / "schema.m")
@@ -402,7 +365,7 @@ def test_preprocessing_beta_creates_dataset_and_bootstraps_unconfigured_stamps(p
         phase_root
         / "PHASE_Preprocessing"
         / "+phase_preprocessing_beta"
-        / "LegacyEngine.m"
+        / "ProcessingEngine.m"
     )
     assert engine.count("if ~isfolder(stamps_folder_full)") == 2
     assert engine.count("mkdir(stamps_folder_full);") == 2
@@ -432,8 +395,8 @@ def test_preprocessing_resume_skips_master_for_sentinel_and_csk(phase_root):
     assert "if cfg.first_step > 1" in load_config
     assert "cfg.process_master = false;" in load_config
     assert "Resuming from slave step %d" in validate_config
-    assert "engine.master_processing_SEN = double(~cfg.process_master)" in apply_config
-    assert "engine.master_processing_CSK = double(~cfg.process_master)" in apply_config
+    assert "engine.constellation = string(cfg.constellation)" in apply_config
+    assert "load(fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot), 'input_preprocessing.mat')" in _text(package / "ProcessingEngine.m")
 
 
 def test_preprocessing_uses_true_raster_warp_and_aoi_crs_estimator(phase_root):
@@ -446,7 +409,7 @@ def test_preprocessing_uses_true_raster_warp_and_aoi_crs_estimator(phase_root):
         phase_root / "PHASE_Preprocessing" / "phase_preprocessing_beta_ui" / "app.js"
     )
 
-    assert "classdef ProcessingEngine < phase_preprocessing_beta.LegacyEngine" in engine
+    assert "classdef ProcessingEngine < handle" in engine
     assert "phase_preprocessing_beta.reprojectGeoTiff" in engine
     for operation in (
         "readgeoraster",
@@ -496,6 +459,8 @@ def test_preprocessing_downloader_and_import_are_integrated_without_legacy_windo
     assert "{'search'}" in controller
     assert "{'login'}" in controller
     assert "phase_download_manager.py" in controller
+    assert "obj.TransferDirectory = tempname(transferBase);" in controller
+    assert "transferBase = fullfile(obj.ProjectDir,'downloadasf');" in controller
     assert "search_update_sentinel1_images.py" in controller
     assert "obj.Engine.UIFigure.Visible = 'on'" not in controller
     assert 'id="downloader-panel"' in html
