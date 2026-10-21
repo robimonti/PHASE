@@ -113,22 +113,58 @@ if ~isempty(freqMatch)
         detected{end+1} = 'lambda';
     end
 end
+% The SNAP2StaMPS .diff.par center_time can disagree with the actual
+% acquisition UTC (observed 08:37 there for a 17:14 Sentinel-1 master).
+% TRAIN needs the satellite pass time, so prefer the master SNAP metadata.
+masterTime = masterAcquisitionUtc(preprocFolder, cfg.master_date);
 timeMatch = regexp(parText, 'center_time:\s+([-+\d\.Ee]+)', 'tokens', 'once');
-if ~isempty(timeMatch)
-    secondsOfDay = str2double(timeMatch{1});
-    hourValue = floor(secondsOfDay / 3600);
-    minuteValue = round(floor(rem(secondsOfDay, 3600) / 60) / 10) * 10;
-    if minuteValue == 60
-        hourValue = hourValue + 1;
-        minuteValue = 0;
-    end
-    hourValue = mod(hourValue, 24);
-    cfg.utc_time = sprintf('%02d:%02d', hourValue, minuteValue);
+if ~isempty(masterTime)
+    cfg.utc_time = masterTime;
     detected{end+1} = 'utc_time';
+    messages{end+1} = ['Automatic detection: satellite UTC read from the SNAP master product (' masterTime ').'];
+    if ~isempty(timeMatch)
+        parMinutes = str2double(timeMatch{1}) / 60;
+        masterMinutes = str2double(masterTime(1:2)) * 60 + str2double(masterTime(4:5));
+        if isfinite(parMinutes) && abs(parMinutes - masterMinutes) > 5
+            messages{end+1} = 'Warning: .diff.par center_time disagrees with the master acquisition UTC; the master value was used.';
+        end
+    end
+elseif ~isempty(timeMatch)
+    secondsOfDay = str2double(timeMatch{1});
+    if isfinite(secondsOfDay) && secondsOfDay >= 0 && secondsOfDay < 86400
+        hourValue = floor(secondsOfDay / 3600);
+        minuteValue = floor(rem(secondsOfDay, 3600) / 60);
+        cfg.utc_time = sprintf('%02d:%02d', hourValue, minuteValue);
+        detected{end+1} = 'utc_time';
+        messages{end+1} = 'Warning: satellite UTC came from .diff.par because master SNAP metadata was unavailable; verify it before using TRAIN.';
+    end
 end
 
 messages{end+1} = sprintf('Automatic detection: parameters read from %s.', diff0Path);
 detected = unique(detected, 'stable');
+end
+
+function utc = masterAcquisitionUtc(preprocFolder, masterDate)
+utc = '';
+masterFolder = fullfile(preprocFolder,'master');
+if ~isfolder(masterFolder)
+    return
+end
+products = dir(fullfile(masterFolder,'*.dim'));
+masterDate = char(string(masterDate));
+for k = 1:numel(products)
+    if ~contains(products(k).name,masterDate)
+        continue
+    end
+    productText = fileread(fullfile(products(k).folder,products(k).name));
+    token = regexp(productText, ...
+        '<MDATTR name="first_line_time"[^>]*>\s*\d{2}-[A-Za-z]{3}-\d{4}\s+(\d{2}:\d{2}):\d{2}', ...
+        'tokens','once');
+    if ~isempty(token)
+        utc = token{1};
+        return
+    end
+end
 end
 
 function tf = samePath(left, right)

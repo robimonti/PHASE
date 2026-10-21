@@ -4,7 +4,7 @@ if nargin < 1 || isempty(installRoot)
     installRoot = phase_project.installationRoot();
 end
 installRoot = char(string(installRoot));
-value = 'v7.0.1 dev';
+value = 'v7.0.2 dev';
 
 % Update packages carry their release tag with the engine itself.
 releaseFile = fullfile(installRoot,'phase-release.json');

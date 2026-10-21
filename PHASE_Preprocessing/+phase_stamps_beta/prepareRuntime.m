@@ -10,6 +10,7 @@ end
 
 stampsRoot = canonicalPath(cfg.installation_folder);
 addpath(genpath(stampsRoot));
+triangleMessages = phase_stamps_beta.ensureWindowsTriangleRuntime(stampsRoot);
 
 binPaths = { ...
     fullfile(stampsRoot,'bin'), ...
@@ -38,6 +39,7 @@ if ~isempty(unresolved)
 end
 
 messages = {['StaMPS runtime ready: ' stampsRoot]};
+messages = [messages triangleMessages];
 trainRoot = findTrainRoot(cfg,stampsRoot);
 if ~isempty(trainRoot)
     trainMatlab = fullfile(trainRoot,'matlab');

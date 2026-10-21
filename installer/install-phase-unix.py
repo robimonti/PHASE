@@ -135,6 +135,14 @@ def validate_external(path: str | None, kind: str) -> Path | None:
     required = ("matlab/stamps.m", "matlab/setparm.m") if kind == "stamps" else ("matlab",)
     if any(not (root / name).exists() for name in required):
         raise RuntimeError(f"Incomplete {kind} runtime: {root}")
+    if kind == "stamps":
+        triangle = root / "external" / "triangle" / "bin" / "triangle"
+        if not triangle.is_file() or not os.access(triangle, os.X_OK):
+            raise RuntimeError(f"StaMPS Triangle is not executable: {triangle}")
+        result = subprocess.run([str(triangle), "-h"], capture_output=True,
+                                text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(f"StaMPS Triangle cannot start: {triangle}")
     return root
 
 
@@ -324,7 +332,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.0.1"
+            version = "v7.0.2"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],

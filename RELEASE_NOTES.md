@@ -1,4 +1,25 @@
-# PHASE v7.0.1
+# PHASE v7.0.2
+
+PHASE v7.0.2 repairs the Windows StaMPS Step 8 failure caused by missing
+Triangle/MinGW runtime DLLs. The Windows installer now installs the three
+required DLLs from PHASE's pinned Portable Git and verifies that Triangle can
+start. Existing managed Windows installations repair Triangle automatically
+before the next StaMPS run; no project files need to be moved. macOS and Linux
+runtime installers now also check that their native Triangle binary starts.
+
+- Satellite acquisition UTC is read from the SNAP master product instead of
+  trusting an inconsistent `.diff.par` `center_time`. When master metadata is
+  unavailable, PHASE warns that the fallback UTC should be verified before
+  TRAIN/GACOS. StaMPS Step 8 does not use this UTC field.
+- The StaMPS first-step selector now includes Steps 7 and 8, allowing a failed
+  Step 8 to be retried without rerunning earlier PSI steps, provided they were
+  completed successfully.
+- All three installer UIs and the shared application version are v7.0.2. The
+  in-app update replaces the PHASE engine while preserving project folders and
+  the installed StaMPS/TRAIN runtime. As before, close MATLAB and relaunch
+  PHASE from its installed launcher to apply a prepared update.
+
+## Previous release: PHASE v7.0.1
 
 PHASE v7.0.1 is a complete PHASE 7 installer/update, not a standalone script
 patch. It keeps the unified Project / Preprocessing / StaMPS PSI / Displacement

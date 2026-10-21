@@ -322,7 +322,7 @@ private struct InstallerView: View {
                         .font(.system(size: 10)).foregroundStyle(Theme.faint)
                 }
             }.padding(.bottom, 14)
-            Text("PHASE  v7.0.1 preview  ·  Roberto Monti · pyccino")
+            Text("PHASE  v7.0.2 preview  ·  Roberto Monti · pyccino")
                 .font(.system(size: 9, design: .monospaced)).foregroundStyle(Theme.faint)
         }
         .padding(24)

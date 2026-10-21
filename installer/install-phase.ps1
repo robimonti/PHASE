@@ -1244,8 +1244,8 @@ function Invoke-StampsBinariesDownload {
     $required = $exeDest.Keys
     $missing = $required | Where-Object { -not (Test-Path (Join-Path $exeDest[$_] $_)) }
     if ($missing.Count -eq 0) {
-        & $StatusCallback "All $($required.Count) StaMPS .exe already present, skipping download"
-        return $true
+        & $StatusCallback "All $($required.Count) StaMPS .exe already present, checking Triangle dependencies"
+        return Install-TriangleRuntime -TriangleBinDir $triangleBinDir -StatusCallback $StatusCallback
     }
     & $StatusCallback "Mancano $($missing.Count)/$($required.Count) .exe StaMPS, scarico stamps-win64-binaries.zip..."
 
@@ -1290,7 +1290,7 @@ function Invoke-StampsBinariesDownload {
         $stillMissing = $required | Where-Object { -not (Test-Path (Join-Path $exeDest[$_] $_)) }
         if ($stillMissing.Count -eq 0) {
             & $StatusCallback "$($required.Count)/$($required.Count) .exe StaMPS estratti (bin/ + external/triangle/bin/ + external/snaphu/bin/)"
-            return $true
+            return Install-TriangleRuntime -TriangleBinDir $triangleBinDir -StatusCallback $StatusCallback
         } else {
             & $StatusCallback "ERRORE: dopo l'estrazione mancano ancora: $($stillMissing -join ', ')"
             return $false
@@ -1300,6 +1300,51 @@ function Invoke-StampsBinariesDownload {
         return $false
     } finally {
         Remove-Item $tmpZip -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# The upstream Windows archive contains only executables. Its Triangle build
+# imports MinGW's C++/GCC runtime; merely finding triangle.exe is insufficient.
+# Use the pinned Portable Git installed above, not arbitrary system DLLs.
+function Install-TriangleRuntime {
+    param(
+        [Parameter(Mandatory)] [string]$TriangleBinDir,
+        [Parameter(Mandatory)] [scriptblock]$StatusCallback
+    )
+    $mingwBin = Join-Path $env:LOCALAPPDATA 'PHASE\portable-git\mingw64\bin'
+    $dlls = @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')
+    foreach ($dll in $dlls) {
+        $source = Join-Path $mingwBin $dll
+        $destination = Join-Path $TriangleBinDir $dll
+        if (-not (Test-Path -LiteralPath $destination)) {
+            if (-not (Test-Path -LiteralPath $source)) {
+                & $StatusCallback "ERROR: Triangle requires $dll, missing from Portable Git: $source"
+                return $false
+            }
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+            & $StatusCallback "Installed Triangle runtime: $dll"
+        }
+    }
+
+    # -h must start and exit successfully; this catches missing transitive DLLs
+    # before the user reaches StaMPS Step 8.
+    $triangle = Join-Path $TriangleBinDir 'triangle.exe'
+    $stdout = Join-Path $env:TEMP "phase-triangle-$(Get-Random).out"
+    $stderr = Join-Path $env:TEMP "phase-triangle-$(Get-Random).err"
+    try {
+        $probe = Start-Process -FilePath $triangle -ArgumentList '-h' -Wait -PassThru `
+            -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        if ($probe.ExitCode -ne 0) {
+            & $StatusCallback "ERROR: Triangle cannot start (exit $($probe.ExitCode))."
+            return $false
+        }
+        & $StatusCallback 'Triangle native runtime verified'
+        return $true
+    } catch {
+        & $StatusCallback "ERROR: Triangle startup failed: $($_.Exception.Message)"
+        return $false
+    } finally {
+        Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -1566,7 +1611,7 @@ function Invoke-StampsBinariesDownload {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.0.1 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.0.2 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>

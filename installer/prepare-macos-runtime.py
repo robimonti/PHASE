@@ -68,6 +68,10 @@ def prepare(stamps_source: Path, train_source: Path, snaphu: Path,
                           ("GNU awk", gawk)):
         if not arm64_executable(binary.expanduser().resolve()):
             raise RuntimeError(f"{label} must be an executable arm64 binary: {binary}")
+    triangle_probe = subprocess.run([str(triangle.expanduser().resolve()), "-h"],
+                                    capture_output=True, text=True, check=False)
+    if triangle_probe.returncode != 0:
+        raise RuntimeError("Triangle is arm64 but cannot start; inspect its native dependencies.")
     if not shutil.which("cmake") or not shutil.which("ctest"):
         raise RuntimeError("CMake and CTest are required to build StaMPS.")
     if not shutil.which("csh"):

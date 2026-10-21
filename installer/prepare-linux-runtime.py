@@ -79,6 +79,10 @@ def prepare(output: Path) -> Path:
         triangle = stamps / "external" / "triangle" / "bin" / "triangle"
         if not triangle.is_file() or not os.access(triangle, os.X_OK):
             raise RuntimeError("Triangle build did not produce an executable.")
+        triangle_probe = subprocess.run([str(triangle), "-h"],
+                                        capture_output=True, text=True, check=False)
+        if triangle_probe.returncode != 0:
+            raise RuntimeError("Triangle was built but cannot start; inspect its native dependencies.")
         if not (train / "matlab" / "aps_linear.m").is_file():
             raise RuntimeError("TRAIN is missing aps_linear.m.")
         # Keep source and license notices, but not Git history in the installed runtime.

@@ -11,17 +11,19 @@ end
 if isempty(regexp(cfg.utc_time, '^([01]\d|2[0-3]):[0-5]\d$', 'once'))
     errors{end+1} = 'UTC time must use HH:MM (00:00 to 23:59).';
 end
-if ~any(strcmp(cfg.stamps_first_step, {'1','2','3','4','5','6'}))
-    errors{end+1} = 'StaMPS first step must be between 1 and 6.';
+if ~any(strcmp(cfg.stamps_first_step, {'1','2','3','4','5','6','7','8'}))
+    errors{end+1} = 'StaMPS first step must be between 1 and 8.';
 end
 if ~any(strcmp(cfg.stamps_last_step, {'7','8'}))
     errors{end+1} = 'StaMPS last step must be 7 or 8.';
+elseif str2double(cfg.stamps_first_step) > str2double(cfg.stamps_last_step)
+    errors{end+1} = 'StaMPS first step cannot be after the last step.';
 end
 if ~any(strcmp(cfg.ph_output, {'wrapped','unwrapped'}))
     errors{end+1} = 'Phase output must be wrapped or unwrapped.';
 elseif strcmp(cfg.ph_output,'wrapped')
-    if strcmp(cfg.stamps_first_step,'6')
-        errors{end+1} = 'Wrapped phase stops after StaMPS Step 5; first step cannot be 6.';
+    if str2double(cfg.stamps_first_step) > 5
+        errors{end+1} = 'Wrapped phase stops after StaMPS Step 5; first step cannot be later than 5.';
     end
     warnings{end+1} = 'Wrapped phase runs through Step 5 and exports phase in radians, not displacement.';
 end
