@@ -40,6 +40,10 @@ jobs:
             (Resolve-Path .\installer\install-phase.ps1), [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { throw ($errors | Out-String) }
 
+      - name: Verify Windows Triangle functional runtime
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\tests\windows_triangle_smoke.ps1
+
       - name: Compile installer tied to this tag
         shell: powershell
         env:

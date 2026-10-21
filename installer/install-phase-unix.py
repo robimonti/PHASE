@@ -139,10 +139,14 @@ def validate_external(path: str | None, kind: str) -> Path | None:
         triangle = root / "external" / "triangle" / "bin" / "triangle"
         if not triangle.is_file() or not os.access(triangle, os.X_OK):
             raise RuntimeError(f"StaMPS Triangle is not executable: {triangle}")
-        result = subprocess.run([str(triangle), "-h"], capture_output=True,
-                                text=True, check=False)
-        if result.returncode != 0:
-            raise RuntimeError(f"StaMPS Triangle cannot start: {triangle}")
+        with tempfile.TemporaryDirectory(prefix="phase-triangle-probe-") as probe_dir:
+            node = Path(probe_dir) / "phase-probe.1.node"
+            node.write_text("3 2 0 0\n1 0 0\n2 1 0\n3 0 1\n", encoding="ascii")
+            result = subprocess.run([str(triangle), "-e", node.name],
+                                    cwd=probe_dir, capture_output=True,
+                                    text=True, check=False)
+            if result.returncode != 0 or not node.with_name("phase-probe.2.edge").is_file():
+                raise RuntimeError(f"StaMPS Triangle could not triangulate test points: {triangle}")
     return root
 
 
@@ -332,7 +336,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.0.2"
+            version = "v7.0.3"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],

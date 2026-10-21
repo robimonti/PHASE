@@ -1,4 +1,15 @@
-# PHASE v7.0.2
+# PHASE v7.0.3
+
+PHASE v7.0.3 corrects a StaMPS Step 8 startup check introduced in v7.0.2.
+The Windows Triangle build can return exit code 3 for the `-h` command even
+when its DLLs are present; PHASE now tests the real `triangle -e` operation
+on three temporary points and verifies that an edge file is produced. The
+same functional check is used by the Windows, macOS and Linux installers.
+No project data are changed. Installations updated to v7.0.2 can update in
+the app, relaunch PHASE, and retry only StaMPS Step 8 after earlier steps
+completed successfully.
+
+## Previous release: PHASE v7.0.2
 
 PHASE v7.0.2 repairs the Windows StaMPS Step 8 failure caused by missing
 Triangle/MinGW runtime DLLs. The Windows installer now installs the three

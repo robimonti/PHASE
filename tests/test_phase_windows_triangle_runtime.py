@@ -7,7 +7,8 @@ def test_installer_bundles_mingw_runtime_and_probes_triangle(phase_root):
         assert name in source
     assert "PHASE\\portable-git\\mingw64\\bin" in source
     assert "Install-TriangleRuntime -TriangleBinDir $triangleBinDir" in source
-    assert "Start-Process -FilePath $triangle -ArgumentList '-h'" in source
+    assert "Start-Process -FilePath $triangle -ArgumentList '-e', 'phase-probe.1.node'" in source
+    assert "phase-probe.2.edge" in source
 
 
 def test_managed_install_repairs_triangle_before_stamps_runs(phase_root):
@@ -18,7 +19,8 @@ def test_managed_install_repairs_triangle_before_stamps_runs(phase_root):
     for name in ("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll"):
         assert name in repair
     assert "copyfile(source,destination)" in repair
-    assert "-h > NUL 2>&1" in repair
+    assert '" -e phase-probe.1.node' in repair
+    assert "phase-probe.2.edge" in repair
 
 
 def test_train_utc_prefers_snap_master_over_diff_par(phase_root):
@@ -40,7 +42,8 @@ def test_unix_installers_probe_native_triangle(phase_root):
         "installer/install-phase-unix.py",
     ):
         source = (phase_root / relative).read_text(encoding="utf-8")
-        assert '"-h"' in source
+        assert '"-e"' in source
+        assert "phase-probe.2.edge" in source
         assert "returncode != 0" in source
 
 

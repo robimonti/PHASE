@@ -41,13 +41,30 @@ for k = 1:numel(dlls)
     messages{end+1} = ['Triangle runtime repaired: ' dlls{k}]; %#ok<AGROW>
 end
 
-% A no-arguments invocation is not useful as a health check; -h should
-% start Triangle without requiring a project or creating processing files.
-command = ['"' triangleExe '" -h > NUL 2>&1'];
+% The Windows port may return a nonzero code for -h even when it works.
+% Exercise the same -e operation used by StaMPS Step 8 on three points.
+probeDir = tempname;
+[ok,message] = mkdir(probeDir);
+if ~ok
+    error('PHASE_StaMPS:triangleProbeSetupFailed', ...
+        'Could not create Triangle probe folder: %s',message);
+end
+cleanup = onCleanup(@() rmdir(probeDir,'s')); %#ok<NASGU>
+nodeFile = fullfile(probeDir,'phase-probe.1.node');
+fid = fopen(nodeFile,'w');
+if fid < 0
+    error('PHASE_StaMPS:triangleProbeSetupFailed', ...
+        'Could not create Triangle probe input: %s',nodeFile);
+end
+fprintf(fid,'3 2 0 0\n1 0 0\n2 1 0\n3 0 1\n');
+fclose(fid);
+command = ['cd /d "' probeDir '" && "' triangleExe ...
+    '" -e phase-probe.1.node > triangle-probe.log 2>&1'];
 [status,~] = system(command);
-if status ~= 0
+edgeFile = fullfile(probeDir,'phase-probe.2.edge');
+if status ~= 0 || ~isfile(edgeFile)
     error('PHASE_StaMPS:triangleRuntimeFailed', ...
-        ['Triangle did not start after its dependencies were installed ', ...
-         '(exit %d). Repair the PHASE installation.'],status);
+        ['Triangle could not triangulate a three-point test after its ', ...
+         'dependencies were installed (exit %d). Repair the PHASE installation.'],status);
 end
 end

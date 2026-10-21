@@ -68,10 +68,14 @@ def prepare(stamps_source: Path, train_source: Path, snaphu: Path,
                           ("GNU awk", gawk)):
         if not arm64_executable(binary.expanduser().resolve()):
             raise RuntimeError(f"{label} must be an executable arm64 binary: {binary}")
-    triangle_probe = subprocess.run([str(triangle.expanduser().resolve()), "-h"],
-                                    capture_output=True, text=True, check=False)
-    if triangle_probe.returncode != 0:
-        raise RuntimeError("Triangle is arm64 but cannot start; inspect its native dependencies.")
+    with tempfile.TemporaryDirectory(prefix="phase-triangle-probe-") as probe_dir:
+        node = Path(probe_dir) / "phase-probe.1.node"
+        node.write_text("3 2 0 0\n1 0 0\n2 1 0\n3 0 1\n", encoding="ascii")
+        triangle_probe = subprocess.run(
+            [str(triangle.expanduser().resolve()), "-e", node.name], cwd=probe_dir,
+            capture_output=True, text=True, check=False)
+        if triangle_probe.returncode != 0 or not node.with_name("phase-probe.2.edge").is_file():
+            raise RuntimeError("Triangle could not triangulate three test points; inspect its native dependencies.")
     if not shutil.which("cmake") or not shutil.which("ctest"):
         raise RuntimeError("CMake and CTest are required to build StaMPS.")
     if not shutil.which("csh"):

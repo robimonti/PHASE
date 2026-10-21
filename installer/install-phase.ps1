@@ -1326,25 +1326,31 @@ function Install-TriangleRuntime {
         }
     }
 
-    # -h must start and exit successfully; this catches missing transitive DLLs
-    # before the user reaches StaMPS Step 8.
+    # Exercise the actual -e operation used by StaMPS Step 8. The Windows
+    # port can return a nonzero status for -h even with all DLLs present.
     $triangle = Join-Path $TriangleBinDir 'triangle.exe'
-    $stdout = Join-Path $env:TEMP "phase-triangle-$(Get-Random).out"
-    $stderr = Join-Path $env:TEMP "phase-triangle-$(Get-Random).err"
+    $probeDir = Join-Path $env:TEMP "phase-triangle-probe_$(Get-Random)"
+    New-Item -ItemType Directory -Path $probeDir -Force | Out-Null
+    $node = Join-Path $probeDir 'phase-probe.1.node'
+    [System.IO.File]::WriteAllText($node, "3 2 0 0`n1 0 0`n2 1 0`n3 0 1`n")
+    $stdout = Join-Path $probeDir 'triangle-probe.out'
+    $stderr = Join-Path $probeDir 'triangle-probe.err'
     try {
-        $probe = Start-Process -FilePath $triangle -ArgumentList '-h' -Wait -PassThru `
-            -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-        if ($probe.ExitCode -ne 0) {
-            & $StatusCallback "ERROR: Triangle cannot start (exit $($probe.ExitCode))."
+        $probe = Start-Process -FilePath $triangle -ArgumentList '-e', 'phase-probe.1.node' `
+            -WorkingDirectory $probeDir -Wait -PassThru -NoNewWindow `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $edge = Join-Path $probeDir 'phase-probe.2.edge'
+        if ($probe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $edge)) {
+            & $StatusCallback "ERROR: Triangle three-point test failed (exit $($probe.ExitCode))."
             return $false
         }
-        & $StatusCallback 'Triangle native runtime verified'
+        & $StatusCallback 'Triangle native runtime verified with three-point test'
         return $true
     } catch {
         & $StatusCallback "ERROR: Triangle startup failed: $($_.Exception.Message)"
         return $false
     } finally {
-        Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $probeDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -1611,7 +1617,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.0.2 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.0.3 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
