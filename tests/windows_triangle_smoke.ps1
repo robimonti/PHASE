@@ -11,8 +11,13 @@ if (-not $triangleSource) { throw 'Windows StaMPS archive has no triangle.exe.' 
 $runtimeDir = Join-Path $probeDir 'runtime'
 New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
 Copy-Item -LiteralPath $triangleSource.FullName -Destination $runtimeDir
-$gitCommand = (Get-Command git.exe).Source
-$gitRoot = Split-Path (Split-Path $gitCommand -Parent) -Parent
+$portableArchive = Join-Path $probeDir 'PortableGit-2.45.2-64-bit.7z.exe'
+Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.45.2.windows.1/PortableGit-2.45.2-64-bit.7z.exe' -OutFile $portableArchive
+$gitRoot = Join-Path $probeDir 'portable-git'
+New-Item -ItemType Directory -Path $gitRoot -Force | Out-Null
+$unpack = Start-Process -FilePath $portableArchive -ArgumentList "-o`"$gitRoot`"", '-y' `
+    -Wait -PassThru -NoNewWindow
+if ($unpack.ExitCode -ne 0) { throw "Portable Git extraction failed (exit $($unpack.ExitCode))." }
 $mingwBin = Join-Path $gitRoot 'mingw64\bin'
 foreach ($dll in @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')) {
     $source = Join-Path $mingwBin $dll
