@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import filecmp
 import hashlib
 import json
 import os
@@ -37,6 +38,13 @@ REQUIRED_FILES = (
 )
 RELEASE_TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 MAX_ARCHIVE_BYTES = 1_000_000_000
+
+
+def copy_runtime_file(source: str, destination: str) -> str:
+    """Reuse identical staged files; Windows can deny overwriting locked copies."""
+    if Path(destination).is_file() and filecmp.cmp(source, destination, shallow=False):
+        return destination
+    return shutil.copy2(source, destination)
 
 
 def read_json(path: Path) -> dict:
@@ -211,13 +219,14 @@ def apply(prefix: Path, installed: dict) -> dict:
             target = candidate / name
             if target.exists():
                 # A previous apply may have copied this runtime, then failed
-                # before replacing the engine (for example due to a Windows
-                # file lock). The installed runtime is still authoritative.
-                # Discard only the staged duplicate and recopy it cleanly.
+                # before replacing the engine. Merge the authoritative
+                # installed copy instead of deleting the staged directory:
+                # Git pack files in it can be read-only or locked on Windows.
                 if not target.is_dir() or target.is_symlink():
                     raise RuntimeError(f"Invalid staged {name} runtime; inspect pending-update.")
-                shutil.rmtree(target)
-            shutil.copytree(source, target)
+            shutil.copytree(source, target, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns(".git"),
+                            copy_function=copy_runtime_file)
     for name in ("project.conf.template", "PHASE_Preprocessing/input_StaMPS.mat",
                  "PHASE_Preprocessing/input_preprocessing.mat"):
         source = old_engine / name

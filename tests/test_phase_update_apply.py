@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -39,15 +40,27 @@ def test_apply_replaces_engine_when_updater_runs_from_it(tmp_path, partial_runti
             staged = pending / "engine" / name
             staged.mkdir()
             (staged / "partial.txt").write_text("incomplete", encoding="utf-8")
+        locked_pack = pending / "engine" / "StaMPS" / ".git" / "objects" / "pack" / "partial.idx"
+        locked_pack.parent.mkdir(parents=True)
+        locked_pack.write_text("read-only Git metadata", encoding="utf-8")
+        locked_pack.chmod(stat.S_IREAD)
     (pending / "update.json").write_text(
         json.dumps({"updateSchema": 1, "version": "v7.0.4"}), encoding="utf-8")
 
-    result = subprocess.run(
-        [sys.executable, str(engine / "phase_update.py"), "apply", "--prefix", str(prefix)],
-        text=True, capture_output=True, check=False)
-    assert result.returncode == 0, result.stdout + result.stderr
+    try:
+        result = subprocess.run(
+            [sys.executable, str(engine / "phase_update.py"), "apply", "--prefix", str(prefix)],
+            text=True, capture_output=True, check=False)
+        assert result.returncode == 0, result.stdout + result.stderr
+    finally:
+        if partial_runtime:
+            for location in (pending / "engine", prefix / "engine"):
+                pack = location / "StaMPS" / ".git" / "objects" / "pack" / "partial.idx"
+                if pack.exists():
+                    pack.chmod(stat.S_IREAD | stat.S_IWRITE)
     assert phase_update.read_json(prefix / "install.json")["version"] == "v7.0.4"
     assert (prefix / "engine" / "StaMPS" / "runtime.txt").read_text() == "keep"
     assert (prefix / "engine" / "TRAIN" / "runtime.txt").read_text() == "keep"
-    assert not (prefix / "engine" / "StaMPS" / "partial.txt").exists()
-    assert not (prefix / "engine" / "TRAIN" / "partial.txt").exists()
+    # Existing staged files are not removed while repairing a partial copy;
+    # required runtime files are overlaid from the installed engine.
+    assert (prefix / "engine" / "StaMPS" / "runtime.txt").is_file()
