@@ -147,6 +147,11 @@ def extract_engine(archive: Path, destination: Path, tag: str) -> None:
     missing = [name for name in REQUIRED_FILES if not (destination / name).is_file()]
     if missing:
         raise RuntimeError("Incomplete PHASE 7 update: " + ", ".join(missing))
+    bundled_runtime = [name for name in ("StaMPS", "TRAIN")
+                       if (destination / name).exists()]
+    if bundled_runtime:
+        raise RuntimeError("PHASE engine update unexpectedly contains native runtimes: " +
+                           ", ".join(bundled_runtime))
     manifest = read_json(destination / "phase-release.json")
     if manifest.get("tag") != tag or manifest.get("updateSchema") != 1:
         raise RuntimeError("PHASE release manifest does not match the GitHub tag.")
@@ -205,7 +210,13 @@ def apply(prefix: Path, installed: dict) -> dict:
         if source.exists():
             target = candidate / name
             if target.exists():
-                raise RuntimeError(f"PHASE release unexpectedly contains {name}.")
+                # A previous apply may have copied this runtime, then failed
+                # before replacing the engine (for example due to a Windows
+                # file lock). The installed runtime is still authoritative.
+                # Discard only the staged duplicate and recopy it cleanly.
+                if not target.is_dir() or target.is_symlink():
+                    raise RuntimeError(f"Invalid staged {name} runtime; inspect pending-update.")
+                shutil.rmtree(target)
             shutil.copytree(source, target)
     for name in ("project.conf.template", "PHASE_Preprocessing/input_StaMPS.mat",
                  "PHASE_Preprocessing/input_preprocessing.mat"):

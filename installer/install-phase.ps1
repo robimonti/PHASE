@@ -1617,7 +1617,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.0.4 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.0.5 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2682,8 +2682,15 @@ function New-PhaseLauncherShortcuts {
 `$env:PHASE_PYTHON = '$pythonQuoted'
 `$env:PHASE_GPTBIN = '$snapQuoted'
 try {
-    & '$pythonQuoted' '$phaseQuoted\phase_update.py' apply --prefix '$appQuoted' | Out-Null
-    if (`$LASTEXITCODE -ne 0) { throw 'PHASE update could not be applied. Check pending-update and backups.' }
+    `$updateOutput = & '$pythonQuoted' '$phaseQuoted\phase_update.py' apply --prefix '$appQuoted' 2>&1
+    if (`$LASTEXITCODE -ne 0) {
+        `$updateMessage = (`$updateOutput | Out-String).Trim()
+        try {
+            `$updateJson = `$updateMessage | ConvertFrom-Json
+            if (`$updateJson.error) { `$updateMessage = `$updateJson.error }
+        } catch {}
+        throw "PHASE update could not be applied: `$updateMessage"
+    }
     & '$matlabQuoted' -r "try, cd('$phaseM'); addpath(genpath('$phaseM')); PHASE_Hub; catch ME, disp(getReport(ME,'extended','hyperlinks','off')); end"
 } catch {
     Add-Type -AssemblyName PresentationFramework

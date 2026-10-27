@@ -106,7 +106,7 @@ def main() -> None:
         if build_tag:
             generated_source = stage / "PHASEInstaller.swift"
             generated_source.write_text(
-                source.read_text(encoding="utf-8").replace("v7.0.4 preview", build_tag),
+                source.read_text(encoding="utf-8").replace("v7.0.5 preview", build_tag),
                 encoding="utf-8")
             source = generated_source
         build_env = os.environ.copy()
@@ -126,8 +126,8 @@ def main() -> None:
             "CFBundleName": "PHASE Installer",
             "CFBundleDisplayName": "PHASE Installer",
             "CFBundleIdentifier": "org.phaseinsar.phase.installer",
-            "CFBundleVersion": build_tag[1:] if build_tag else "7.0.4",
-            "CFBundleShortVersionString": build_tag[1:] if build_tag else "7.0.4",
+            "CFBundleVersion": build_tag[1:] if build_tag else "7.0.5",
+            "CFBundleShortVersionString": build_tag[1:] if build_tag else "7.0.5",
             "CFBundleExecutable": "PHASEInstaller",
             "CFBundlePackageType": "APPL",
             "CFBundleIconFile": "PHASE.icns",

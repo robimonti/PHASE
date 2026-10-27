@@ -1,4 +1,14 @@
-# PHASE v7.0.4
+# PHASE v7.0.5
+
+PHASE v7.0.5 makes in-app updates recoverable after an interrupted apply.
+If an earlier attempt copied StaMPS or TRAIN into `pending-update` but stopped
+before replacing the engine, the updater now discards only that staged copy
+and recopies the installed runtime. It no longer blocks every subsequent
+launch with `PHASE release unexpectedly contains StaMPS`. New Windows
+installers also show the updater's actual error rather than a generic message.
+The engine update does not alter project files.
+
+## Previous release: PHASE v7.0.4
 
 PHASE v7.0.4 fixes Displacement Modeling failing with
 `MATLAB:fopen:InvalidFileLocation` while creating a geoSplinter job. PHASE
