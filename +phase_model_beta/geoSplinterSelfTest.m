@@ -8,25 +8,30 @@ previousFolder = pwd;
 folderRestore = onCleanup(@() cd(previousFolder)); %#ok<NASGU>
 cd(runtimeRoot);
 
-relativeRoot = fullfile('phase_model_beta_ui', ...
-    ['runtime_test_' char(datetime('now','Format','yyyyMMdd_HHmmss_SSS'))]);
-absoluteRoot = fullfile(runtimeRoot,relativeRoot);
+% Use an absolute folder outside the engine, as real PHASE 7 projects do.
+% A relative folder inside the engine concealed invalid '.\C:\...' paths.
+absoluteRoot = [tempname ' PHASE model test'];
 cleanup = onCleanup(@() removeTestFolder(absoluteRoot)); %#ok<NASGU>
-inputDir = fullfile(relativeRoot,'data_input');
-outputDir = fullfile(relativeRoot,'data_output');
-jobDir = fullfile(relativeRoot,'job');
-mkdir(fullfile(runtimeRoot,inputDir));
-mkdir(fullfile(runtimeRoot,outputDir));
-mkdir(fullfile(runtimeRoot,jobDir));
+inputDir = fullfile(absoluteRoot,'data_input');
+outputDir = fullfile(absoluteRoot,'data_output');
+jobDir = fullfile(absoluteRoot,'job');
+mkdir(inputDir);
+mkdir(outputDir);
+mkdir(jobDir);
 
 % Mirror the short names used by the real temporal workflow. The 2005
 % Windows binary has fixed-width filename buffers for some diagnostics.
 inputName = 'PS_1.txt';
 outputName = 'PS_1_cub';
 writematrix([0 0; 1 1; 2 0.2; 3 1.1; 4 0.1; 5 0.9], ...
-    fullfile(runtimeRoot,inputDir,inputName),'Delimiter','space');
+    fullfile(inputDir,inputName),'Delimiter','space');
 jobFile_analysis(1,2,inputName,outputName,6,2,0,5,0,10, ...
     inputDir,outputDir,jobDir);
+jobPath = fullfile(jobDir,[outputName '.job']);
+jobText = fileread(jobPath);
+assert(contains(jobText,fullfile('.','data_input',inputName)) && ...
+    ~contains(jobText,absoluteRoot), ...
+    'geoSplinter job file must contain short paths relative to its data root.');
 
 switch detectOS()
     case 'windows'
@@ -42,12 +47,11 @@ switch detectOS()
             'Unsupported platform for the geoSplinter self-test.');
 end
 
-jobPath = fullfile(jobDir,[outputName '.job']);
 [status,output] = runGeoSplinter(executable,jobPath);
 requiredSuffixes = {'.out.txt','.hdr.txt','.grd.txt', ...
     '.par.txt','.std.txt','.mat.txt'};
 requiredPaths = cellfun(@(suffix) ...
-    fullfile(runtimeRoot,outputDir,[outputName suffix]), ...
+    fullfile(outputDir,[outputName suffix]), ...
     requiredSuffixes,'UniformOutput',false);
 missing = requiredPaths(~cellfun(@isfile,requiredPaths));
 if status ~= 0 || ~isempty(missing)

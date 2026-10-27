@@ -29,3 +29,23 @@ def test_direct_runner_resolves_windows_executable_and_redirects_job(phase_root:
     assert "redirectInput(java.io.File(jobFile))" in runner
     assert "endsWith(lower(executable),'.exe')" in runner
     assert "candidate.getCanonicalPath()" in runner
+    assert "workingDir = fileparts(fileparts(jobFile))" in runner
+
+
+def test_model_jobs_support_absolute_project_paths(phase_root: Path):
+    functions = phase_root / "MatlabFunctions"
+    helper = (functions / "geoSplinterJobPath.m").read_text(encoding="utf-8")
+    assert "folderParent" in helper and "jobParent" in helper
+    assert "value = fullfile('.',folderName" in helper
+    for name in ("jobFile_analysis.m", "jobFile_analysis2D.m", "jobFile_synthesis.m"):
+        source = (functions / name).read_text(encoding="utf-8")
+        assert "job_file = fullfile(gS_job_path" in source
+        assert "geoSplinterJobPath(" in source
+        assert "fullfile('.', gS_job_path" not in source
+    for name in GEOSPLINTER_FILES:
+        source = (functions / name).read_text(encoding="utf-8")
+        assert "fullfile('.', gS_" not in source
+    smoke = (phase_root / "+phase_model_beta" / "geoSplinterSelfTest.m").read_text(
+        encoding="utf-8"
+    )
+    assert "absoluteRoot = [tempname ' PHASE model test']" in smoke

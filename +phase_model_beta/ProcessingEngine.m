@@ -456,13 +456,9 @@ classdef ProcessingEngine < dynamicprops
 
                 % folder for figures
                 figsDir = fullfile(outputDir, 'figures');
-                mkdir(figsDir);
 
                 % folder for files
                 filesDir = fullfile(outputDir, 'files');
-                mkdir(filesDir)
-                mkdir(fullfile(filesDir, 'shp'))
-                mkdir(fullfile(filesDir, 'mat'))
 
 
                 % - 3.3) Create processing folders for geoSplinter
@@ -471,10 +467,17 @@ classdef ProcessingEngine < dynamicprops
                 gS_job_path = fullfile(outputDir, 'geoSplinter', 'job');
                 gS_synth_path = fullfile(outputDir, 'geoSplinter', 'data_synthesis');
 
-                mkdir(gS_input_path)
-                mkdir(gS_output_path)
-                mkdir(gS_job_path)
-                mkdir(gS_synth_path)
+                processingFolders = {figsDir,filesDir, ...
+                    fullfile(filesDir,'shp'),fullfile(filesDir,'mat'), ...
+                    gS_input_path,gS_output_path,gS_job_path,gS_synth_path};
+                for folderIndex = 1:numel(processingFolders)
+                    folder = processingFolders{folderIndex};
+                    [folderCreated,folderMessage] = mkdir(folder);
+                    if ~folderCreated && ~isfolder(folder)
+                        error('PHASE_Model_beta:processingFolderCreateFailed', ...
+                            'Could not create modelling folder %s: %s',folder,folderMessage);
+                    end
+                end
 
 
                 % Update progress (40%)

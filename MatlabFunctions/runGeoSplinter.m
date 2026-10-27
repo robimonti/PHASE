@@ -1,9 +1,9 @@
 function [status, output] = runGeoSplinter(executable, jobFile, stopCheck)
 %RUNGEOSPLINTER Run a geoSplinter job without cmd.exe or shell redirection.
 %
-% Paths are resolved against the PHASE engine root. Java ProcessBuilder
-% connects the job file directly to standard input, avoiding the temporary
-% batch files and current-folder assumptions used by the legacy application.
+% Executable paths are resolved against the PHASE engine root. The native
+% process runs in the common parent of job/data folders, so job entries can
+% use short relative paths even when the project itself is elsewhere.
 
 if nargin < 3 || isempty(stopCheck)
     stopCheck = @() [];
@@ -25,8 +25,9 @@ if ~isfile(jobFile)
         'geoSplinter job file was not created: %s',jobFile);
 end
 
+workingDir = fileparts(fileparts(jobFile));
 builder = java.lang.ProcessBuilder(javaStrings({executable}));
-builder.directory(java.io.File(runtimeRoot));
+builder.directory(java.io.File(workingDir));
 builder.redirectInput(java.io.File(jobFile));
 builder.redirectErrorStream(true);
 try

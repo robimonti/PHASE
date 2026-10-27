@@ -185,7 +185,7 @@ for id = 1:size(displIN_AOI,1)
     
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -193,8 +193,8 @@ for id = 1:size(displIN_AOI,1)
             end
 
             % define the output file base name from geoSplinter run
-            mat_file = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
-            hdr_file = fullfile('.', gS_output_path, strcat(file_out, '.hdr.txt'));
+            mat_file = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
+            hdr_file = fullfile(gS_output_path, strcat(file_out, '.hdr.txt'));
 
             % import normal matrix and normal vector
             fid = fopen(mat_file, 'r');
@@ -1014,7 +1014,7 @@ for r = rows_to_test
 
         % Run geoSplinter_analysis
         gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-        gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+        gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
         [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
         if status ~= 0
             error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -1022,9 +1022,9 @@ for r = rows_to_test
         end
 
         % Import results
-            %[~, ~, ~,~] = geoSplinter(fullfile('.', gS_output_path, file_out), ext);
+            %[~, ~, ~,~] = geoSplinter(fullfile(gS_output_path, file_out), ext);
         [gS_out_data_tmp, gS_out_raster, ~, ~, gS_out_nodes] = geoSplinter_noFig(...
-            fullfile('.', gS_output_path, file_out), ext);
+            fullfile(gS_output_path, file_out), ext);
 
         % Import knots
         knots_x = gS_out_nodes(1,:,1);
@@ -1347,7 +1347,7 @@ jobFile_synthesis(data_dim, type_spl, file_spl, file_est, file_syn, gS_input_pat
 
 % Run geoSplinter_synthesis
 gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
-gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
+gS_job_file = fullfile(gS_job_path, [file_syn, '.job']);
 [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
 if status ~= 0
     error('Error executing geoSplinter_synthesis for file %s: %s', ...
@@ -1427,7 +1427,7 @@ jobFile_synthesis(data_dim, type_spl, file_spl, [gS_est_obs, '.txt'], file_syn_o
 
 % Run geoSplinter_synthesis
 gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
-gS_job_file = fullfile('.', gS_job_path, [file_syn_obs, '.job']);
+gS_job_file = fullfile(gS_job_path, [file_syn_obs, '.job']);
 [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
 if status ~= 0
     error('Error executing geoSplinter_synthesis for Obs Grid %s: %s', ...
@@ -1495,7 +1495,7 @@ if exist('xy_EXTR', 'var') && ~isempty(xy_EXTR)
         gS_input_path, gS_output_path, gS_job_path, gS_synth_path);
 
     % Run geoSplinter_synthesis
-    gS_job_file_extr = fullfile('.', gS_job_path, [file_syn_extr, '.job']);
+    gS_job_file_extr = fullfile(gS_job_path, [file_syn_extr, '.job']);
     [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file_extr);
     if status ~= 0
         error('Error executing geoSplinter_synthesis for Extrapolation Grid: %s', ...

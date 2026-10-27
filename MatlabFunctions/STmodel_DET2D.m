@@ -169,7 +169,7 @@ for id = 1:size(displIN_AOI,1)
     
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -177,8 +177,8 @@ for id = 1:size(displIN_AOI,1)
             end
 
             % define the output file base name from geoSplinter run
-            mat_file = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
-            hdr_file = fullfile('.', gS_output_path, strcat(file_out, '.hdr.txt'));
+            mat_file = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
+            hdr_file = fullfile(gS_output_path, strcat(file_out, '.hdr.txt'));
 
             % import normal matrix and normal vector
             fid = fopen(mat_file, 'r');

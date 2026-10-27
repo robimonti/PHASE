@@ -841,7 +841,7 @@ for i = 1:size(dataIN_AOI, 1)
     
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -850,10 +850,10 @@ for i = 1:size(dataIN_AOI, 1)
 
             % import results
             [gS_out_data_tmp, ~, ~, ~, ~] = ...
-                geoSplinter_noFig(fullfile('.', gS_output_path, file_out), ext);
+                geoSplinter_noFig(fullfile(gS_output_path, file_out), ext);
     
             % import normal matrix and normal vector
-            mat_file = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
+            mat_file = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
             fid = fopen(mat_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', mat_file);
@@ -899,7 +899,7 @@ for i = 1:size(dataIN_AOI, 1)
             fclose(fid);
         
             % import knots
-            hdr_file = fullfile('.', gS_output_path, strcat(file_out, '.hdr.txt'));
+            hdr_file = fullfile(gS_output_path, strcat(file_out, '.hdr.txt'));
             fid = fopen(hdr_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', hdr_file);
@@ -972,7 +972,7 @@ for i = 1:size(dataIN_AOI, 1)
             residuals = obs_p2{i, 5} - estimated_obs';
             SSR = sum(residuals.^2);
             s02_est = SSR / (num_obs - n_params);
-            mat_file_full = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
+            mat_file_full = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
             fid2 = fopen(mat_file_full, 'r');
             diag_cov_vals = zeros(n_params, 1);
             if fid2 ~= -1
@@ -1813,7 +1813,7 @@ for i = 1:size(dataIN_AOI, 1)
         
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -1821,7 +1821,7 @@ for i = 1:size(dataIN_AOI, 1)
             end
 
             % import normal matrix and normal vector
-            mat_file = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
+            mat_file = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
             fid = fopen(mat_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', mat_file);
@@ -1867,7 +1867,7 @@ for i = 1:size(dataIN_AOI, 1)
             fclose(fid);
             
             % import knots
-            hdr_file = fullfile('.', gS_output_path, strcat(file_out, '.hdr.txt'));
+            hdr_file = fullfile(gS_output_path, strcat(file_out, '.hdr.txt'));
             fid = fopen(hdr_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', hdr_file);
@@ -1943,7 +1943,7 @@ for i = 1:size(dataIN_AOI, 1)
             
             % run geoSplinter_synthesis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
-            gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_syn, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
                 error('Error executing geoSplinter_synthesis for file %s: %s', ...
@@ -2088,7 +2088,7 @@ for i = 1:size(dataIN_AOI, 1)
         
             % run geoSplinter_analysis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_analysis');
-            gS_job_file = fullfile('.', gS_job_path, [file_out, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_out, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
                 error('Error executing geoSplinter_analysis for file %s: %s', ...
@@ -2096,7 +2096,7 @@ for i = 1:size(dataIN_AOI, 1)
             end
 
             % import normal matrix and normal vector
-            mat_file = fullfile('.', gS_output_path, strcat(file_out, '.mat.txt'));
+            mat_file = fullfile(gS_output_path, strcat(file_out, '.mat.txt'));
             fid = fopen(mat_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', mat_file);
@@ -2142,7 +2142,7 @@ for i = 1:size(dataIN_AOI, 1)
             fclose(fid);
             
             % import knots
-            hdr_file = fullfile('.', gS_output_path, strcat(file_out, '.hdr.txt'));
+            hdr_file = fullfile(gS_output_path, strcat(file_out, '.hdr.txt'));
             fid = fopen(hdr_file, 'r');
             if fid == -1
                 error('Cannot open file: %s', hdr_file);
@@ -2218,7 +2218,7 @@ for i = 1:size(dataIN_AOI, 1)
             
             % run geoSplinter_synthesis with the job file
             gS_exec = fullfile(gS_dir, 'geoSplinter_synthesis');
-            gS_job_file = fullfile('.', gS_job_path, [file_syn, '.job']);
+            gS_job_file = fullfile(gS_job_path, [file_syn, '.job']);
             [status, geoOutput] = runGeoSplinter(gS_exec,gS_job_file,stop_check);
             if status ~= 0
                 error('Error executing geoSplinter_synthesis for file %s: %s', ...

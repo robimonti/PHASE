@@ -39,27 +39,31 @@ elseif nargin == 10
 end
 
 % Create the job file
-job_file = fullfile('.', gS_job_path, [output_file, '.job']);
+job_file = fullfile(gS_job_path, [output_file, '.job']);
 fid = fopen(job_file, 'w');
+if fid == -1
+    error('PHASE_Model_beta:geoSplinterJobWriteFailed', ...
+        'Cannot create geoSplinter job file: %s',job_file);
+end
 
 if type_spl == 1   % linear splines
 
     fprintf(fid, '\n%s\n', num2str(data_dim));
     fprintf(fid, '%s\n', num2str(type_spl));
     fprintf(fid, '%s\n', num2str(type_discr));
-    fprintf(fid, '%s\n', strcat(gS_output_path, filesep, spl_file));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_output_path,spl_file,gS_job_path));
     fprintf(fid, '%s\n', 'y');
-    fprintf(fid, '%s\n', strcat(gS_input_path, filesep, input_file));
-    fprintf(fid, '%s\n', strcat(gS_synth_path, filesep, output_file, '.txt'));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_input_path,input_file,gS_job_path));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_synth_path,[output_file '.txt'],gS_job_path));
 
 elseif type_spl == 2   % cubic splines
  
     fprintf(fid, '\n%s\n', num2str(data_dim));
     fprintf(fid, '%s\n', num2str(type_spl));
-    fprintf(fid, '%s\n', strcat(gS_output_path, filesep, spl_file));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_output_path,spl_file,gS_job_path));
     fprintf(fid, '%s\n', 'y');
-    fprintf(fid, '%s\n', strcat(gS_input_path, filesep, input_file));
-    fprintf(fid, '%s\n', strcat(gS_synth_path, filesep, output_file, '.txt'));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_input_path,input_file,gS_job_path));
+    fprintf(fid, '%s\n', geoSplinterJobPath(gS_synth_path,[output_file '.txt'],gS_job_path));
 
 end
 

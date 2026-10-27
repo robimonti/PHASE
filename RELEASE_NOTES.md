@@ -1,4 +1,15 @@
-# PHASE v7.0.3
+# PHASE v7.0.4
+
+PHASE v7.0.4 fixes Displacement Modeling failing with
+`MATLAB:fopen:InvalidFileLocation` while creating a geoSplinter job. PHASE
+now writes job files directly into the project's existing processing folders
+and gives the native geoSplinter program short relative data paths. This
+works even when the project is outside the installed engine or its path has
+spaces. Folder creation is checked and reports the precise folder on failure.
+The selected StaMPS Excel input and scientific model equations are unchanged.
+The fix covers deterministic, stochastic, 1D and 2D modelling paths.
+
+## Previous release: PHASE v7.0.3
 
 PHASE v7.0.3 corrects a StaMPS Step 8 startup check introduced in v7.0.2.
 The Windows Triangle build can return exit code 3 for the `-h` command even
