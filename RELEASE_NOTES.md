@@ -1,4 +1,12 @@
-# PHASE v7.0.5
+# PHASE v7.0.6
+
+PHASE v7.0.6 completes interrupted-update recovery on Windows when a staged
+StaMPS Git pack file is read-only or temporarily locked. The updater now
+merges missing runtime files from the installed engine without deleting or
+overwriting matching staged files, and does not copy non-runtime `.git`
+metadata into fresh updates. Projects remain untouched.
+
+## Previous release: PHASE v7.0.5
 
 PHASE v7.0.5 makes in-app updates recoverable after an interrupted apply.
 If an earlier attempt copied StaMPS or TRAIN into `pending-update` but stopped
