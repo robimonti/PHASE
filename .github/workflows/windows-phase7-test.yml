@@ -25,6 +25,17 @@ jobs:
             (Resolve-Path .\installer\install-phase.ps1), [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { throw ($errors | Out-String) }
 
+      - name: Set up Python for updater regression
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test in-place engine upgrade on Windows
+        shell: powershell
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_phase_update_apply.py
+
       - name: Verify Windows Triangle functional runtime
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File .\tests\windows_triangle_smoke.ps1
