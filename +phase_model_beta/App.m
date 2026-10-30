@@ -176,6 +176,9 @@ classdef App < handle
                         obj.browseFromPayload(payload);
                     case 'estimatepsbounds'
                         obj.estimatePsBoundsFromPayload(payload);
+                    case 'previewcustommodel'
+                        obj.updateFromPayload(payload);
+                        phase_model_custom.preview(obj.Config);
                     case 'mapaoichanged'
                         obj.mapAoiChanged(payload);
                     case 'maptilesrequested'
@@ -349,6 +352,10 @@ classdef App < handle
                 case 'filepath_EXTR'
                     [file,path] = uigetfile({'*.txt;*.csv','Query-point files (*.txt, *.csv)'}, ...
                         'Select query-points file',obj.ProjectDir);
+                    if ~isequal(file,0), selected = fullfile(path,file); end
+                case 'customFunctionFile'
+                    [file,path] = uigetfile({'*.m','MATLAB model function (*.m)'}, ...
+                        'Select custom deterministic model',obj.ProjectDir);
                     if ~isequal(file,0), selected = fullfile(path,file); end
                 case 'coherence_dir'
                     value = uigetdir(obj.ProjectDir,'Select coherence folder');

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-10-30
+- Optional custom deterministic models for spatio-temporal DET/STC in 1D/2D,
+  with fixed or bounded estimated parameters and MATLAB function support.
+- Separate custom entry points preserve the automatic scientific engines and
+  copy their outlier rejection verbatim.
+- Two-stage fitting, explicit shared-data covariance propagation and
+  reproducible component/parameter exports. See
+  [the custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+- App and installer labels aligned to 7.1.0; custom models released for real-project testing.
+
 ### Added
 - Unified PHASE 7 hub and one-installation/many-project workflow.
 - Apple Silicon installer and tested native StaMPS/TRAIN PSI path.

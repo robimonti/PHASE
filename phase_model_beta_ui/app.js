@@ -115,6 +115,8 @@ function visibleGroups() {
   const dimension = ModelUI.config.projDim || "1D";
   const temporal = ["temporal", "temporal&NNI"].includes(ModelUI.config.procType);
   return asArray(ModelUI.schema.groups).filter(group => {
+    const custom = ModelUI.config.deterministicModelMode === "custom";
+    if (group.id === "custom") return !temporal && custom;
     if (group.id === "observations" || group.id === "splines") return temporal;
     if (group.id === "spatial1d") return !temporal && dimension === "1D";
     if (group.id === "spatial2d") return !temporal && dimension === "2D";
@@ -177,6 +179,15 @@ function renderPage() {
       grid.appendChild(createFullPsExtentAction());
     }
   });
+  if (group.id === "custom") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "browse-button";
+    button.textContent = "Preview model at current parameter values";
+    button.disabled = Boolean(ModelUI.state?.running);
+    button.addEventListener("click", () => { collectVisibleForm(false); send("PreviewCustomModel", payload()); });
+    grid.appendChild(button);
+  }
   renderContextNote(group.id);
   const groups = visibleGroups();
   const index = groups.findIndex(item => item.id === group.id);
@@ -202,7 +213,7 @@ function renderContextNote(groupId) {
 function createField(meta) {
   const card = document.createElement("div");
   card.className = `field-card${meta.type === "path" ? " wide" : ""}`;
-  if (meta.id === "flag_AOIbb") card.classList.add("wide");
+  if (meta.id === "flag_AOIbb" || meta.type === "multiline") card.classList.add("wide");
   const role = pairRole(meta.id);
   if (role) card.classList.add(`pair-${role}`);
   const covarianceRole = covarianceModelRole(meta.id);
@@ -257,6 +268,7 @@ function createFullPsExtentAction() {
 }
 
 function createControl(meta) {
+  if (meta.id === "customParameters") return createCustomParameterEditor(meta);
   const value = ModelUI.config[meta.id];
   if (meta.type === "boolean") {
     const wrap = document.createElement("div");
@@ -298,6 +310,11 @@ function createControl(meta) {
       control.appendChild(node);
     });
     control.value = textValue(value);
+  } else if (meta.type === "multiline") {
+    control = document.createElement("textarea");
+    control.rows = meta.id === "customParameters" ? 5 : 3;
+    control.value = textValue(value);
+    control.spellcheck = false;
   } else {
     control = document.createElement("input");
     if (meta.type === "number") {
@@ -333,6 +350,7 @@ function createControl(meta) {
 function dependencyDriver(id) {
   return [
     "flag_AOIbb", "projDim", "procType", "varNoise_method", "coll_proc",
+    "deterministicModelMode",
     "num_spl_method", "lambda_method", "detrendMethod", "flag_tsExtr",
     "min_period_days_method", "min_coll_snr_method",
     "min_coll_corr_samples_method", "spline_min_knot_intervals_method",
@@ -349,7 +367,10 @@ function isRelevant(meta) {
   const needsInterpolationGrid = c.procType !== "temporal";
   const deterministic = c.procType === "spatialDET";
   const stochastic = c.procType === "spatialSTC";
+  const custom = c.deterministicModelMode === "custom";
   const rules = {
+    deterministicModelMode: spatial,
+    customMaxObservations: stochastic && custom,
     filepathAOI: !c.flag_AOIbb,
     lonMinAOI: Boolean(c.flag_AOIbb), lonMaxAOI: Boolean(c.flag_AOIbb),
     latMinAOI: Boolean(c.flag_AOIbb), latMaxAOI: Boolean(c.flag_AOIbb),
@@ -370,8 +391,8 @@ function isRelevant(meta) {
     min_period_days: c.min_period_days_method === "manual",
     spline_min_knot_intervals: c.spline_min_knot_intervals_method === "manual",
     spline_max_fraction: c.spline_max_fraction_method === "manual",
-    detrendMethod: spatial, polyDegreeST: spatial,
-    useInclinedMeansST: spatial && c.detrendMethod === "residualAtm",
+    detrendMethod: spatial && !custom, polyDegreeST: spatial && !custom,
+    useInclinedMeansST: spatial && !custom && c.detrendMethod === "residualAtm",
     filepath_EXTR: Boolean(c.flag_tsExtr),
     dtCov_STC1D: stochastic && c.dtCov_method_STC1D === "manual",
     dsCov_STC1D: stochastic && c.dsCov_method_STC1D === "manual",
@@ -451,9 +472,84 @@ function collectControl(control) {
   } else {
     ModelUI.config[id] = control.value;
   }
+  if (id === "procType" && !["spatialDET", "spatialSTC"].includes(control.value)) {
+    ModelUI.config.deterministicModelMode = "automatic";
+  }
   if (["lonMinAOI","lonMaxAOI","latMinAOI","latMaxAOI"].includes(id)) {
     ModelUI.config.aoi_polygon_lonlat = [];
   }
+}
+
+function createCustomParameterEditor(meta) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-parameter-editor";
+  const storage = document.createElement("textarea");
+  storage.hidden = true;
+  storage.dataset.configField = meta.id;
+  storage.dataset.controlType = "text";
+  storage.value = textValue(ModelUI.config[meta.id]);
+  let parameters;
+  try {
+    parameters = JSON.parse(storage.value);
+    if (!Array.isArray(parameters)) throw new Error("Expected an array");
+  } catch {
+    storage.hidden = false;
+    storage.className = "control";
+    storage.rows = 5;
+    storage.addEventListener("input", () => { collectControl(storage); localChange(false); });
+    wrapper.appendChild(storage);
+    return wrapper;
+  }
+  const table = document.createElement("table");
+  table.className = "custom-parameter-table";
+  const head = table.createTHead().insertRow();
+  ["Name", "Value / initial value", "Estimate", "Lower bound", "Upper bound", "Std (fixed)", ""].forEach(label => {
+    const th = document.createElement("th"); th.textContent = label; head.appendChild(th);
+  });
+  const body = table.createTBody();
+  const save = () => {
+    storage.value = JSON.stringify(parameters);
+    ModelUI.config[meta.id] = storage.value;
+    localChange(false);
+  };
+  const drawRows = () => {
+    body.replaceChildren();
+    parameters.forEach((p, index) => {
+      const row = body.insertRow();
+      ["name", "value", "estimate", "lower", "upper", "std"].forEach(key => {
+        const input = document.createElement("input");
+        input.className = "control";
+        input.disabled = Boolean(ModelUI.state?.running);
+        input.setAttribute("aria-label", `${key} for parameter ${index + 1}`);
+        if (key === "estimate") { input.type = "checkbox"; input.checked = p.estimate === true; }
+        else { input.type = "text"; input.value = p[key] == null ? "" : String(p[key]); }
+        input.addEventListener("change", () => {
+          p[key] = key === "estimate" ? input.checked : key === "name" ? input.value.trim()
+            : input.value.trim() === "" ? null : Number(input.value);
+          if (key === "estimate" && p.estimate) p.std = null;
+          save();
+          if (key === "estimate") drawRows();
+        });
+        row.insertCell().appendChild(input);
+      });
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.className = "browse-button"; remove.textContent = "Remove";
+      remove.disabled = Boolean(ModelUI.state?.running);
+      remove.addEventListener("click", () => { parameters.splice(index, 1); save(); drawRows(); });
+      row.insertCell().appendChild(remove);
+    });
+  };
+  drawRows();
+  const add = document.createElement("button");
+  add.type = "button"; add.className = "browse-button"; add.textContent = "+ Add parameter";
+  add.disabled = Boolean(ModelUI.state?.running);
+  add.addEventListener("click", () => {
+    let number = parameters.length + 1;
+    while (parameters.some(p => p.name === `p${number}`)) number++;
+    parameters.push({ name: `p${number}`, value: 1, estimate: true }); save(); drawRows();
+  });
+  wrapper.append(storage, table, add);
+  return wrapper;
 }
 
 function localChange(notify = true) {

@@ -388,3 +388,10 @@ h1 { margin: 0; color: var(--graphite); font-size: 32px; line-height: 1.05; lett
   .aoi-extent-card { align-items: flex-start; flex-direction: column; }
   .map-heading { align-items: flex-start; flex-direction: column; }
 }
+/* Custom model controls use the same cards and rounded controls as the app. */
+.custom-parameter-editor { width: 100%; overflow-x: auto; }
+.custom-parameter-table { width: 100%; border-collapse: separate; border-spacing: 6px; }
+.custom-parameter-table th { font-size: 12px; text-align: left; font-weight: 600; }
+.custom-parameter-table .control { min-width: 90px; width: 100%; }
+.custom-parameter-table input[type="checkbox"] { min-width: 20px; width: 20px; height: 20px; accent-color: #3467d9; }
+.control:is(textarea) { resize: vertical; min-height: 90px; line-height: 1.5; font-family: ui-monospace, monospace; }

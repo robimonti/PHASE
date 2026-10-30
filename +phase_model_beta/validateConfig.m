@@ -130,6 +130,19 @@ if config.flag_tsExtr
     end
 end
 
+custom = isfield(config,'deterministicModelMode') && strcmp(config.deterministicModelMode,'custom');
+if custom
+    if ~ismember(config.procType,{'spatialDET','spatialSTC'})
+        errors{end+1} = 'Custom deterministic models require a spatio-temporal DET or STC workflow.';
+    else
+        try
+            phase_model_custom.parseDefinition(config);
+            phase_model_custom.validateOptions(config);
+        catch ME
+            errors{end+1} = ME.message;
+        end
+    end
+end
 if strcmp(config.procType,'spatialDET')
     if strcmp(config.projDim,'1D')
         errors = [errors validateDeterministic(config,'1D')]; %#ok<AGROW>

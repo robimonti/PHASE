@@ -1,4 +1,37 @@
-# PHASE v7.0.6
+# PHASE v7.1.0
+
+PHASE 7.1 adds an optional user-defined deterministic model for 1D/2D
+spatio-temporal displacement modelling, with the existing automatic workflow
+remaining the default.
+
+- Define a numerical expression or select a MATLAB function; assign fixed
+  parameters or estimate bounded parameters from the observations.
+- Custom DET/STC subtract the custom model once, apply the native residual
+  spline/covariance/collocation steps and restore the model at PS, grid and
+  query locations. The four automatic engines and outlier rejection are unchanged.
+- Diagnose the residual mean, or explicitly estimate a constant residual offset.
+- Fixed parameters default to zero uncertainty; optional standard deviations
+  or covariance matrices are propagated, including induced cross terms in
+  mixed fixed/estimated cases. Assigned errors are assumed independent of
+  input observation errors.
+- Added component, covariance, parameter and mean-diagnostic exports and a DSC
+  quadratic space/time example. See the [custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+- App and installer version labels are aligned to 7.1.0.
+
+**Validation status:** native integration tests cover DET/STC in 1D/2D;
+scientific checks include covariance matrix oracles, Monte Carlo, nonlinear
+fits and assigned-parameter uncertainty. The new custom path is being released
+for real-project testing and has not yet completed real-data validation.
+Uncertainty is local and conditional on the selected residual model and
+outlier mask; see the guide for its scope and assumptions.
+
+**Existing installations:** use Check for updates, prepare the update, close
+PHASE/MATLAB and relaunch PHASE from its installed launcher. Projects and
+installed StaMPS/TRAIN runtimes are preserved. New installations can use the
+platform installer below. The macOS DMG is unsigned/not notarized; Linux
+remains experimental. MATLAB and SNAP remain separate prerequisites.
+
+## Previous release: PHASE v7.0.6
 
 PHASE v7.0.6 completes interrupted-update recovery on Windows when a staged
 StaMPS Git pack file is read-only or temporarily locked. The updater now
