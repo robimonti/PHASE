@@ -313,6 +313,13 @@ classdef ProcessingEngine < dynamicprops
                 flag_PSinterp = app.flag_PSinterp;
                 flag_tsExtr = app.flag_tsExtr;
                 filepath_EXTR = app.filepath_EXTR;
+                if flag_tsExtr && strcmp(app.queryPointSource,'manual')
+                    queryConfig=struct('flag_tsExtr',true,'queryPointSource','manual', ...
+                        'queryPoints',app.queryPoints,'filepath_EXTR',filepath_EXTR);
+                    queryRoot=app.ConfigRoot;if isempty(queryRoot),queryRoot=fileparts(filepathIN);end
+                    queryConfig=phase_model_beta.materializeQueryPoints(queryConfig,queryRoot);
+                    filepath_EXTR=queryConfig.filepath_EXTR;
+                end
 
                 % Update progress (20%)
                 app.notifyBetaProgress(20, 'Importing files...');
@@ -879,17 +886,17 @@ classdef ProcessingEngine < dynamicprops
 
                     % check if the table contains the 'id' column, if not, set an artificial 'id' column
                     if ismember('id', EXTR_table.Properties.VariableNames)
-                        idEXTR = EXTR_table.id;
+                        idEXTR = cellstr(string(EXTR_table.id));
                     else
                         idEXTR = cellstr(['q' num2str((1:height(EXTR_table))')]);
                     end
 
                     % check that EXTR coordinates are inside the AOI
-                    if exist('latEXTR', 'var') && exist('lonEXTR', 'var')
+                    if ~isempty(latEXTR) && ~isempty(lonEXTR)
                         [xEXTR, yEXTR] = phase_model_beta.projectWgs84( ...
                             projectCRS,[lonEXTR,latEXTR]);
                         inside_AOI_flag = inpolygon(xEXTR, yEXTR, xyAOI(:,1), xyAOI(:,2));
-                    elseif exist('xEXTR', 'var') && exist('yEXTR', 'var')
+                    elseif ~isempty(xEXTR) && ~isempty(yEXTR)
                         inside_AOI_flag = inpolygon(xEXTR, yEXTR, xyAOI(:,1), xyAOI(:,2));
                         [latEXTR,lonEXTR] = projinv(projectCRS,xEXTR,yEXTR);
                     else
@@ -929,6 +936,7 @@ classdef ProcessingEngine < dynamicprops
                         if isprop(app,customName), customConfig.(customName) = app.(customName); end
                     end
                     customConfig.stopCheck = @() phase_model_beta.throwIfStopped(app);
+                    customConfig.queryPointIds = idEXTR;
                     customConfig.progressCallback = @(percentage,message) app.notifyBetaProgress(percentage,message);
                     app.notifyBetaProgress(50,'Rejecting outliers with the existing temporal filter');
                 % - 6.2) Perform the time series modelling

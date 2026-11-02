@@ -147,6 +147,37 @@ reference-area uncertainty is not inferred from the Excel.
 - `custom_model_components.csv`: component values and signed covariance terms.
 - `custom_residual_mean*.csv/json`: residual-mean diagnostics.
 - `custom_model_source/`: copied custom MATLAB function, when selected.
+- `figures/custom_covariance_time.*` and `custom_covariance_space.*`:
+  PNG and editable FIG plots of empirical values, contributing pair counts,
+  marginal fits and the common-amplitude kernel actually used for prediction.
+  Matching CSVs retain the plotted empirical/kernel values and pair counts.
+- `figures/custom_residual_mean.*`: mean/RMS by acquisition and mean by PS.
+- `custom_query_timeseries.csv`, when query points are enabled: dated point
+  predictions with station ID, coordinates, deterministic/residual components
+  and conditional standard deviation, referenced to the first input date.
+
+In **Outputs**, enable **Interpolate query-point time series**, then select
+**Load TXT / CSV** or **Enter points**. The GUI list accepts ID, longitude and
+latitude in WGS84 degrees; Save writes `query_points_gui.txt` in the project
+folder. Both sources follow the same prediction and AOI-selection path.
+Points outside the AOI follow the existing warning/exclusion rules. For
+custom DET/STC these are evaluations at the requested coordinates, not the
+nearest output-grid cell. Re-run modelling after changing query points.
+
+For GNSS comparison use the same LOS direction/sign, spatial reference and
+temporal zero; the custom query CSV uses the first input acquisition as zero.
+An externally fitted deterministic model does not by itself guarantee
+agreement after a different observation subset and residual model are used.
+
+Older STC covariance figures can be recovered from their JSON without refitting:
+
+```matlab
+phase_model_custom.exportSavedCovariance('custom_model.json', 'diagnostics')
+```
+
+Old results without pair counts show that information as unavailable.
+Covariance fitting does not enforce zero residual mean; inspect mean-by-date
+and mean-by-PS diagnostics separately. No additional detrending is performed.
 
 The normal workbook and spatial export pipeline also receive custom results.
 
@@ -182,4 +213,4 @@ time step in days control prediction count. No observations are silently dropped
 The custom path is released for real-project testing. Validate the full
 GUI/report path on a real project and review residual-mean diagnostics before
 relying on its scientific outputs. STC remains a dense method with an explicit
-RAM budget. Version: 7.1.1 development.
+RAM budget. Version: 7.1.2.

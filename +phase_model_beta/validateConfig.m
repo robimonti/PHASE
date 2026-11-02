@@ -123,7 +123,12 @@ if ismember(config.procType,{'temporal','temporal&NNI'})
 end
 
 if config.flag_tsExtr
-    if isempty(strtrim(config.filepath_EXTR))
+    if strcmp(config.queryPointSource,'manual')
+        try,phase_model_beta.parseQueryPoints(config.queryPoints);
+        catch ME,errors{end+1}=ME.message;end %#ok<AGROW>
+    elseif ~strcmp(config.queryPointSource,'file')
+        errors{end+1}='Select a query-point source.'; %#ok<AGROW>
+    elseif isempty(strtrim(config.filepath_EXTR))
         errors{end+1} = 'Select the query-points file.'; %#ok<AGROW>
     elseif forRun && ~isfile(config.filepath_EXTR)
         errors{end+1} = ['Query-points file does not exist: ' config.filepath_EXTR]; %#ok<AGROW>

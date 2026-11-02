@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed — 7.1.1 development
+## [7.1.2] - 2026-11-02
+- Export custom STC empirical covariance/kernel plots as PNG and FIG, with
+  contributing pair counts, marginal fits and the actual common-amplitude
+  prediction kernel; export residual-mean diagnostic plots for custom DET/STC.
+- Recover covariance plots from an existing STC JSON without refitting.
+- Enter query-point IDs and WGS84 coordinates in the GUI or load TXT/CSV;
+  GUI points are saved to the same TXT format and use the same processing path.
+- Export dated custom query series with components and conditional uncertainty;
+  fix X/Y query detection and normalise numeric station IDs for report exports.
+- Preserve input coordinates/times and query predictions in custom MAT results.
+- App and installer labels aligned to 7.1.2; automatic scientific engines and
+  outlier rejection remain unchanged.
+
+## [7.1.1] - 2026-11-02
 - Simplified Automatic/Custom selection and moved the AOI source choice above
   the map; shapefile mode no longer requires opening the drawing map.
 - Custom model time starts at the first acquisition, with no separate offset.

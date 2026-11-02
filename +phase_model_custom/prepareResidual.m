@@ -11,6 +11,7 @@ if estimatedGB>config.customMemoryGB
 end
 phase_model_custom.reportProgress(config,56,sprintf('Fitting empirical residual covariances — %d samples, estimated matrix RAM %.2f GiB',numel(y),estimatedGB));
 settings=phase_model_custom.fitCovariance(c,r,config,fit.context,ids);
+phase_model_custom.exportCovarianceDiagnostics(settings,fit.context.outputDir);
 phase_model_custom.reportProgress(config,57,'Building the observation covariance matrix');
 if strcmp(config.projDim,'1D')
     [C,~,N]=compute_C_obs_obs_nugget([c(:,4),c(:,3)],settings.timeFunction, ...

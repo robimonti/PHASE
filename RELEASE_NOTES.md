@@ -1,4 +1,32 @@
-# PHASE v7.1.1
+# PHASE v7.1.2
+
+- Custom STC now saves temporal/spatial covariance plots as PNG and editable
+  FIG, plus CSV curves and contributing pair counts. Plots distinguish the
+  marginal fits from the common-amplitude kernel actually used in prediction.
+- Custom DET/STC save residual-mean diagnostics by acquisition and PS. These
+  diagnostics do not enforce zero residual mean or modify the fitted model.
+- Outputs now offers a GUI list of station ID, WGS84 longitude and latitude,
+  alongside TXT/CSV loading. Save writes query_points_gui.txt in the project;
+  both input methods use the same prediction path.
+- Custom point exports include date, station ID, coordinates, deterministic
+  and residual contributions, total LOS displacement and conditional standard
+  deviation. Point predictions use the first input acquisition as temporal zero.
+- Fixed X/Y query-file detection and numeric IDs in existing report exports.
+- Existing STC covariance plots can be recovered from custom_model.json
+  without repeating processing; older results cannot supply missing pair counts.
+- App and installer versions aligned to 7.1.2. Automatic scientific engines,
+  custom fitting equations and the original outlier filter are unchanged.
+
+**Validation:** all four custom DET/STC entry tests check figure/CSV creation
+and agreement of query predictions with the same grid coordinate. Query TXT
+round-trip and GUI editing are tested. Real-project GNSS agreement still
+requires matching LOS/sign, spatial reference and temporal zero, and review
+of the empirical covariance/residual diagnostics. Linux remains experimental;
+the Apple Silicon DMG is unsigned and not notarized.
+
+See the [custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+
+## PHASE v7.1.1
 
 This update simplifies custom deterministic modelling and accelerates native
 STC prediction without changing the automatic engines or outlier rejection.

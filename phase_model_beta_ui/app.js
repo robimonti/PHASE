@@ -312,6 +312,7 @@ function createFullPsExtentAction() {
 
 function createControl(meta) {
   if (meta.id === "customParameters") return createCustomParameterEditor(meta);
+  if (meta.id === "queryPoints") return createQueryPointEditor(meta);
   const value = ModelUI.config[meta.id];
   if (meta.type === "boolean") {
     const wrap = document.createElement("div");
@@ -393,7 +394,7 @@ function createControl(meta) {
 function dependencyDriver(id) {
   return [
     "flag_AOIbb", "projDim", "procType", "varNoise_method", "coll_proc",
-    "deterministicModelMode",
+    "deterministicModelMode", "queryPointSource",
     "num_spl_method", "lambda_method", "detrendMethod", "flag_tsExtr",
     "min_period_days_method", "min_coll_snr_method",
     "min_coll_corr_samples_method", "spline_min_knot_intervals_method",
@@ -436,7 +437,9 @@ function isRelevant(meta) {
     spline_max_fraction: c.spline_max_fraction_method === "manual",
     detrendMethod: spatial && !custom, polyDegreeST: spatial && !custom,
     useInclinedMeansST: spatial && !custom && c.detrendMethod === "residualAtm",
-    filepath_EXTR: Boolean(c.flag_tsExtr),
+    queryPointSource: Boolean(c.flag_tsExtr),
+    queryPoints: Boolean(c.flag_tsExtr) && c.queryPointSource === "manual",
+    filepath_EXTR: Boolean(c.flag_tsExtr) && c.queryPointSource !== "manual",
     dtCov_STC1D: stochastic && c.dtCov_method_STC1D === "manual",
     dsCov_STC1D: stochastic && c.dsCov_method_STC1D === "manual",
     dtCov_STC2D: stochastic && c.dtCov_method_STC2D === "manual",
@@ -521,6 +524,53 @@ function collectControl(control) {
   if (["lonMinAOI","lonMaxAOI","latMinAOI","latMaxAOI"].includes(id)) {
     ModelUI.config.aoi_polygon_lonlat = [];
   }
+}
+
+function createQueryPointEditor(meta) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-parameter-editor";
+  const storage = document.createElement("textarea");storage.hidden = true;
+  storage.dataset.configField = meta.id;storage.dataset.controlType = "text";
+  storage.value = textValue(ModelUI.config[meta.id]) || "[]";
+  let points;
+  try { points = JSON.parse(storage.value); if (!Array.isArray(points)) throw Error(); }
+  catch { storage.hidden = false; storage.className = "control";
+    storage.addEventListener("input",()=>{collectControl(storage);localChange(false);});
+    wrapper.appendChild(storage);return wrapper; }
+  const table = document.createElement("table");table.className = "custom-parameter-table";
+  const header = table.createTHead().insertRow();
+  ["Station ID","Longitude [°]","Latitude [°]",""].forEach(label=>{
+    const th=document.createElement("th");th.textContent=label;header.appendChild(th);
+  });
+  const body=table.createTBody();
+  const save=()=>{storage.value=JSON.stringify(points);ModelUI.config[meta.id]=storage.value;localChange(false);};
+  const draw=()=>{
+    body.replaceChildren();
+    points.forEach((p,index)=>{
+      const row=body.insertRow();
+      ["id","longitude","latitude"].forEach(key=>{
+        const input=document.createElement("input");input.className="control";input.type="text";
+        input.value=p[key]==null?"":String(p[key]);input.disabled=Boolean(ModelUI.state?.running);
+        input.setAttribute("aria-label",`${key} for query point ${index+1}`);
+        if(key!=="id")input.inputMode="decimal";
+        input.addEventListener("input",()=>{
+          p[key]=key==="id"?input.value.trim():input.value.trim()===""?null:Number(input.value);save();
+        });
+        row.insertCell().appendChild(input);
+      });
+      const remove=document.createElement("button");remove.type="button";
+      remove.className="browse-button";remove.textContent="Remove";remove.disabled=Boolean(ModelUI.state?.running);
+      remove.addEventListener("click",()=>{points.splice(index,1);save();draw();});
+      row.insertCell().appendChild(remove);
+    });
+  };
+  const add=document.createElement("button");add.type="button";add.className="browse-button";
+  add.textContent="+ Add point";add.disabled=Boolean(ModelUI.state?.running);
+  add.addEventListener("click",()=>{
+    let n=points.length+1;while(points.some(p=>p.id===`q${n}`))n++;
+    points.push({id:`q${n}`,longitude:null,latitude:null});save();draw();
+  });
+  draw();wrapper.append(storage,table,add);return wrapper;
 }
 
 function createCustomParameterEditor(meta) {

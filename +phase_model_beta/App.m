@@ -227,7 +227,7 @@ classdef App < handle
             if ~isempty(errors)
                 error('PHASE_Model_beta:invalidConfiguration','%s',strjoin(errors,newline));
             end
-            pathValue = phase_model_beta.saveConfig(obj.ProjectDir,candidate);
+            [pathValue,candidate] = phase_model_beta.saveConfig(obj.ProjectDir,candidate);
             obj.Config = candidate;
             obj.SavedConfig = candidate;
             obj.refreshMapAoi(true);

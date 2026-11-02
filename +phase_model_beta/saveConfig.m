@@ -1,9 +1,10 @@
-function pathValue = saveConfig(rootDir,config)
+function [pathValue,config] = saveConfig(rootDir,config)
 %SAVECONFIG Atomically save the standalone Model configuration.
 
 if nargin < 1 || isempty(rootDir)
     rootDir = phase_model_beta.projectRoot();
 end
+config=phase_model_beta.materializeQueryPoints(config,rootDir);
 pathValue = fullfile(rootDir,'input_model.mat');
 backup = [pathValue '.bak'];
 temporary = [tempname(rootDir) '.mat'];

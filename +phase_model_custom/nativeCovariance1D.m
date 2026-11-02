@@ -222,4 +222,8 @@ settings=struct('dimension',config.projDim,'native',true,'timeParameters',c1_t, 
     'noiseVariance',A_noise,'signalVariance',c1_m,'lagTime',lag_t, ...
     'covarianceTime',eCovF_mean_t,'lagSpace',lag_s,'covarianceSpace',eCovF_mean_s, ...
     'centeringPolicy','Original cleanObs: spatial epoch centering at nonzero lags; raw second moment at lag zero; temporal products unchanged');
+settings.pairCountTime=round(1./Cecf_mean_t);
+settings.pairCountSpace=round(1./Cecf_mean_s);
+settings.marginalTimeParameters=c_opt_t;
+settings.marginalSpaceParameters=c_opt_s;
 end

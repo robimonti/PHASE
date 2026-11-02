@@ -36,10 +36,25 @@ for dimension={'1D','2D'}
                 args={raw,ids,dates,times,xg,yg,true,folder,6,input,output,jobs,os, ...
                     NaN,NaN,'32 T',xy,aoi,30,'cleanObs',1,'gaussian','gaussian',10,[]};
         end
-        [~,outDates,~,ps,model,stds]=feval(['STmodel_' family{1} dimension{1} '_custom'],args{:},c,folder);
+        args{end}=xy(1,:);c.queryPointIds={'GNSS_TEST'};
+        [~,outDates,~,ps,model,stds,query]=feval(['STmodel_' family{1} dimension{1} '_custom'],args{:},c,folder);
         assert(numel(outDates)==numel(dates) && size(ps,1)==4 && size(ps,2)==numel(dates));
         assert(all(isfinite(model(:))) && all(isfinite(stds(:))) && all(model(:,1)==0));
+        assert(max(abs(query(1,:)-model(1,:)))<1e-8,'Point prediction differs from the same grid location.');
+        queryFile=readtable(fullfile(folder,'custom_query_timeseries.csv'),'TextType','string');
+        assert(all(queryFile.ID=="GNSS_TEST")&&all(isfinite(queryFile.Std_mm)));
+        assert(max(abs(queryFile.Total_mm-query(:)))<1e-8);
         diagnostic=load(fullfile(folder,'custom_model_results.mat'),'clean');
+        assert(isfile(fullfile(folder,'figures','custom_residual_mean.png')));
+        if strcmp(family{1},'STC')
+            for direction={'time','space'}
+                base=['custom_covariance_' direction{1}];
+                assert(isfile(fullfile(folder,'figures',[base '.png'])));
+                assert(isfile(fullfile(folder,'figures',[base '.fig'])));
+                curves=readtable(fullfile(folder,[base '.csv']));
+                assert(all(curves.PairCount>0)&&all(isfinite(curves.FittedSignal_mm2)));
+            end
+        end
         if isempty(firstClean), firstClean=diagnostic.clean;
         else, assert(isequaln(firstClean,diagnostic.clean),'Outlier filtering differs across custom entries.'); end
     end
