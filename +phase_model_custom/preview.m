@@ -15,7 +15,6 @@ t=linspace(0,duration,150)'; positions=[-100,0,100];
 if strcmp(config.customCoordinates,'lonlat'),positions=[-0.01,0,0.01];end
 f=figure('Name','PHASE · Custom model preview','Color','w'); ax=axes(f); hold(ax,'on');
 context=struct('origin',[0,0],'referenceDay',reference);
-context.timeOffset=config.customTimeOffset;
 for k=1:numel(positions)
     position=positions(k);
     coordinates=[repmat(position,numel(t),1),zeros(numel(t),1), ...

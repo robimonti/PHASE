@@ -218,6 +218,8 @@ def ignored(directory: str, names: list[str]) -> set[str]:
                or name.endswith((".pyc", ".docx", ".zip"))}
     if current == SOURCE_FOR_COPY:
         blocked.update(ROOT_IGNORED.intersection(names))
+    if current == SOURCE_FOR_COPY / "examples":
+        blocked.update({"selected_random_points_DSC_VV.xlsx"}.intersection(names))
     if current.name == "tools":
         blocked.update(name for name in names if name not in {
             "srtm_precache.py", "snap_dim_version_check.py"
@@ -336,7 +338,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.1.0"
+            version = "v7.1.1"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],

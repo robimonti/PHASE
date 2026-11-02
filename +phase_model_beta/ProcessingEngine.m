@@ -929,6 +929,8 @@ classdef ProcessingEngine < dynamicprops
                         if isprop(app,customName), customConfig.(customName) = app.(customName); end
                     end
                     customConfig.stopCheck = @() phase_model_beta.throwIfStopped(app);
+                    customConfig.progressCallback = @(percentage,message) app.notifyBetaProgress(percentage,message);
+                    app.notifyBetaProgress(50,'Rejecting outliers with the existing temporal filter');
                 % - 6.2) Perform the time series modelling
                 switch procType
                     case 'spatialDET'

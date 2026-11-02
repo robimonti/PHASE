@@ -78,3 +78,6 @@ Roberto*/
 /_*/
 email_*.txt
 tests/test_roberto_v4_fix.py
+
+# Private real-project test input; never distribute in source releases.
+/examples/selected_random_points_DSC_VV.xlsx

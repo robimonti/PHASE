@@ -22,7 +22,6 @@ end
 context=struct('referenceDay',timesIN(master),'origin',mean(xy,1));
 context.times=timesIN; context.xy=xy; context.outputDir=outputDir;
 context.utmZone=utmZone;context.coordinateSystem=config.customCoordinates;
-context.timeOffset=config.customTimeOffset;
 if strcmp(config.customCoordinates,'lonlat')
     [lat,lon]=utm2deg(xy(:,1),xy(:,2),repmat(utmZone,size(xy,1),1));
     context.origin=mean([lon,lat],1);
@@ -59,18 +58,30 @@ if numel(y)<max(5,2*nnz([definition.parameters.estimate])+1)
 end
 fprintf('Custom deterministic fit: %d observations, %d estimated parameters.\n',numel(y),nnz([definition.parameters.estimate]));
 phase_model_custom.checkStop(config);
+phase_model_custom.reportProgress(config,54,'Fitting the custom deterministic model');
 fit=phase_model_custom.fitDeterministic(definition,c,y,context);
 if ~isfolder(outputDir), mkdir(outputDir); end
 meanDiagnostics=phase_model_custom.meanDiagnostics(c,y-fit.mean,ids,context,outputDir);
 fprintf('Custom residual fit: %s.\n',config.procType);
+phase_model_custom.reportProgress(config,56,'Estimating residual structure and uncertainty');
 residual=phase_model_custom.prepareResidual(c,y,ids,fit,config);
+if strcmp(residual.kind,'STC')
+    residual.parameterCovariance=fit.L*residual.C*fit.L';
+    residual.whitenedJacobian=residual.factor\fit.J;
+end
+if any(definition.assignedCovariance(:))
+    [~,residual.assignedJacobian]=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context);
+    if strcmp(residual.kind,'STC')
+        residual.whitenedAssignedJacobian=residual.factor\(residual.assignedJacobian+fit.J*fit.assignedSensitivity);
+    end
+end
 times=(0:config.step_t_ST:timesIN(end))';
 dates=datesIN(1)+days(times);
 q=expand(gridXY,gridS,times);
-prediction=predictBatches(q,0);
+prediction=predictBatches(q,0,'Output grid',59,65);
 onGrid=reshape(prediction.total,size(gridXY,1),[]);
 stdGrid=reshape(sqrt(prediction.variance),size(gridXY,1),[]);
-obsPrediction=predictBatches(allCoordinates,context.referenceDay);
+obsPrediction=predictBatches(allCoordinates,context.referenceDay,'Input PS',65,68);
 atPS=reshape(obsPrediction.total,np,nt);
 atQuery=[];
 if ~isempty(xyQuery)
@@ -79,7 +90,7 @@ if ~isempty(xyQuery)
     else
         queryS=zeros(size(xyQuery,1),1);
     end
-    queryPrediction=predictBatches(expand(xyQuery,queryS,times),0);
+    queryPrediction=predictBatches(expand(xyQuery,queryS,times),0,'Query points',68,69);
     atQuery=reshape(queryPrediction.total,size(xyQuery,1),[]);
 end
 [lat,lon]=utm2deg(gridXY(:,1),gridXY(:,2),repmat(utmZone,size(gridXY,1),1));
@@ -104,7 +115,8 @@ metadata=struct('workflow','custom two-stage','family',config.procType, ...
     'units','LOS displacement mm; metric x,y,s; time days', ...
     'uncertainty','Local sampling/prediction uncertainty, conditional on selected covariance/spline settings and outlier mask; includes deterministic-residual cross covariance. Excludes covariance hyperparameter uncertainty, spline bias and model discrepancy.');
 metadata.residualMeanPolicy=config.customResidualMean;metadata.meanDiagnostics=meanDiagnostics;
-metadata.coordinateSystem=config.customCoordinates;metadata.modelCoordinateOrigin=context.origin;metadata.modelTimeOffsetDays=context.timeOffset;
+metadata.coordinateSystem=config.customCoordinates;metadata.modelCoordinateOrigin=context.origin;
+metadata.modelTimeOrigin=char(string(datesIN(1)));
 metadata.assignedParameterAssumption='Assigned parameter errors are independent of observation errors; default covariance zero.';
 if strcmp(residual.kind,'STC')
     metadata.residualSettings=rmfield(residual.settings,{'timeFunction','spaceFunction'});
@@ -127,8 +139,11 @@ componentTable=table(q(:,1),q(:,2),q(:,3),q(:,4),prediction.deterministic, ...
     'ResidualErrorVariance_mm2','CrossCovariance_mm2'});
 writetable(componentTable,fullfile(outputDir,'custom_model_components.csv'));
 fprintf('Custom model completed. Diagnostics: %s\n',fullfile(outputDir,'custom_model.json'));
-    function p=predictBatches(query,reference)
-        p=struct(); batch=max(1,min(500,floor(32e6/(8*numel(y)*8))));
+    function p=predictBatches(query,reference,label,startPercent,endPercent)
+        % Bound temporary matrices while allowing efficient BLAS-sized blocks.
+        p=struct(); batch=max(1,min(1024,floor(128*2^20/(8*numel(y)*8))));
+        clock=tic;
+        phase_model_custom.reportProgress(config,startPercent,sprintf('%s: residual prediction and uncertainty (0 / %d)',label,size(query,1)));
         for first=1:batch:size(query,1)
             last=min(first+batch-1,size(query,1));
             part=phase_model_custom.predict(query(first:last,:),reference,c,ids,fit,residual);
@@ -140,7 +155,12 @@ fprintf('Custom model completed. Diagnostics: %s\n',fullfile(outputDir,'custom_m
             end
             drawnow limitrate
             phase_model_custom.checkStop(config);
-            if mod(first-1,batch*20)==0, fprintf('Custom prediction: %d/%d rows.\n',last,size(query,1)); end
+            if toc(clock)>=2 || last==size(query,1)
+                fraction=last/size(query,1);
+                phase_model_custom.reportProgress(config,startPercent+(endPercent-startPercent)*fraction, ...
+                    sprintf('%s: residual prediction and uncertainty — %.0f%% (%d / %d space-time samples)',label,100*fraction,last,size(query,1)));
+                clock=tic;
+            end
         end
     end
 end

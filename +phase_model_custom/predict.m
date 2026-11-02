@@ -11,7 +11,12 @@ m=m-m0;
 if strcmp(residual.kind,'STC')
     K=phase_model_custom.kernel(q,c,residual.settings) ...
         -phase_model_custom.kernel(reference,c,residual.settings);
-    W=(residual.factor'\(residual.factor\K'))';
+    % Whiten once: avoid a second triangular solve and O(batch*n^2)
+    % covariance multiplications. W*C=K gives the identical error equations.
+    V=residual.factor\K';
+    if isfield(residual,'whitenedJacobian'), whitenedJ=residual.whitenedJacobian;
+    else, whitenedJ=residual.factor\fit.J; end
+    WJ=V'*whitenedJ;
     stochastic=K*residual.alpha;
     t=q(:,4); t0=referenceDay;
     if isfield(residual,'native') && residual.native
@@ -30,6 +35,20 @@ else
     stochastic=B*residual.coefficients;
     K=zeros(size(W)); targetVariance=zeros(size(q,1),1);
 end
+if strcmp(residual.kind,'STC')
+    if isfield(residual,'parameterCovariance')
+        Pfit=residual.parameterCovariance;
+    else
+        Pfit=fit.L*residual.C*fit.L';
+    end
+    base=targetVariance-sum(V.^2,1)';
+    A=Jq-WJ;
+    total=base+sum((A*Pfit).*A,2);
+    deterministicVariance=sum((Jq*Pfit).*Jq,2);
+    residualVariance=base+sum((WJ*Pfit).*WJ,2);
+    cross=-sum((Jq*Pfit).*WJ,2);
+    varianceScale=targetVariance;
+else
 F=Jq*fit.L;
 G=W-(W*fit.J)*fit.L;
 H=F+G;
@@ -44,19 +63,32 @@ total=targetVariance+sum(HC.*H,2)-2*sum(H.*K,2);
 deterministicVariance=sum(FC.*F,2);
 residualVariance=targetVariance+sum(GC.*G,2)-2*sum(G.*K,2);
 cross=sum(FC.*G,2)-sum(F.*K,2);
-if isfield(fit.definition,'assignedCovariance')
+varianceScale=sum(HC.*H,2);
+end
+if isfield(fit.definition,'assignedCovariance') && any(fit.definition.assignedCovariance(:))
     P=fit.definition.assignedCovariance;
-    [~,Jobs]=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context);
+    if isfield(residual,'assignedJacobian'), Jobs=residual.assignedJacobian;
+    else, [~,Jobs]=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context); end
     sensitivity=zeros(numel(fit.free),numel(fit.values));
     if isfield(fit,'assignedSensitivity'),sensitivity=fit.assignedSensitivity;end
     D=Jall-J0all+Jq*sensitivity;
-    R=-W*(Jobs+fit.J*sensitivity); Q=D+R;
+    if strcmp(residual.kind,'STC')
+        if isfield(residual,'whitenedAssignedJacobian')
+            assignedJ=residual.whitenedAssignedJacobian;
+        else
+            assignedJ=residual.factor\(Jobs+fit.J*sensitivity);
+        end
+        R=-V'*assignedJ;
+    else
+        R=-W*(Jobs+fit.J*sensitivity);
+    end
+    Q=D+R;
     total=total+sum((Q*P).*Q,2);
     deterministicVariance=deterministicVariance+sum((D*P).*D,2);
     residualVariance=residualVariance+sum((R*P).*R,2);
     cross=cross+sum((D*P).*R,2);
 end
-scale=max([1;abs(targetVariance);abs(sum(HC.*H,2))]);
+scale=max([1;abs(targetVariance);abs(varianceScale)]);
 if any(total < -1e-7*scale)
     error('PHASE:customVariance','Negative propagated variance beyond numerical precision.');
 end

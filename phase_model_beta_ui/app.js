@@ -162,7 +162,10 @@ function renderPage() {
   const group = visibleGroups().find(item => item.id === ModelUI.active) || visibleGroups()[0];
   if (!group) return;
   ModelUI.active = group.id;
-  byId("aoi-map-panel").classList.toggle("hidden", group.id !== "aoi");
+  byId("aoi-map-panel").classList.toggle("hidden", group.id !== "aoi" || !ModelUI.config.flag_AOIbb);
+  const aoiSource = byId("aoi-source");
+  aoiSource.innerHTML = "";
+  aoiSource.classList.toggle("hidden", group.id !== "aoi");
   byId("section-kicker").textContent = group.kicker || "Configuration";
   byId("section-title").textContent = group.title || "";
   byId("section-subtitle").textContent = group.subtitle || "";
@@ -171,15 +174,53 @@ function renderPage() {
   byId("section-meta").textContent = `${relevant.length} control${relevant.length === 1 ? "" : "s"}`;
   const grid = byId("form-grid");
   grid.innerHTML = "";
+  let coordinateFields, coordinateSection;
+  if (group.id === "custom") {
+    const details = document.createElement("details");
+    details.className = "custom-coordinates";
+    details.id = "custom-coordinate-settings";
+    const c = ModelUI.config;
+    const explicitOrigin = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    details.open = c.customCoordinates === "lonlat" || explicitOrigin(c.customOriginX) || explicitOrigin(c.customOriginY);
+    details.innerHTML = '<summary>Coordinate settings · optional</summary><p>PHASE supplies coordinates automatically. Change these settings only if your model requires a specific coordinate system or coefficients defined relative to a known origin. Fixed coefficients must use the same units and origin as their original model.</p>';
+    coordinateFields = document.createElement("div");
+    coordinateFields.className = "form-grid";
+    details.appendChild(coordinateFields);
+    // Append after the basic model fields below.
+    coordinateSection = details;
+  }
   fields.forEach(meta => {
+    if (group.id === "aoi" && meta.id === "flag_AOIbb") {
+      const source = document.createElement("div");
+      source.className = "field-card wide";
+      source.innerHTML = '<div class="field-label">AOI source</div>';
+      const row = document.createElement("div"); row.className = "control-row";
+      [[false,"Load shapefile"],[true,"Draw on map"]].forEach(([value,label]) => {
+        const button = document.createElement("button"); button.type = "button";
+        button.className = `button ${Boolean(ModelUI.config.flag_AOIbb) === value ? "primary" : "secondary"}`;
+        button.textContent = label;
+        button.setAttribute("aria-pressed",String(Boolean(ModelUI.config.flag_AOIbb) === value));
+        button.disabled = Boolean(ModelUI.state?.running);
+        button.addEventListener("click",() => {
+          collectVisibleForm(false); ModelUI.config.flag_AOIbb=value; localChange(); renderAll();
+        });
+        row.appendChild(button);
+      });
+      source.appendChild(row); aoiSource.appendChild(source);
+      if (ModelUI.config.flag_AOIbb) aoiSource.appendChild(createFullPsExtentAction());
+      return;
+    }
+    if (group.id === "aoi" && !isRelevant(meta)) return;
     const card = createField(meta);
     if (!isRelevant(meta)) card.classList.add("inactive");
-    grid.appendChild(card);
-    if (meta.id === "flag_AOIbb" && ModelUI.config.flag_AOIbb) {
-      grid.appendChild(createFullPsExtentAction());
+    if (coordinateFields && ["customCoordinates","customOriginX","customOriginY"].includes(meta.id)) {
+      coordinateFields.appendChild(card);
+    } else {
+      grid.appendChild(card);
     }
   });
   if (group.id === "custom") {
+    grid.appendChild(coordinateSection);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "browse-button";
@@ -201,6 +242,8 @@ function renderContextNote(groupId) {
   let message = "";
   if (groupId === "processing") {
     message = `${processingLabel()} · ${ModelUI.config.projDim || "1D"} project`;
+  } else if (groupId === "custom") {
+    message = "PHASE supplies PS and output coordinates and acquisition times. By default x and y are metres from the selected PS centre, and t is days from the first acquisition. Define your model and parameters; no manual coordinate preparation is needed.";
   } else if (groupId === "spatial1d" || groupId === "spatial2d") {
     message = ModelUI.config.procType === "spatialDET"
       ? "Showing deterministic spline controls for the selected project dimension."
@@ -370,7 +413,7 @@ function isRelevant(meta) {
   const custom = c.deterministicModelMode === "custom";
   const rules = {
     deterministicModelMode: spatial,
-    customMaxObservations: stochastic && custom,
+    customMemoryGB: stochastic && custom,
     filepathAOI: !c.flag_AOIbb,
     lonMinAOI: Boolean(c.flag_AOIbb), lonMaxAOI: Boolean(c.flag_AOIbb),
     latMinAOI: Boolean(c.flag_AOIbb), latMaxAOI: Boolean(c.flag_AOIbb),

@@ -1,7 +1,10 @@
 function z=DSC_quadratic_example(x,y,s,t,p) %#ok<INUSD>
 %DSC_QUADRATIC_EXAMPLE Rounded coefficients supplied in DSC.txt.
 % Select lonlat coordinates, origin X=152.20890917, Y=-4.23823009.
-% Model t is days since 2021-01-02; set the time offset if input starts later.
+% PHASE passes t in days since the first input acquisition (t0).
+% The supplied coefficients originally used 2021-01-02 as time origin.
+% Reusing them unchanged is physically consistent only with that origin;
+% otherwise adapt the polynomial inside this function or refit its parameters.
 % This illustrative file does not assert the precision of the original fit.
 c=polyval([2.5063e-9 -2.5302e-6 7.9440e-4 -9.1404e-2 36.816],t);
 a=polyval([-1.7911e-7 2.9430e-4 -1.4059e-1 15.275 777.24],t);

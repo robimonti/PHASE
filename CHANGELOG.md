@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 7.1.1 development
+- Simplified Automatic/Custom selection and moved the AOI source choice above
+  the map; shapefile mode no longer requires opening the drawing map.
+- Custom model time starts at the first acquisition, with no separate offset.
+- STC memory budget is expressed in GiB with an explicit matrix-RAM estimate.
+- Custom progress distinguishes outlier filtering, model fitting, covariance
+  fitting/factorisation and grid/PS/query prediction with uncertainty.
+- Equivalent Cholesky-whitened uncertainty equations and larger bounded
+  prediction blocks remove repeated dense covariance products. Automatic
+  scientific functions and the original outlier filter remain unchanged.
+- Clarified that the output temporal step is in days, including predictions
+  between acquisitions. Private student input is excluded from Git.
+- App/installer development versions aligned to 7.1.1.
+- Automatic spatial centering for the normal custom workflow; coordinate
+  overrides are grouped in an optional section, expanded for non-defaults.
+
 ## [7.1.0] - 2026-10-30
 - Optional custom deterministic models for spatio-temporal DET/STC in 1D/2D,
   with fixed or bounded estimated parameters and MATLAB function support.

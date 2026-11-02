@@ -12,11 +12,8 @@ for name={'customOriginX','customOriginY'}
         error('PHASE:customOrigin','Origins must be finite or empty for automatic centering.');
     end
 end
-if ~isscalar(config.customTimeOffset)||~isfinite(config.customTimeOffset)
-    error('PHASE:customTime','The model time offset must be finite.');
-end
-limit=config.customMaxObservations;
-if ~isnumeric(limit)||~isscalar(limit)||~isfinite(limit)||limit<5||limit~=round(limit)
-    error('PHASE:customOption','The dense observation limit must be an integer of at least 5.');
+limit=config.customMemoryGB;
+if ~isnumeric(limit)||~isscalar(limit)||~isfinite(limit)||limit<0.1
+    error('PHASE:customOption','The STC memory budget must be at least 0.1 GiB.');
 end
 end

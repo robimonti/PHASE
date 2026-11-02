@@ -34,7 +34,7 @@ distance-based automatic spatial bins; empirical/fitting functions are reused.
 ## Interface and model contract
 
 In Displacement Modeling choose DET or STC, then
-**Model design → Deterministic model → Custom (two stages)**.
+**Model design → Deterministic model → Custom**.
 Use an expression and the parameter table, or a self-contained MATLAB file:
 
 ```matlab
@@ -50,17 +50,27 @@ operators where needed. Do not estimate a time-independent physical offset:
 temporal referencing removes it and makes it unidentifiable.
 
 PHASE evaluates the same function at PS, grid and query positions.
+For the normal PHASE PSI-to-model workflow, no manual coordinate preparation
+is required: use the default metric coordinates, leave the origins empty,
+and define the model and its parameters. The optional **Coordinate settings**
+section is collapsed by default and opens automatically for non-default values.
+Centering is a coordinate convention, not a separate data correction. Free
+coefficients are estimated in that convention. Fixed external coefficients
+must retain the units and origin for which they were defined; changing an
+origin without transforming those coefficients generally changes the model.
 Choose project metric coordinates or longitude/latitude in degrees.
-Model origins can be assigned; empty origins use the mean input PS coordinate.
+Model origins can be assigned; empty origins use the mean selected PS coordinate.
 The chainage `s` is available for 1D. Time is days from the first acquisition
-plus the explicit model time offset. PHASE references physical model values
+(t0); there is no separate time-offset control. PHASE references physical model values
 to the input master epoch. Existing workbook output conventions are retained.
 
 **DSC example:** select
 `examples/custom_models/DSC_quadratic_example.m`, longitude/latitude,
 X origin `152.20890917`, Y origin `-4.23823009`, no parameters (`[]`).
-The model time origin is 2021-01-02. If the first input acquisition is later,
-enter its day difference as the model time offset. Coefficients in this file
+The supplied coefficients used a model time origin of 2021-01-02. For exact
+reuse, the input must start on that date; otherwise adapt the polynomial
+inside the user function or refit its parameters. PHASE always supplies t=0
+at the first input acquisition. Coefficients in this file
 are the rounded values supplied in DSC.txt; at the given target and day 540
 the absolute model evaluates to approximately 127.962858 mm. PHASE's relative
 value also subtracts the model at the input reference epoch. Obtain full
@@ -154,7 +164,22 @@ example. The four native entry integrations exercise outlier filtering plus
 native residual modelling. Python tests check automatic source isolation,
 verbatim filter copies and reuse of the native residual selection code.
 
+Prediction evaluates the deterministic model, the residual field and its
+uncertainty. Native STC uses a dense covariance factorisation, followed by
+memory-bounded blocks of space-time queries. Algebraically equivalent
+Cholesky-whitened equations avoid repeated full covariance multiplications.
+The monitor separates covariance fitting, factorisation, grid predictions,
+PS predictions and optional query predictions. Percentages indicate completed
+work within each phase, not an estimated fraction of total runtime.
+
+The STC memory budget is specified in GiB. The guard estimates six dense
+double-precision observation matrices plus a 128 MiB prediction workspace;
+this is a working estimate, not a hard cap on total MATLAB/process memory.
+Leave RAM for native covariance fitting, reports and other applications.
+AOI size controls retained observation count; grid resolution and the output
+time step in days control prediction count. No observations are silently dropped.
+
 The custom path is released for real-project testing. Validate the full
 GUI/report path on a real project and review residual-mean diagnostics before
 relying on its scientific outputs. STC remains a dense method with an explicit
-RAM observation limit. Version: 7.1.0.
+RAM budget. Version: 7.1.1 development.

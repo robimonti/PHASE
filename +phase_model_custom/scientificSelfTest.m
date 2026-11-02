@@ -28,6 +28,19 @@ draws=V*diag(sqrt(max(diag(D),0)))*randn(stream,size(joint,1),20000);
 errors=H*draws(1:numel(y),:)-draws(numel(y)+1:end,:);
 assert(max(abs(var(errors,0,2)-oracle)./max(oracle,0.05))<0.04);
 assert(p.variance(3)==0&&p.total(3)==0);
+% Cached whitening must preserve every uncertainty component.
+cached=residual;cached.parameterCovariance=fit.L*C*fit.L';
+cached.whitenedJacobian=L\fit.J;
+pc=phase_model_custom.predict(q,0,c,ids,fit,cached);
+for field=fieldnames(p)'
+    assert(max(abs(pc.(field{1})-p.(field{1})))<1e-10);
+end
+% Fixed exact model: no parameter estimation or assigned covariance.
+config.customParameters='[{"name":"a","value":0.03,"estimate":false}]';
+exact=phase_model_custom.fitDeterministic(phase_model_custom.parseDefinition(config),c,y,context);
+pe=phase_model_custom.predict(q,0,c,ids,exact,residual);
+assert(max(abs(pe.variance-diag(Kqq-W*K')))<1e-8);
+assert(all(pe.deterministicVariance==0)&&all(pe.crossCovariance==0));
 % External assigned parameter errors include their effect on residual fitting.
 config.customParameters='[{"name":"a","value":0.03,"estimate":false,"std":0.02}]';
 fixed=phase_model_custom.fitDeterministic(phase_model_custom.parseDefinition(config),c,y,context);

@@ -1,4 +1,32 @@
-# PHASE v7.1.0
+# PHASE v7.1.1
+
+This update simplifies custom deterministic modelling and accelerates native
+STC prediction without changing the automatic engines or outlier rejection.
+
+- Automatic / Custom labels and automatic spatial centering; coordinate
+  overrides are optional and expanded when non-default values are saved.
+- Custom time starts at the first acquisition. The separate time-offset
+  control is removed. Models previously using a nonzero offset must express
+  that temporal origin inside their function before rerunning.
+- STC memory budget in GiB and clearer output time spacing in days.
+- AOI source selection precedes the map, with separate shapefile/drawing modes.
+- Stage progress for filtering, deterministic fitting, covariance fitting,
+  factorisation, and grid/PS/query predictions including uncertainty.
+- Equivalent whitened uncertainty equations avoid repeated dense products;
+  prediction blocks are larger and bounded in memory. On a synthetic
+  fixed-model benchmark (1,200 observations, 800 queries), prediction was
+  approximately 9x faster; this is not a full-pipeline performance guarantee.
+- App and installer versions aligned to 7.1.1. Private real-project input is
+  excluded from Git and source-release builds.
+
+**Validation:** all four custom DET/STC entry integrations, covariance oracles,
+Monte Carlo and assigned/estimated-parameter checks passed. Real-project GUI
+validation of this update remains the next test. Linux remains experimental;
+the Apple Silicon DMG is unsigned and not notarized.
+
+See the [custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+
+## PHASE v7.1.0
 
 PHASE 7.1 adds an optional user-defined deterministic model for 1D/2D
 spatio-temporal displacement modelling, with the existing automatic workflow

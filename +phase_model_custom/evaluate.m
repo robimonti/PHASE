@@ -31,7 +31,6 @@ end
         end
         x = coordinateXY(:,1)-context.origin(1); y = coordinateXY(:,2)-context.origin(2);
         s = c(:,3); t = c(:,4);
-        if isfield(context,'timeOffset'),t=t+context.timeOffset;end
         parameters = cell2struct(num2cell(p(:)),{definition.parameters.name},1);
         if ~isempty(definition.functionFile)
             % A .m plugin is executable user code, with an explicit contract.
