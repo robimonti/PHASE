@@ -240,6 +240,23 @@ function renderPage() {
   });
   if (group.id === "custom") {
     grid.appendChild(coordinateSection);
+    const example = document.createElement("button");
+    example.type = "button"; example.className = "browse-button";
+    example.textContent = "Use temporal quadratic example";
+    example.disabled = Boolean(ModelUI.state?.running);
+    example.addEventListener("click", () => {
+      collectVisibleForm(false);
+      ModelUI.config.customFunctionFile = "";
+      ModelUI.config.customExpression = "a.*t + b.*t.^2";
+      ModelUI.config.customParameters = JSON.stringify([
+        {name:"a",value:0,estimate:true,lower:null,upper:null,std:null},
+        {name:"b",value:0,estimate:true,lower:null,upper:null,std:null},
+      ]);
+      ModelUI.config.customResidualMean = "model";
+      ModelUI.config.customParameterCovariance = "[]";
+      localChange(); renderAll();
+    });
+    grid.appendChild(example);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "browse-button";
@@ -267,6 +284,12 @@ function renderContextNote(groupId) {
     message = ModelUI.config.procType === "spatialDET"
       ? "Showing deterministic spline controls for the selected project dimension."
       : "Showing stochastic covariance controls for the selected project dimension.";
+  }
+  if (groupId === "custom") {
+    const advanced = [];
+    if (ModelUI.config.customResidualMean === "constant") advanced.push("estimated residual offset");
+    if (String(ModelUI.config.customParameterCovariance || "[]").replace(/\s/g, "") !== "[]") advanced.push("assigned parameter covariance");
+    if (advanced.length) message += ` Saved profile retains: ${advanced.join(" and ")}. The quadratic example resets these advanced settings.`;
   }
   note.textContent = message;
   note.classList.toggle("hidden", !message);

@@ -35,6 +35,13 @@ for k = 1:numel(definition.fields)
     end
 end
 
+% Advanced settings from existing profiles remain reproducible even though
+% their editors are no longer part of the simplified custom panel.
+for hidden={'customResidualMean','customParameterCovariance'}
+    name=hidden{1};
+    if isfield(payload,name),config.(name)=char(string(payload.(name)));end
+end
+
 if isfield(payload,'aoi_polygon_lonlat')
     config.aoi_polygon_lonlat = numericMatrix(payload.aoi_polygon_lonlat);
 end

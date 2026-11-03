@@ -1,4 +1,11 @@
-# PHASE v7.1.5
+# PHASE v7.1.6
+
+- Simplify the custom panel by removing residual-mean and full assigned-covariance editors; preserve existing profile settings with a contextual indication when active. Fixed-parameter standard deviations remain in the parameter table.
+- Add a temporal quadratic example: estimated a*t + b*t², no function-file override, and automatic displacement referencing. Existing model configurations remain unchanged until the example is selected.
+- Keep automatic residual-field correction and component exports, allowing comparison of the time-only custom contribution with the full prediction.
+- Align application and all installer versions to 7.1.6.
+
+## PHASE v7.1.5
 
 - Correct automatic residual-field selection after custom modelling: temporal validation determines whether observed trends are removed. Spatial validation guides regularisation and reports prediction coverage; it no longer vetoes an observed temporal correction.
 - Refine the automatic regularisation search while retaining the native polynomial and cubic spline bases, original outlier filter and covariance estimators.

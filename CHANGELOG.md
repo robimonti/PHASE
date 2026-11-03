@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.6] - 2026-11-03
+- Simplify custom-model controls and add an estimated temporal quadratic example. Preserve existing advanced profile settings and expose their active status.
+- Align app and installers to 7.1.6.
+
 ## [7.1.5] - 2026-11-03
 - Separate temporal trend selection from spatial prediction validation; refine regularisation among temporally supported mean fields.
 - Add independent-noise, oscillatory-signal and valid long-range covariance regression checks.

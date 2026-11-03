@@ -295,3 +295,22 @@ The custom path is released for real-project testing. Validate the full
 GUI/report path on a real project and review residual-mean diagnostics before
 relying on its scientific outputs. STC remains a dense method with an explicit
 RAM budget. Version: 7.1.2.
+
+## Temporal quadratic example (7.1.6)
+
+In the custom panel choose **Use temporal quadratic example**. This clears the
+MATLAB function override, sets `a.*t + b.*t.^2` and estimates both coefficients
+from the retained PS, starting at zero with unbounded coefficients. Time is in
+days from the first input epoch; the input-master reference is applied by PHASE.
+No constant is needed: a constant disappears under displacement referencing.
+Units are a: mm/day and b: mm/day². Coordinate settings do not affect this model.
+The custom contribution is time-only; the full custom workflow can still add
+its automatically selected space-time residual mean and stochastic residual.
+Compare `CustomModel_mm`, `TemporalTrend_mm`, `Residual_mm` and `Total_mm` in the
+query CSV. A GNSS used in an earlier fit is not independent validation of that
+fit; this new parameter fit uses PS observations only.
+
+Residual-mean and full assigned-covariance editors have been removed from the
+simplified custom panel. Fixed-parameter standard deviations remain available
+in the parameter table. Existing advanced settings are preserved during a
+profile round-trip and indicated when active; the example resets them.
