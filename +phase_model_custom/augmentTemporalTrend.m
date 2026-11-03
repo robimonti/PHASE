@@ -56,5 +56,5 @@ fit.assignedSensitivity=[fit.assignedSensitivity;assignedTrend];
 fit.temporalTrend.coefficients=beta;
 matrix(sub2ind(size(matrix),ids,it))=y-fit.mean;
 fit.temporalTrend.after=phase_model_science.temporalDiagnostic(fit.context.times,matrix,folder,'temporal_after');
-fprintf('Residual deterministic correction: temporal degree %d, %d coefficients; subtracted before residual fitting and restored in predictions.\n',degree,numel(beta));
+fprintf('Residual deterministic correction: temporal degree %d, %d coefficients; subtracted before residual fitting; restoration follows the selected prediction target.\n',degree,numel(beta));
 end

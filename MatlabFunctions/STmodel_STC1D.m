@@ -419,6 +419,12 @@ disp('Variables preparation completed.');
 scientificOptions=phase_model_science.options(struct());
 if ~isempty(varargin),scientificOptions=phase_model_science.options(varargin{1});end
 protectedTemporalDegree=0;originalPolynomialDegree=poly_degree;
+if strcmp(detrend_method,'residualAtm') && strcmp(scientificOptions.temporalTrend,'auto')
+    % Epoch atmospheric offsets confound a common temporal deformation trend.
+    % Preserve the established atmospheric target; inspect without refitting.
+    scientificOptions.temporalTrend='diagnose';
+    fprintf('Residual temporal check: diagnose only with per-epoch atmospheric offsets.\n');
+end
 if strcmp(detrend_method,'residualAtm') && ~strcmp(scientificOptions.temporalTrend,'diagnose')
     error('PHASE:temporalTrendAtmosphere','A common temporal trend is not identifiable separately from per-epoch atmospheric means. Use cleanObs to retain and restore a deformation trend, or Diagnose only.');
 end
@@ -579,7 +585,7 @@ while iter < 2
     % Track which parameters are currently kept in the model (initially, everything is kept)
     mask_params = true(size(A_full, 2), 1);
     if strcmp(detrend_method,'cleanObs')
-        mask_params=phase_model_science.polynomialMask(size(A_full,2),originalPolynomialDegree,protectedTemporalDegree,'1D');
+        mask_params=phase_model_science.polynomialMask(size(A_full,2),originalPolynomialDegree,protectedTemporalDegree,'1D',A_full);
     end
     
     % Loop until no more parameters can be removed
@@ -1294,11 +1300,11 @@ switch detrend_method
             A_poly_target = [A_poly_target, s_target_n, t_target_n];
         end
     
-        if poly_degree == 2
+        if poly_degree >= 2
             A_poly_target = [A_poly_target, s_target_n.^2, t_target_n.^2, ...
                           s_target_n.*t_target_n];
         end
-        if poly_degree == 3
+        if poly_degree >= 3
             A_poly_target = [A_poly_target, s_target_n.^3, t_target_n.^3, ...
                           s_target_n.^2.*t_target_n, t_target_n.^2.*s_target_n];
         end

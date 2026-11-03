@@ -405,6 +405,12 @@ disp('Variables preparation completed.');
 scientificOptions=phase_model_science.options(struct());
 if ~isempty(varargin),scientificOptions=phase_model_science.options(varargin{1});end
 protectedTemporalDegree=0;originalPolynomialDegree=poly_degree;
+if strcmp(detrend_method,'residualAtm') && strcmp(scientificOptions.temporalTrend,'auto')
+    % Epoch atmospheric offsets confound a common temporal deformation trend.
+    % Preserve the established atmospheric target; inspect without refitting.
+    scientificOptions.temporalTrend='diagnose';
+    fprintf('Residual temporal check: diagnose only with per-epoch atmospheric offsets.\n');
+end
 if strcmp(detrend_method,'residualAtm') && ~strcmp(scientificOptions.temporalTrend,'diagnose')
     error('PHASE:temporalTrendAtmosphere','A common temporal trend is not identifiable separately from per-epoch atmospheric means. Use cleanObs to retain and restore a deformation trend, or Diagnose only.');
 end
@@ -574,7 +580,7 @@ while iter < 2
     % Track which parameters are currently kept in the model (initially, everything is kept)
     mask_params = true(size(A_full, 2), 1);
     if strcmp(detrend_method,'cleanObs')
-        mask_params=phase_model_science.polynomialMask(size(A_full,2),originalPolynomialDegree,protectedTemporalDegree,'2D');
+        mask_params=phase_model_science.polynomialMask(size(A_full,2),originalPolynomialDegree,protectedTemporalDegree,'2D',A_full);
     end
     
     % Loop until no more parameters can be removed

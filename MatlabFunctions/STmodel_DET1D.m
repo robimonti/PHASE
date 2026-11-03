@@ -710,7 +710,7 @@ if poly_degree >= 3
 end
 
 % 3.5.2) Backward elimination for polynomial
-mask_poly = phase_model_science.polynomialMask(size(A_poly,2),originalPolynomialDegree,protectedTemporalDegree,'1D');
+mask_poly = phase_model_science.polynomialMask(size(A_poly,2),originalPolynomialDegree,protectedTemporalDegree,'1D',A_poly);
 elimination_done = false;
 elim_iter = 0;
 

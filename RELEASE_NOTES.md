@@ -1,4 +1,14 @@
-# PHASE v7.1.6
+# PHASE v7.1.7
+
+- Remove the temporary temporal-example button from the custom panel.
+- Add **Restore automatic residual trend** for custom DET/STC, enabled by default. Disabled treats the removed field as a systematic observation component; residual modelling remains unchanged. Propagate uncertainty for the selected target, including shared-data and assigned-parameter cross terms.
+- Export both the removed `TemporalTrend_mm` and applied `RestoredTrend_mm`; total = custom + restored trend + residual. Record the target choice in JSON/MAT.
+- Enable the native automatic temporal check by default and inspect individual PS as well as the AOI mean. Supported local trends can refit the existing polynomial with time-space interactions, preserving native uncertainty and outlier rejection. Guard new terms against rank deficiency.
+- Preserve automatic STC atmospheric-offset semantics: Auto diagnoses without adding a confounded common trend in residualAtm mode.
+- Correct degree-three 1D STC reconstruction so observation predictions include the quadratic terms too.
+- Align app and all installer versions to 7.1.7. Conditional uncertainty excludes model-selection uncertainty and regularisation bias; detrending does not certify stationarity.
+
+## PHASE v7.1.6
 
 - Simplify the custom panel by removing residual-mean and full assigned-covariance editors; preserve existing profile settings with a contextual indication when active. Fixed-parameter standard deviations remain in the parameter table.
 - Add a temporal quadratic example: estimated a*t + b*t², no function-file override, and automatic displacement referencing. Existing model configurations remain unchanged until the example is selected.

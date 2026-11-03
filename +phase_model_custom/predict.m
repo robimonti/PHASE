@@ -8,7 +8,7 @@ reference=q; reference(:,4)=referenceDay;
 [m0,J0all]=phase_model_custom.evaluate(fit.definition,fit.values,reference,fit.context);
 Jq=Jall(:,fit.free)-J0all(:,fit.free);
 m=m-m0;
-customMean=m; temporalMean=zeros(size(m));
+customMean=m; temporalMean=zeros(size(m)); restoredMean=temporalMean;
 if isfield(fit,'temporalTrend') && fit.temporalTrend.degree>0
     trend=fit.temporalTrend;
     if isfield(trend,'kind')
@@ -17,8 +17,13 @@ if isfield(fit,'temporalTrend') && fit.temporalTrend.degree>0
         Bq=phase_model_science.trendBasis(q(:,4),referenceDay,trend.scale,trend.degree);
     end
     temporalMean=Bq*trend.coefficients;
-    m=m+temporalMean;
-    Jq=[Jq Bq];
+    restore=true;
+    if isfield(trend,'restore'),restore=trend.restore;end
+    restoredMean=double(restore)*temporalMean;
+    m=m+restoredMean;
+    % Observation derivatives remain unchanged: the excluded field was still
+    % estimated from those observations. Zero only its target contribution.
+    Jq=[Jq double(restore)*Bq];
 end
 if strcmp(residual.kind,'STC')
     K=phase_model_custom.kernel(q,c,residual.settings) ...
@@ -104,7 +109,7 @@ scale=max([1;abs(targetVariance);abs(varianceScale)]);
 if any(total < -1e-7*scale)
     error('PHASE:customVariance','Negative propagated variance beyond numerical precision.');
 end
-prediction=struct('customDeterministic',customMean,'temporalTrend',temporalMean,'total',m+stochastic,'deterministic',m,'residual',stochastic, ...
+prediction=struct('customDeterministic',customMean,'temporalTrend',temporalMean,'restoredTrend',restoredMean,'total',m+stochastic,'deterministic',m,'residual',stochastic, ...
     'variance',max(total,0),'deterministicVariance',max(deterministicVariance,0), ...
     'residualVariance',residualVariance,'crossCovariance',cross);
 end

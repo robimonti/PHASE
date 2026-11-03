@@ -47,10 +47,15 @@ settings=struct('dimension','2D','native',true,'timeParameters',[2,1/70^2], ...
 C=phase_model_custom.kernel(c,c,settings)+.2*eye(size(c,1));
 residual=struct('kind','STC','native',true,'settings',settings,'C',C, ...
     'factor',chol(C,'lower'),'alpha',C\(yobs-fit.mean));
+% Both targets must obey the full covariance oracle, including assigned errors.
+for restore=[true false]
+fit.temporalTrend.restore=restore;
 p=phase_model_custom.predict(q,0,c,ids,fit,residual);
-assert(abs(p.total(1)-((.02+.0002*30)*500+.2*sin(5)))<1e-7&&p.total(2)==0);
+expected=fit.values(fit.free)*500+double(restore)*.0002*30*500+.2*sin(5);
+assert(abs(p.total(1)-expected)<1e-7&&p.total(2)==0);
+assert(max(abs(p.total-p.customDeterministic-p.restoredTrend-p.residual))<1e-10);
 q0=q;q0(:,4)=0;
-Jq=[q(:,4),phase_model_science.spaceTimeBasis(q,fit.temporalTrend,0)];
+Jq=[q(:,4),double(restore)*phase_model_science.spaceTimeBasis(q,fit.temporalTrend,0)];
 K=phase_model_custom.kernel(q,c,settings)-phase_model_custom.kernel(q0,c,settings);
 H=K/C+(Jq-(K/C)*fit.J)*fit.L;
 Kqq=phase_model_custom.kernel(q,q,settings)-phase_model_custom.kernel(q,q0,settings) ...
@@ -62,6 +67,29 @@ Q=Jall-J0all+Jq*fit.assignedSensitivity-(K/C)*(Jobs+fit.J*fit.assignedSensitivit
 oracle=diag(Kqq-H*K'-K*H'+H*C*H'+Q*definition.assignedCovariance*Q');
 assert(max(abs(p.variance-oracle))<1e-8);
 assert(max(abs(p.variance-p.deterministicVariance-p.residualVariance-2*p.crossCovariance))<1e-8);
+% DET uses the same target but a sampling covariance, tested independently.
+map=pinv([ones(size(c,1),1),c(:,4)]);
+det=struct('kind','DET','basis',@(v,state)[ones(size(v,1),1),v(:,4)], ...
+    'nativeState',struct(),'coefficientMap',map,'coefficients',map*(yobs-fit.mean),'noiseVariance',.2);
+pdet=phase_model_custom.predict(q,0,c,ids,fit,det);
+W=([ones(size(q,1),1),q(:,4)]-[ones(size(q,1),1),q0(:,4)])*map;
+Hd=Jq*fit.L+W-(W*fit.J)*fit.L;
+Qd=Jall-J0all+Jq*fit.assignedSensitivity-W*(Jobs+fit.J*fit.assignedSensitivity);
+oracleD=diag(.2*(Hd*Hd')+Qd*definition.assignedCovariance*Qd');
+assert(max(abs(pdet.variance-oracleD))<1e-8);
+end
+% Automatic native check must detect local drifts hidden in the AOI mean.
+localResidual=reshape(r,np,nt);
+info=phase_model_science.temporalDiagnostic(times,localResidual,'');
+assert(info.suggestedDegree==0&&info.suggestedPointDegree==1);
+[retry,protected,degree]=phase_model_science.nativeTrendCheck(times,localResidual, ...
+    phase_model_science.options(struct()),0,0,'','');
+assert(retry&&protected==1&&degree==2);
+% Degenerate geometries must not admit dependent added interactions.
+u=repelem((0:3)',2);v=repmat([-1;1],4,1);
+A=[ones(8,1),v,u,v.^2,u.^2,v.*u];
+mask=phase_model_science.polynomialMask(6,0,1,'1D',A);
+assert(rank(A(:,mask))==nnz(mask)&&mask(3)&&mask(6));
 % 1D uses chainage, not east/north coordinates.
 line=c;line(:,3)=c(:,1);
 [one,A,~]=phase_model_science.selectResidualField(line,r,ids,'1D',ref);

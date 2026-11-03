@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.7] - 2026-11-03
+- Remove temporary example UI; choose whether to restore the automatic custom residual field, with target-consistent uncertainty and component exports.
+- Enable native temporal checks by default, including local PS trends and identifiable time-space interactions; preserve atmospheric-offset semantics.
+- Fix degree-three 1D STC observation reconstruction; align app and all installers to 7.1.7.
+
 ## [7.1.6] - 2026-11-03
 - Simplify custom-model controls and add an estimated temporal quadratic example. Preserve existing advanced profile settings and expose their active status.
 - Align app and installers to 7.1.6.

@@ -1,7 +1,8 @@
 # PHASE 7.1 — Custom deterministic models
 
-Automatic is the default. The four original automatic scientific functions
-are unchanged. Each separate `STmodel_*_custom.m` entry copies its original
+Automatic is the default. The four original automatic scientific functions retain their native
+modelling and outlier-rejection paths; the optional residual check refits the
+existing polynomial, including its uncertainty calculation. Each separate `STmodel_*_custom.m` entry copies its original
 outlier-rejection block verbatim and then calls the custom two-stage path.
 
 ## Workflow
@@ -141,24 +142,23 @@ reference-area uncertainty is not inferred from the Excel.
 ## Residual controls (v7.1.3)
 
 The 1D model / 2D model pages expose the same controls for automatic/custom spatio-temporal
-DET and STC, in 1D and 2D. Automatic-engine defaults diagnose only, with no range constraints.
+DET and STC, in 1D and 2D. Automatic-engine defaults to Auto, with no range constraints.
 Custom workflows select their residual field automatically. The original outlier rejection is unchanged.
 
 **Automatic-engine residual temporal trend:** Diagnose only, Auto, Linear or Quadratic.
 The check fits the residual displacement series, never the covariance curve.
-Auto compares the AOI mean with constant, linear and quadratic descriptions
+Auto compares both the AOI mean and individual PS with constant, linear and quadratic descriptions
 using contiguous held-out time blocks. A polynomial requires at least 20%
 less prediction MSE than a constant; degree two also requires 10% less than
 degree one, and a fitted excursion of at least max(0.5 mm, 10% of residual RMS).
 These are documented selection heuristics, not iid p-values or a guarantee of
-stationarity. Opposite local trends may cancel: per-PS linear/quadratic
-coefficients are exported alongside the AOI mean diagnostics.
+stationarity. Held-out per-PS errors are aggregated before selection so opposite local trends remain visible. Per-PS coefficients and aggregate scores are exported alongside the AOI mean diagnostics.
 
 Custom DET/STC automatically checks an additional residual deterministic field;
 there are no user controls for its coefficients or complexity. Candidates use
 linear/quadratic time terms with common, affine/quadratic spatial coefficients,
 or the existing native cubic spatial spline basis at coarse resolutions. All
-terms are referenced to the input master and restored at prediction locations.
+terms are referenced to the input master. They are restored at prediction locations by default; the custom panel now allows excluding them from the prediction target.
 The fixed custom model is unchanged. Regularisation and complexity are selected
 using five contiguous time blocks and five contiguous spatial groups. The held-out temporal error must improve by at least 10% over no additional
 correction. The simplest field within 10% of the best temporal score is retained;
@@ -185,11 +185,9 @@ Extrapolation outside observation coverage still requires care.
 
 Automatic correction reuses the existing polynomial basis and uncertainty
 calculation. It optionally refits the selected native model once, retaining
-its time or time-squared terms. New temporal terms do not activate new spatial
-terms, and are restored by the native prediction code. With automatic STC
+its time or time-squared terms. Local checks can activate time-space interactions up to native total degree three, admitting only independent added columns and retaining the original spatial degree. Corrections are restored by native prediction code. With automatic STC
 `residualAtm`, per-epoch atmospheric means and an additional common temporal
-trend are not separately identifiable. In that case select Diagnose only, or
-use `cleanObs` when the temporal trend is to be retained as deformation.
+trend are not separately identifiable. Auto therefore diagnoses without refitting in that mode; explicit linear/quadratic correction is rejected. Use `cleanObs` when the temporal trend is to be retained as deformation.
 
 **Correlation lengths (STC):** optional suggested spatial/temporal lengths,
 refinement percentage (default ±25%) and independent maximum lengths.
@@ -254,7 +252,7 @@ phase_model_custom.exportSavedCovariance('custom_model.json', 'diagnostics')
 
 Old results without pair counts show that information as unavailable.
 Covariance fitting does not enforce zero residual mean; inspect mean-by-date
-and mean-by-PS diagnostics separately. Additional detrending is opt-in.
+and mean-by-PS diagnostics separately. Automatic native temporal checks are enabled by default.
 Automatic-engine diagnostics are saved in `files/residualDiagnostics/`.
 
 The normal workbook and spatial export pipeline also receive custom results.
@@ -296,21 +294,32 @@ GUI/report path on a real project and review residual-mean diagnostics before
 relying on its scientific outputs. STC remains a dense method with an explicit
 RAM budget. Version: 7.1.2.
 
-## Temporal quadratic example (7.1.6)
+## Prediction target (7.1.7)
 
-In the custom panel choose **Use temporal quadratic example**. This clears the
-MATLAB function override, sets `a.*t + b.*t.^2` and estimates both coefficients
-from the retained PS, starting at zero with unbounded coefficients. Time is in
-days from the first input epoch; the input-master reference is applied by PHASE.
-No constant is needed: a constant disappears under displacement referencing.
-Units are a: mm/day and b: mm/day². Coordinate settings do not affect this model.
-The custom contribution is time-only; the full custom workflow can still add
-its automatically selected space-time residual mean and stochastic residual.
-Compare `CustomModel_mm`, `TemporalTrend_mm`, `Residual_mm` and `Total_mm` in the
-query CSV. A GNSS used in an earlier fit is not independent validation of that
-fit; this new parameter fit uses PS observations only.
+**Restore automatic residual trend** is enabled by default, preserving previous
+results. The observation reduction is always `y - custom - automaticTrend`.
+The covariance/spline fit uses exactly that reduced signal in both modes.
 
-Residual-mean and full assigned-covariance editors have been removed from the
-simplified custom panel. Fixed-parameter standard deviations remain available
-in the parameter table. Existing advanced settings are preserved during a
-profile round-trip and indicated when active; the example resets them.
+- Enabled: `prediction = custom + automaticTrend + residual`.
+- Disabled: `prediction = custom + residual`. This interprets the automatic
+  field as a systematic observation contribution excluded from the desired
+  deformation, a scientific assumption selected by the user.
+
+The covariance shape alone cannot identify a physical systematic contribution.
+The original custom model is always restored. Fixed custom parameters retain
+their values. With exclusion, zero only the automatic field's target basis:
+keep its observation design, fitting derivative and correlation with the
+residual estimate in uncertainty propagation. Assigned parameter errors follow
+the same target. Output uncertainty is conditional on this interpretation,
+selected field/covariance, regularisation and outlier mask; it excludes model
+selection, regularisation bias and physical model discrepancy.
+
+Component CSVs retain `TemporalTrend_mm` for the full removed contribution and
+add `RestoredTrend_mm` for the contribution actually applied. Thus
+`Total_mm = CustomModel_mm + RestoredTrend_mm + Residual_mm`. JSON/MAT record
+the restore flag and target equation. References remain unchanged.
+
+The temporary temporal-example button has been removed. The normal expression,
+parameter table and preview remain. Residual-mean/full assigned-covariance
+editors remain hidden; existing profile settings are preserved and indicated.
+No residual diagnostic figures are generated. Numeric checks remain available.

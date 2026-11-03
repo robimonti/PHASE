@@ -63,6 +63,14 @@ phase_model_custom.checkStop(config);
 phase_model_custom.reportProgress(config,54,'Fitting the custom deterministic model');
 fit=phase_model_custom.fitDeterministic(definition,c,y,context);
 fit=phase_model_custom.augmentTemporalTrend(fit,c,y,ids,config,outputDir);
+% The full field is always removed for residual modelling. Only the target changes.
+fit.temporalTrend.restore=true;
+if isfield(config,'customRestoreTrend'),fit.temporalTrend.restore=logical(config.customRestoreTrend);end
+if fit.temporalTrend.restore
+    fprintf('Custom prediction target: custom model + automatic trend + residual signal.\n');
+else
+    fprintf('Custom prediction target: custom model + residual signal (automatic trend excluded as systematic observation component).\n');
+end
 if ~isfolder(outputDir), mkdir(outputDir); end
 customMean=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context);
 residualForCovariance=y-fit.mean;
@@ -119,6 +127,7 @@ if ~isempty(xyQuery)
         'VariableNames',{'ID','Date','Longitude','Latitude','Time_days','Deterministic_mm','Residual_mm','Total_mm','Std_mm'});
     queryTable.CustomModel_mm=queryPrediction.customDeterministic;
     queryTable.TemporalTrend_mm=queryPrediction.temporalTrend;
+    queryTable.RestoredTrend_mm=queryPrediction.restoredTrend;
     writetable(queryTable,fullfile(outputDir,'custom_query_timeseries.csv'));
 end
 [lat,lon]=utm2deg(gridXY(:,1),gridXY(:,2),repmat(utmZone,size(gridXY,1),1));
@@ -144,6 +153,8 @@ metadata=struct('workflow','custom two-stage','family',config.procType, ...
     'units','LOS displacement mm; metric x,y,s; time days', ...
     'uncertainty','Local sampling/prediction uncertainty, conditional on selected covariance/spline settings and outlier mask; includes deterministic-residual cross covariance. Excludes covariance hyperparameter/mean-field selection uncertainty, regularisation bias and model discrepancy.');
 metadata.temporalTrend=fit.temporalTrend;
+metadata.predictionTarget='CustomModel_mm + RestoredTrend_mm + Residual_mm';
+metadata.automaticTrendInterpretation='Restored: deformation contribution; excluded: systematic observation component. Selection is a scientific assumption, not inferred from covariance fit.';
 metadata.covarianceReview=covarianceReview;
 metadata.augmentedParameterNames=[{definition.parameters(fit.free).name}, ...
     cellstr("residualMeanCoefficient"+string(1:(size(fit.J,2)-numel(fit.free))))];
@@ -174,6 +185,7 @@ componentTable=table(q(:,1),q(:,2),q(:,3),q(:,4),prediction.deterministic, ...
     'ResidualErrorVariance_mm2','CrossCovariance_mm2'});
 componentTable.CustomModel_mm=prediction.customDeterministic;
 componentTable.TemporalTrend_mm=prediction.temporalTrend;
+componentTable.RestoredTrend_mm=prediction.restoredTrend;
 writetable(componentTable,fullfile(outputDir,'custom_model_components.csv'));
 fprintf('Custom model completed. Diagnostics: %s\n',fullfile(outputDir,'custom_model.json'));
     function p=predictBatches(query,reference,label,startPercent,endPercent)

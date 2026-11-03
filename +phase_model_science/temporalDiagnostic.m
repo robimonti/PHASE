@@ -34,6 +34,7 @@ info=struct('suggestedDegree',degree,'blockedCV_MSE',score, ...
     'interpretation','Descriptive blocked validation of the AOI mean: >=20% improvement over constant; quadratic also >=10% over linear; drift >= max(0.5 mm, 0.1 residual RMS). Not a stationarity test. Local trends may cancel in the AOI mean.');
 % Inspect individual PS as well: opposite slopes can hide in the AOI mean.
 pointSlope=nan(size(residuals,1),1);pointCurvature=pointSlope;
+pointScores=nan(size(residuals,1),3);pointDrift=pointScores;
 for k=1:size(residuals,1)
     valid=isfinite(residuals(k,:));
     if nnz(valid)<4,continue;end
@@ -41,7 +42,32 @@ for k=1:size(residuals,1)
     polynomial=(localTime.^(0:2))\residuals(k,valid)';
     pointSlope(k)=polynomial(2)/scale*365.25;
     pointCurvature(k)=polynomial(3)/scale^2*365.25^2;
+    if nnz(valid)<8,continue;end
+    localY=residuals(k,valid)';
+    blocks=min(5,floor(numel(localY)/3));
+    labels=min(blocks,ceil((1:numel(localY))'*blocks/numel(localY)));
+    for d=0:2
+        A=localTime.^(0:d);prediction=nan(size(localY));
+        for block=1:blocks
+            train=labels~=block;test=~train;
+            prediction(test)=A(test,:)*(A(train,:)\localY(train));
+        end
+        pointScores(k,d+1)=mean((localY-prediction).^2);
+        pointDrift(k,d+1)=range(A*(A\localY));
+    end
 end
+% Aggregate held-out errors across PS, rather than the AOI mean, so equal
+% and opposite local drifts remain visible. Selection is descriptive only.
+localScore=mean(pointScores,1,'omitnan');localDegree=0;
+if all(isfinite(localScore)) && localScore(2)<.8*localScore(1),localDegree=1;end
+if all(isfinite(localScore)) && localScore(3)<.8*localScore(1) && localScore(3)<.9*localScore(2),localDegree=2;end
+localDrift=0;
+if localDegree>0
+    localDrift=sqrt(mean(pointDrift(:,localDegree+1).^2,'omitnan'));
+    if localDrift<max(.5,.1*rmsValue),localDegree=0;end
+end
+info.suggestedPointDegree=localDegree;
+info.pointBlockedCV_MSE=localScore;info.pointDriftRMS_mm=localDrift;
 info.pointSlopePercentiles_mmYear=prctile(pointSlope,[10 50 90]);
 info.pointCurvaturePercentiles_mmYear2=prctile(pointCurvature,[10 50 90]);
 if nargin<3||isempty(folder),return;end

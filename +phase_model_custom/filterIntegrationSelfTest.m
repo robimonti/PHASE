@@ -1,6 +1,7 @@
-function result=filterIntegrationSelfTest(policy)
+function result=filterIntegrationSelfTest(policy,restoreTrend)
 %FILTERINTEGRATIONSELFTEST Exercise every custom entry through geoSplinter.
 if nargin<1,policy='quadratic';end
+if nargin<2,restoreTrend=true;end
 root=phase_model_beta.projectRoot(); old=pwd; cd(root);
 pathCleanup=onCleanup(@() cd(old)); %#ok<NASGU>
 addpath(fullfile(root,'MatlabFunctions'));
@@ -17,7 +18,7 @@ center=struct('projected_distances',[0;40;0;40], ...
 [xg,yg]=meshgrid([500000 500040],[4980000 4980040]);
 aoi=xy([1,2,4,3,1],:);
 c=phase_model_beta.defaultConfig(); c.deterministicModelMode='custom';
-c.step_t_ST=30;c.temporalTrend=policy;
+c.step_t_ST=30;c.temporalTrend=policy;c.customRestoreTrend=restoreTrend;
 resultFolder=fullfile(folder,'files','customModel');
 os=detectOS(); firstClean=[];
 for dimension={'1D','2D'}
@@ -46,6 +47,10 @@ for dimension={'1D','2D'}
         queryFile=readtable(fullfile(resultFolder,'custom_query_timeseries.csv'),'TextType','string');
         assert(all(queryFile.ID=="GNSS_TEST")&&all(isfinite(queryFile.Std_mm)));
         assert(max(abs(queryFile.Total_mm-query(:)))<1e-8);
+        assert(max(abs(queryFile.Total_mm-queryFile.CustomModel_mm-queryFile.RestoredTrend_mm-queryFile.Residual_mm))<1e-8);
+        metadata=jsondecode(fileread(fullfile(resultFolder,'custom_model.json')));
+        assert(logical(metadata.temporalTrend.restore)==restoreTrend);
+        if ~restoreTrend,assert(all(queryFile.RestoredTrend_mm==0));end
         diagnostic=load(fullfile(resultFolder,'custom_model_results.mat'),'clean');
         assert(~isfile(fullfile(folder,'figures','custom_residual_mean.png')));
         assert(isfile(fullfile(resultFolder,'custom_residual_mean.json')));

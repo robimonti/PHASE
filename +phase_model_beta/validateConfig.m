@@ -138,7 +138,7 @@ if config.flag_tsExtr
 end
 
 custom = isfield(config,'deterministicModelMode') && strcmp(config.deterministicModelMode,'custom');
-if ~custom && strcmp(config.procType,'spatialSTC') && strcmp(config.detrendMethod,'residualAtm') && ~strcmp(config.temporalTrend,'diagnose')
+if ~custom && strcmp(config.procType,'spatialSTC') && strcmp(config.detrendMethod,'residualAtm') && ismember(config.temporalTrend,{'linear','quadratic'})
     errors{end+1}='Temporal trend and per-epoch atmospheric offsets cannot be separated. Use cleanObs for trend correction, or select Diagnose only.';
 end
 if custom
