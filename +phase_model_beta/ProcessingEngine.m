@@ -927,6 +927,14 @@ classdef ProcessingEngine < dynamicprops
                 end
 
 
+                scientificConfig=phase_model_beta.defaultConfig();
+                scientificNames=fieldnames(phase_model_science.options(scientificConfig));
+                for scientificIndex=1:numel(scientificNames)
+                    scientificName=scientificNames{scientificIndex};
+                    if isprop(app,scientificName),scientificConfig.(scientificName)=app.(scientificName);end
+                end
+                scientificOptions=phase_model_science.options(scientificConfig);
+
                 % Custom scripts are isolated from every automatic function.
                 if isprop(app,'deterministicModelMode') && strcmp(app.deterministicModelMode,'custom')
                     customConfig = phase_model_beta.defaultConfig();
@@ -996,14 +1004,14 @@ classdef ProcessingEngine < dynamicprops
                                     figsDir, minMonths, gS_input_path, gS_output_path, gS_job_path, gS_synth_path, ...
                                     detectedOS, varNoise_DET1D, varNoise_manual_DET1D, num_spl_method_DET1D, spline_method_DET1D, ...
                                     num_spl_row_manual_DET1D, num_spl_col_manual_DET1D, lambda_method_DET1D, lambda_manual_DET1D, ...
-                                    utmZone, xyIN_AOI, step_t_ST, detrendMethodST, useInclinedMeansST, polyDegreeST, markerSize, xy_EXTR);
+                                    utmZone, xyIN_AOI, step_t_ST, detrendMethodST, useInclinedMeansST, polyDegreeST, markerSize, xy_EXTR, scientificOptions);
                             case '2D'
                                 [lonlatIN_AOI_DET2D, t_dateTS, t_relTS, displAOI_TS, displAOI_TS_DET2D, stdAOI_DET2D, displEXTR] = ...
                                     STmodel_DET2D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, x_grid, y_grid, figsDir, minMonths, ...
                                     gS_input_path, gS_output_path, gS_job_path, detectedOS, varNoise_DET2D, varNoise_manual_DET2D, ...
                                     num_spl_method_DET2D, spline_method_DET2D, num_spl_row_manual_DET2D, num_spl_col_manual_DET2D, ...
                                     num_spl_t_manual_DET2D, lambda_method_DET2D, lambda_manual_DET2D, utmZone, xyIN_AOI, xyAOI, ...
-                                    step_t_ST, detrendMethodST, useInclinedMeansST, polyDegreeST, markerSize, xy_EXTR);
+                                    step_t_ST, detrendMethodST, useInclinedMeansST, polyDegreeST, markerSize, xy_EXTR, scientificOptions);
                         end
 
                         % Update progress (70%)
@@ -1016,12 +1024,12 @@ classdef ProcessingEngine < dynamicprops
                                 [lonlatIN_AOI_STC1D, t_dateTS, t_relTS, displAOI_TS, displAOI_TS_STC1D, stdAOI_STC1D, displEXTR] = ...
                                     STmodel_STC1D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, centerline_data, figsDir, minMonths, ...
                                     gS_input_path, gS_output_path, gS_job_path, detectedOS, dtCov_STC1D, dsCov_STC1D, utmZone, xyIN_AOI, step_t_ST, ...
-                                    detrendMethodST, useInclinedMeansST, polyDegreeST, tCovModel_STC2D, sCovModel_STC2D, markerSize, xy_EXTR);
+                                    detrendMethodST, useInclinedMeansST, polyDegreeST, tCovModel_STC2D, sCovModel_STC2D, markerSize, xy_EXTR, scientificOptions);
                             case '2D'
                                 [lonlatIN_AOI_STC2D, t_dateTS, t_relTS, displAOI_TS, displAOI_TS_STC2D, stdAOI_STC2D, displEXTR] = ...
                                     STmodel_STC2D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, x_grid, y_grid, useInclinedMeansST, figsDir, minMonths, ...
                                     gS_input_path, gS_output_path, gS_job_path, detectedOS, dtCov_STC2D, dsCov_STC2D, utmZone, xyIN_AOI, xyAOI, step_t_ST, ...
-                                    detrendMethodST, polyDegreeST, tCovModel_STC2D, sCovModel_STC2D, markerSize, xy_EXTR);
+                                    detrendMethodST, polyDegreeST, tCovModel_STC2D, sCovModel_STC2D, markerSize, xy_EXTR, scientificOptions);
                         end
 
                         % Update progress (70%)
@@ -1642,7 +1650,7 @@ classdef ProcessingEngine < dynamicprops
                     'contribution of a cubic splines deterministic trend and a stochastic component.'];
                 if exist('customConfig','var')
                     subtitle1_s3 = ['Custom two-stage model: assigned/estimated deterministic contribution ' ...
-                        'plus residual spline (DET) or collocation (STC). See custom_model.json for formula and parameters.'];
+                        'plus residual spline (DET) or collocation (STC). See files/customModel/custom_model.json for formula and parameters.'];
                 end
                 subtitle2_s3 = 'Coordinates are WGS84 [deg] and project UTM [m]; see the EPSG code in General.';
                 subtitle3_s3 = 'Displacement is given along the satellite Line Of Sight (LOS) [mm]. The average velocity is in [mm/year].';

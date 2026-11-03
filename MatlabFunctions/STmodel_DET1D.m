@@ -2,7 +2,7 @@ function [lonlatIN_AOI_DET1D, dates_full, t_full, final_signal_orig, final_signa
     STmodel_DET1D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, centerline_data, figsDir, minMonths, ...
     gS_input_path, gS_output_path, gS_job_path, gS_synth_path, detectedOS, varNoise_method, varNoise_manual, num_spl_method, ...
     spline_method, num_spl_row_manual, num_spl_col_manual, lambda_method, lambda_manual, utmZone, xyIN_AOI, step_t, ...
-    detrend_method, use_inclined_means, poly_degree, markerSize_DET1D, xy_EXTR)
+    detrend_method, use_inclined_means, poly_degree, markerSize_DET1D, xy_EXTR, varargin)
 
 % STmodel_DET1D Performs spatio-temporal deterministic modelling for displacement data
 %
@@ -418,6 +418,12 @@ disp('Variables preparation completed.');
 
 
 
+% Optional residual controls (outlier rejection above is unchanged).
+scientificOptions=phase_model_science.options(struct());
+if ~isempty(varargin),scientificOptions=phase_model_science.options(varargin{1});end
+protectedTemporalDegree=0;originalPolynomialDegree=poly_degree;
+residualDiagnosticsDir=fullfile(fileparts(figsDir),'files','residualDiagnostics');
+
 %% 3) LEAST SQUARES MODEL REDUCTION
 disp('======== Step 3 ========');
 disp('Least Squares model reduction started...');
@@ -673,6 +679,8 @@ else
     y_for_poly = y0_lsc;
 end
 
+while true % At most one optional residual-trend refit.
+
 % 3.5.1) Build design matrix A_poly
 % (using the vectors corresponding to current VALID observations)
 t_n = t_centered;
@@ -702,7 +710,7 @@ if poly_degree >= 3
 end
 
 % 3.5.2) Backward elimination for polynomial
-mask_poly = true(size(A_poly, 2), 1);
+mask_poly = phase_model_science.polynomialMask(size(A_poly,2),originalPolynomialDegree,protectedTemporalDegree,'1D');
 elimination_done = false;
 elim_iter = 0;
 
@@ -741,6 +749,8 @@ while ~elimination_done
         t_crit = 1.96; 
     end
     
+    t_stats=phase_model_science.protectTemporalTerms(t_stats,mask_poly,protectedTemporalDegree,'1D');
+
     % Identify worst parameter
     [min_t, min_idx_local] = min(abs(t_stats));
     active_indices = find(mask_poly);
@@ -805,6 +815,12 @@ end
 
 % Final cleaned time series for splies
 data_final_clean = residuals_grid_full - full_model_grid;
+[retryTrend,protectedTemporalDegree,poly_degree]=phase_model_science.nativeTrendCheck( ...
+    t_relIN,data_final_clean,scientificOptions,protectedTemporalDegree,poly_degree, ...
+    residualDiagnosticsDir,sprintf('DET1D_protected%d',protectedTemporalDegree));
+if ~retryTrend,break;end
+end % optional native polynomial refit
+
 
 
 disp('Least Squares model reduction completed.');

@@ -138,7 +138,63 @@ discrepancy. Numerical covariance stabilization is recorded explicitly.
 The native covariance/noise assumptions are retained; additional input
 reference-area uncertainty is not inferred from the Excel.
 
+## Residual controls (v7.1.3)
+
+Model design exposes the same controls for automatic/custom spatio-temporal
+DET and STC, in 1D and 2D. Defaults preserve the numerical workflow: diagnose
+only and no range constraints. The original outlier rejection is unchanged.
+
+**Residual temporal trend:** Diagnose only, Auto, Linear or Quadratic.
+The check fits the residual displacement series, never the covariance curve.
+Auto compares the AOI mean with constant, linear and quadratic descriptions
+using contiguous held-out time blocks. A polynomial requires at least 20%
+less prediction MSE than a constant; degree two also requires 10% less than
+degree one, and a fitted excursion of at least max(0.5 mm, 10% of residual RMS).
+These are documented selection heuristics, not iid p-values or a guarantee of
+stationarity. Opposite local trends may cancel: per-PS linear/quadratic
+coefficients are exported alongside the AOI mean diagnostics.
+
+Custom correction fits a common AOI temporal polynomial after the custom
+model, subtracts it before the native spline/covariance calculation, then
+restores it at every output location and the appropriate reference epoch.
+It does not change fixed custom parameters. With B the reference-aware time
+basis and M = pinv(B), the second-stage derivative is
+`Ltrend = M - M*Jcustom*Lcustom`. The augmented design/derivative enters the
+existing prediction equations, retaining cross terms with the custom fit and
+collocation/splines, including assigned parameter uncertainty. Diagnostics
+export the before/after residual means, the extra coefficients, their joint
+covariance and separate custom/trend/residual output components. This common
+correction cannot remove a spatially varying residual trend; inspect the
+per-PS diagnostics before accepting a stationary covariance model.
+
+Automatic correction reuses the existing polynomial basis and uncertainty
+calculation. It optionally refits the selected native model once, retaining
+its time or time-squared terms. New temporal terms do not activate new spatial
+terms, and are restored by the native prediction code. With automatic STC
+`residualAtm`, per-epoch atmospheric means and an additional common temporal
+trend are not separately identifiable. In that case select Diagnose only, or
+use `cleanObs` when the temporal trend is to be retained as deformation.
+
+**Correlation lengths (STC):** optional suggested spatial/temporal lengths,
+refinement percentage (default ±25%) and independent maximum lengths.
+Lengths mean the e-folding distance/time of the kernel envelope: L = 1/c2 for
+exponential; L = 1/sqrt(c2) for Gaussian and Gaussian-cosine. A maximum is a
+hard bound, not a lag-bin size. When enabled, a bounded weighted fit refines
+the native kernel against empirical nonzero-lag bins using the native pair
+cofactors. The native amplitude/nugget combination is retained. Cosine period
+is kept at the native fit. Without these controls the original fit is used
+exactly. A constrained range is not evidence of a good fit; inspect the figure
+and the saved range/bound diagnostics. Fit/model-selection uncertainty remains
+outside the conditional prediction uncertainty.
+
+Background: [NIST stationarity](https://www.itl.nist.gov/div898/handbook/pmc/section4/pmc442.htm)
+and [MathWorks mean plus covariance model](https://www.mathworks.com/help/stats/gaussian-process-regression-models.html).
+
 ## Additional outputs
+
+All files below are inside `output_NNN/files/customModel/`. The general Excel
+report remains at `output_NNN/`, alongside the existing output subfolders.
+
 
 - `custom_model.json`: model, parameters/covariance, units, origins, references,
   native residual settings and uncertainty scope.
@@ -147,10 +203,14 @@ reference-area uncertainty is not inferred from the Excel.
 - `custom_model_components.csv`: component values and signed covariance terms.
 - `custom_residual_mean*.csv/json`: residual-mean diagnostics.
 - `custom_model_source/`: copied custom MATLAB function, when selected.
-- `figures/custom_covariance_time.*` and `custom_covariance_space.*`:
-  PNG and editable FIG plots of empirical values, contributing pair counts,
-  marginal fits and the common-amplitude kernel actually used for prediction.
-  Matching CSVs retain the plotted empirical/kernel values and pair counts.
+- `figures/STC_cov1D.*` or `figures/STC_cov2D.*`: the original native
+  two-panel covariance figure (PNG and editable FIG), with empirical, signal
+  and noise. `custom_covariance_time.csv` and `custom_covariance_space.csv`
+  retain empirical/kernel values and pair counts without altering the figure.
+- `custom_observation_components.csv`: observed = custom model + extra temporal
+  trend + residual actually used for fitting, for every retained observation.
+- `temporal_before*` / `temporal_after*`: trend diagnostics, including per-PS
+  coefficients; after files exist only when a correction is applied.
 - `figures/custom_residual_mean.*`: mean/RMS by acquisition and mean by PS.
 - `custom_query_timeseries.csv`, when query points are enabled: dated point
   predictions with station ID, coordinates, deterministic/residual components
@@ -177,13 +237,16 @@ phase_model_custom.exportSavedCovariance('custom_model.json', 'diagnostics')
 
 Old results without pair counts show that information as unavailable.
 Covariance fitting does not enforce zero residual mean; inspect mean-by-date
-and mean-by-PS diagnostics separately. No additional detrending is performed.
+and mean-by-PS diagnostics separately. Additional detrending is opt-in.
+Automatic-engine diagnostics are saved in `files/residualDiagnostics/`.
 
 The normal workbook and spatial export pipeline also receive custom results.
 
 ## Verification
 
 ```matlab
+phase_model_science.selfTest
+phase_model_science.nativeIntegrationSelfTest
 phase_model_custom.scientificSelfTest
 phase_model_custom.filterIntegrationSelfTest
 phase_model_beta.selfTest

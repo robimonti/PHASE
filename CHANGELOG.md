@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.3] - 2026-11-03
+- Restore native covariance figures and organize custom outputs in files/customModel.
+- Add optional residual temporal diagnostics/correction and bounded covariance lengths across automatic/custom DET/STC. Preserve original outlier filtering.
+- Propagate the additional custom temporal fit with shared-data cross covariance.
+- Autofit numeric report columns, wrap sidebar paths and space the AOI source controls.
+- Fix skipped-candidate preallocation in automatic DET2D; align app/installer versions.
+
 ## [7.1.2] - 2026-11-02
 - Export custom STC empirical covariance/kernel plots as PNG and FIG, with
   contributing pair counts, marginal fits and the actual common-amplitude

@@ -1,4 +1,20 @@
-# PHASE v7.1.2
+# PHASE v7.1.3
+
+- Size Excel report columns from displayed numeric values, including large UTM coordinates.
+- Store additional custom-model outputs under files/customModel; restore the original native two-panel covariance figure.
+- Add AOI source spacing and wrap long sidebar result/error paths.
+- Add optional residual temporal diagnostics and linear/quadratic correction for automatic/custom DET/STC in 1D/2D. Defaults diagnose only. Custom correction propagates shared-data and assigned-parameter uncertainty; automatic correction reuses the native polynomial and uncertainty path. Outlier rejection is unchanged.
+- Add optional suggested/maximum spatial and temporal e-folding lengths and bounded refinement for STC covariance fits. Empty controls preserve the native fit.
+- Export observation-level subtraction checks and separate custom-model/temporal-trend contributions. Common AOI trend correction does not remove spatially varying trends; per-PS diagnostics are included.
+- Automatic STC atmospheric per-epoch means cannot be separated from an additional common temporal trend: use Diagnose only or cleanObs.
+- Fix missing candidate preallocation in automatic DET2D on small datasets.
+- App and installer versions aligned to 7.1.3.
+
+Validation: numerical covariance oracle, derivative and remove/restore checks; four custom and four automatic native integration paths. Linux remains experimental. macOS installer remains unsigned/not notarized.
+
+See the [custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+
+## PHASE v7.1.2
 
 - Custom STC now saves temporal/spatial covariance plots as PNG and editable
   FIG, plus CSV curves and contributing pair counts. Plots distinguish the

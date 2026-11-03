@@ -20,6 +20,7 @@ def test_covariance_diagnostics_export_actual_kernel_and_counts(phase_root):
     prepare=(phase_root / "+phase_model_custom/prepareResidual.m").read_text()
     assert "exportCovarianceDiagnostics" in prepare
     export=(phase_root / "+phase_model_custom/exportCovarianceDiagnostics.m").read_text()
-    assert "savefig(" in export and "exportFigure(" in export
+    assert "savefig(" in export and "print(f," in export
     assert "FittedSignal_mm2" in export and "PairCount" in export
-    assert "Marginal fit before common amplitude" in export
+    assert "subplot(1,2,1)" in export and "subplot(1,2,2)" in export
+    assert "legend('empirical', 'signal', 'noise')" in export

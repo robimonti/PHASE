@@ -4,6 +4,8 @@ function [errors,warnings] = validateConfig(config,forRun)
 if nargin < 2, forRun = false; end
 errors = {};
 warnings = {};
+try, phase_model_science.options(config);
+catch ME, errors{end+1}=ME.message; end
 
 if isempty(strtrim(config.filepathIN))
     if forRun, errors{end+1} = 'Select the displacement time-series XLSX/CSV file.'; end %#ok<AGROW>
@@ -136,6 +138,9 @@ if config.flag_tsExtr
 end
 
 custom = isfield(config,'deterministicModelMode') && strcmp(config.deterministicModelMode,'custom');
+if ~custom && strcmp(config.procType,'spatialSTC') && strcmp(config.detrendMethod,'residualAtm') && ~strcmp(config.temporalTrend,'diagnose')
+    errors{end+1}='Temporal trend and per-epoch atmospheric offsets cannot be separated. Use cleanObs for trend correction, or select Diagnose only.';
+end
 if custom
     if ~ismember(config.procType,{'spatialDET','spatialSTC'})
         errors{end+1} = 'Custom deterministic models require a spatio-temporal DET or STC workflow.';

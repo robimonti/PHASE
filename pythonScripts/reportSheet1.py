@@ -1,3 +1,4 @@
+from reportColumnWidths import autofit_numeric_columns
 import sys
 import openpyxl
 from openpyxl.drawing.image import Image
@@ -54,6 +55,7 @@ def format_excel(report_path, figures_and_positions, sheet_name):
         sheet[header].alignment = Alignment(horizontal='left', vertical='center')
 
     # Save the updated workbook
+    autofit_numeric_columns(sheet)
     wb.save(report_path)
     print(f"Updated Excel file saved at: {report_path}")
 

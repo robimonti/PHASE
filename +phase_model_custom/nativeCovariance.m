@@ -170,6 +170,8 @@ if ~isfinite(dsCov_STC2D)||dsCov_STC2D<=0, error('PHASE:customCovarianceBins','S
         case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_t, mCovF1] = fit_gaussian_cosine_auto(x_data_t, y_data_t, w_data_t);
     end
+    [c_opt_t,timeRangeFit]=phase_model_science.constrainCovariance(c_opt_t,mCovF1, ...
+        x_data_t,y_data_t,w_data_t,tCovModel_STC2D,config,'Time');
     c1_t = c_opt_t;
     
     
@@ -192,6 +194,8 @@ if ~isfinite(dsCov_STC2D)||dsCov_STC2D<=0, error('PHASE:customCovarianceBins','S
         case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_s, mCovF2] = fit_gaussian_cosine_auto(x_data_s, y_data_s, w_data_s);
     end
+    [c_opt_s,spaceRangeFit]=phase_model_science.constrainCovariance(c_opt_s,mCovF2, ...
+        x_data_s,y_data_s,w_data_s,sCovModel_STC2D,config,'Space');
     c1_s = c_opt_s;
     
     
@@ -220,4 +224,5 @@ settings.pairCountTime=round(1./Cecf_mean_t);
 settings.pairCountSpace=round(1./Cecf_mean_s);
 settings.marginalTimeParameters=c_opt_t;
 settings.marginalSpaceParameters=c_opt_s;
+settings.timeRangeFit=timeRangeFit;settings.spaceRangeFit=spaceRangeFit;
 end

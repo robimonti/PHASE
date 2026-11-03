@@ -8,6 +8,14 @@ reference=q; reference(:,4)=referenceDay;
 [m0,J0all]=phase_model_custom.evaluate(fit.definition,fit.values,reference,fit.context);
 Jq=Jall(:,fit.free)-J0all(:,fit.free);
 m=m-m0;
+customMean=m; temporalMean=zeros(size(m));
+if isfield(fit,'temporalTrend') && fit.temporalTrend.degree>0
+    trend=fit.temporalTrend;
+    Bq=phase_model_science.trendBasis(q(:,4),referenceDay,trend.scale,trend.degree);
+    temporalMean=Bq*trend.coefficients;
+    m=m+temporalMean;
+    Jq=[Jq Bq];
+end
 if strcmp(residual.kind,'STC')
     K=phase_model_custom.kernel(q,c,residual.settings) ...
         -phase_model_custom.kernel(reference,c,residual.settings);
@@ -69,7 +77,7 @@ if isfield(fit.definition,'assignedCovariance') && any(fit.definition.assignedCo
     P=fit.definition.assignedCovariance;
     if isfield(residual,'assignedJacobian'), Jobs=residual.assignedJacobian;
     else, [~,Jobs]=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context); end
-    sensitivity=zeros(numel(fit.free),numel(fit.values));
+    sensitivity=zeros(size(fit.J,2),numel(fit.values));
     if isfield(fit,'assignedSensitivity'),sensitivity=fit.assignedSensitivity;end
     D=Jall-J0all+Jq*sensitivity;
     if strcmp(residual.kind,'STC')
@@ -92,7 +100,7 @@ scale=max([1;abs(targetVariance);abs(varianceScale)]);
 if any(total < -1e-7*scale)
     error('PHASE:customVariance','Negative propagated variance beyond numerical precision.');
 end
-prediction=struct('total',m+stochastic,'deterministic',m,'residual',stochastic, ...
+prediction=struct('customDeterministic',customMean,'temporalTrend',temporalMean,'total',m+stochastic,'deterministic',m,'residual',stochastic, ...
     'variance',max(total,0),'deterministicVariance',max(deterministicVariance,0), ...
     'residualVariance',residualVariance,'crossCovariance',cross);
 end

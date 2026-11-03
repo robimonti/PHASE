@@ -149,7 +149,7 @@ end
 
 % Pre-allocate for candidates
 num_candidates = size(combinations, 1);
-% Adapter guard: retain entries for skipped candidates before native sorting.
+% Retain entries for skipped candidates before native sorting.
 lambda_tmp=NaN(num_candidates,1);coef_tmp=cell(num_candidates,1);
 obs_est_tmp = NaN(n_obs, num_candidates);
 var_resSpl = NaN(num_candidates, 1);

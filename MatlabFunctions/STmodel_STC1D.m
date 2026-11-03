@@ -1,7 +1,7 @@
 function [lonlatIN_AOI_STC1D, dates_full, t_full, final_signal_orig, final_signal_out, final_std_out, displEXTR] = ...
     STmodel_STC1D(displIN_AOI, PSidIN_AOI, t_dateIN, t_relIN, centerline_data, figsDir, minMonths, ...
     gS_input_path, gS_output_path, gS_job_path, detectedOS, dtCov_STC1D, dsCov_STC1D, utmZone, xyIN_AOI, step_t, ...
-    detrend_method, use_inclined_means, poly_degree, tCovModel_STC1D, sCovModel_STC1D, markerSize_STC1D, xy_EXTR)
+    detrend_method, use_inclined_means, poly_degree, tCovModel_STC1D, sCovModel_STC1D, markerSize_STC1D, xy_EXTR, varargin)
 
 % STmodel_STC1D Performs spatio-temporal stochastic modelling for displacement data
 %
@@ -415,6 +415,15 @@ disp('Variables preparation completed.');
 
 
 
+% Optional residual controls (outlier rejection above is unchanged).
+scientificOptions=phase_model_science.options(struct());
+if ~isempty(varargin),scientificOptions=phase_model_science.options(varargin{1});end
+protectedTemporalDegree=0;originalPolynomialDegree=poly_degree;
+if strcmp(detrend_method,'residualAtm') && ~strcmp(scientificOptions.temporalTrend,'diagnose')
+    error('PHASE:temporalTrendAtmosphere','A common temporal trend is not identifiable separately from per-epoch atmospheric means. Use cleanObs to retain and restore a deformation trend, or Diagnose only.');
+end
+residualDiagnosticsDir=fullfile(fileparts(figsDir),'files','residualDiagnostics');
+
 %% 3) LEAST SQUARES COLLOCATION
 disp('======== Step 3 ========');
 disp('Iterative 2D Least Squares Collocation started...');
@@ -569,6 +578,9 @@ while iter < 2
     % 3.3) LS with backward elimination
     % Track which parameters are currently kept in the model (initially, everything is kept)
     mask_params = true(size(A_full, 2), 1);
+    if strcmp(detrend_method,'cleanObs')
+        mask_params=phase_model_science.polynomialMask(size(A_full,2),originalPolynomialDegree,protectedTemporalDegree,'1D');
+    end
     
     % Loop until no more parameters can be removed
     elimination_done = false;
@@ -630,6 +642,9 @@ while iter < 2
             t_crit = 1.96; 
         end
         
+        if strcmp(detrend_method,'cleanObs')
+            t_stats=phase_model_science.protectTemporalTerms(t_stats,mask_params,protectedTemporalDegree,'1D');
+        end
         % 3.3.4) Identify the smallest one
         [min_t, min_idx_local] = min(abs(t_stats));
         
@@ -750,6 +765,15 @@ while iter < 2
         - trend_grid_full ...
         - spatialMeans_grid_temp;
 
+
+    % Diagnose the residual series, not the shape of its covariance curve.
+    % Repeat this LSC iteration once if extra temporal terms are requested.
+    [retryTrend,protectedTemporalDegree,poly_degree]=phase_model_science.nativeTrendCheck( ...
+        t_relIN,residuals_grid_full,scientificOptions,protectedTemporalDegree,poly_degree, ...
+        residualDiagnosticsDir,sprintf('STC1D_iteration%d_protected%d',iter,protectedTemporalDegree));
+    if retryTrend && strcmp(detrend_method,'cleanObs')
+        iter=iter-1;continue
+    end
 
     % 3.6) Convergence check
     if iter == 1
@@ -920,6 +944,8 @@ while iter < 2
         case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_t, mCovF1] = fit_gaussian_cosine_auto(x_data_t, y_data_t, w_data_t);
     end
+    [c_opt_t,rangeFitTime]=phase_model_science.constrainCovariance(c_opt_t,mCovF1, ...
+        x_data_t,y_data_t,w_data_t,tCovModel_STC1D,scientificOptions,'Time');
     c1_t = c_opt_t;
     if any(isnan(c1_t))
         warning('Time covariance fit returned NaNs. Using safe fallback parameters.');
@@ -946,6 +972,8 @@ while iter < 2
         case {'gaussian_cos', 'gaussian_cosine', 'gaussian+cosine'}
             [c_opt_s, mCovF2] = fit_gaussian_cosine_auto(x_data_s, y_data_s, w_data_s);
     end
+    [c_opt_s,rangeFitSpace]=phase_model_science.constrainCovariance(c_opt_s,mCovF2, ...
+        x_data_s,y_data_s,w_data_s,sCovModel_STC1D,scientificOptions,'Space');
     c1_s = c_opt_s;
     if any(isnan(c1_s))
         warning('Space covariance fit returned NaNs. Using safe fallback parameters.');
@@ -984,6 +1012,9 @@ while iter < 2
 
 end
 
+
+phase_project.writeJson(fullfile(residualDiagnosticsDir,'correlation_fit.json'), ...
+    struct('time',rangeFitTime,'space',rangeFitSpace));
 
 % Final cleaned time series for collocation
 data_final_clean = dataRawCleanT_sorted ...

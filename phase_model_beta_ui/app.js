@@ -414,6 +414,10 @@ function isRelevant(meta) {
   const custom = c.deterministicModelMode === "custom";
   const rules = {
     deterministicModelMode: spatial,
+    temporalTrend: spatial,
+    correlationSpace: stochastic, correlationSpaceMax: stochastic,
+    correlationTime: stochastic, correlationTimeMax: stochastic,
+    correlationTolerance: stochastic,
     customMemoryGB: stochastic && custom,
     filepathAOI: !c.flag_AOIbb,
     lonMinAOI: Boolean(c.flag_AOIbb), lonMaxAOI: Boolean(c.flag_AOIbb),

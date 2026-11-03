@@ -338,7 +338,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.1.2"
+            version = "v7.1.3"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],
