@@ -140,11 +140,11 @@ reference-area uncertainty is not inferred from the Excel.
 
 ## Residual controls (v7.1.3)
 
-Model design exposes the same controls for automatic/custom spatio-temporal
-DET and STC, in 1D and 2D. Defaults preserve the numerical workflow: diagnose
-only and no range constraints. The original outlier rejection is unchanged.
+The 1D model / 2D model pages expose the same controls for automatic/custom spatio-temporal
+DET and STC, in 1D and 2D. Automatic-engine defaults diagnose only, with no range constraints.
+Custom workflows select their residual field automatically. The original outlier rejection is unchanged.
 
-**Residual temporal trend:** Diagnose only, Auto, Linear or Quadratic.
+**Automatic-engine residual temporal trend:** Diagnose only, Auto, Linear or Quadratic.
 The check fits the residual displacement series, never the covariance curve.
 Auto compares the AOI mean with constant, linear and quadratic descriptions
 using contiguous held-out time blocks. A polynomial requires at least 20%
@@ -154,18 +154,32 @@ These are documented selection heuristics, not iid p-values or a guarantee of
 stationarity. Opposite local trends may cancel: per-PS linear/quadratic
 coefficients are exported alongside the AOI mean diagnostics.
 
-Custom correction fits a common AOI temporal polynomial after the custom
-model, subtracts it before the native spline/covariance calculation, then
-restores it at every output location and the appropriate reference epoch.
-It does not change fixed custom parameters. With B the reference-aware time
-basis and M = pinv(B), the second-stage derivative is
+Custom DET/STC automatically checks an additional residual deterministic field;
+there are no user controls for its coefficients or complexity. Candidates use
+linear/quadratic time terms with common, affine/quadratic spatial coefficients,
+or the existing native cubic spatial spline basis at coarse resolutions. All
+terms are referenced to the input master and restored at prediction locations.
+The fixed custom model is unchanged. Regularisation and complexity are selected
+using five contiguous time blocks and five contiguous spatial groups. Both
+held-out errors must improve by at least 10% over no additional correction;
+the simplest field within 10% of the best joint score is retained. Tiny effects
+and numerically weak fits are rejected. Scores are conditional on the upstream
+custom fit and outlier mask, not an independent validation of the full pipeline.
+
+If no spatial field generalises, the separately supported common temporal mean
+is retained; otherwise no additional correction is applied. The reason and all
+candidate scores are saved. The method never forces an empirical covariance
+tail towards zero by increasing deterministic complexity until it disappears.
+
+For the selected weighted/regularised coefficient map M, the derivative is
 `Ltrend = M - M*Jcustom*Lcustom`. The augmented design/derivative enters the
 existing prediction equations, retaining cross terms with the custom fit and
-collocation/splines, including assigned parameter uncertainty. Diagnostics
-export the before/after residual means, the extra coefficients, their joint
-covariance and separate custom/trend/residual output components. This common
-correction cannot remove a spatially varying residual trend; inspect the
-per-PS diagnostics before accepting a stationary covariance model.
+collocation/splines, including assigned parameter uncertainty. Uncertainty is
+conditional on field selection and regularisation: selection uncertainty and
+regularisation/model bias are not included. Observation, custom-model, added
+field and residual contributions are exported separately. Mean and covariance
+fit checks can request scientific review; they do not certify stationarity.
+Extrapolation outside observation coverage still requires care.
 
 Automatic correction reuses the existing polynomial basis and uncertainty
 calculation. It optionally refits the selected native model once, retaining
@@ -192,7 +206,8 @@ and [MathWorks mean plus covariance model](https://www.mathworks.com/help/stats/
 
 ## Additional outputs
 
-All files below are inside `output_NNN/files/customModel/`. The general Excel
+Diagnostic data files below are inside `output_NNN/files/customModel/`. All figures
+are in the shared `output_NNN/figures/`, as PNG plus editable FIG. The general Excel
 report remains at `output_NNN/`, alongside the existing output subfolders.
 
 
@@ -211,7 +226,7 @@ report remains at `output_NNN/`, alongside the existing output subfolders.
   trend + residual actually used for fitting, for every retained observation.
 - `temporal_before*` / `temporal_after*`: trend diagnostics, including per-PS
   coefficients; after files exist only when a correction is applied.
-- `figures/custom_residual_mean.*`: mean/RMS by acquisition and mean by PS.
+- Residual diagnostic figures are not generated. Numerical mean/trend checks remain in CSV/JSON.
 - `custom_query_timeseries.csv`, when query points are enabled: dated point
   predictions with station ID, coordinates, deterministic/residual components
   and conditional standard deviation, referenced to the first input date.
@@ -245,6 +260,7 @@ The normal workbook and spatial export pipeline also receive custom results.
 ## Verification
 
 ```matlab
+phase_model_science.residualFieldSelfTest
 phase_model_science.selfTest
 phase_model_science.nativeIntegrationSelfTest
 phase_model_custom.scientificSelfTest

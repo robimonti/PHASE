@@ -1,4 +1,13 @@
-# PHASE v7.1.3
+# PHASE v7.1.4
+
+- Group temporal/spatial covariance controls in the 1D model / 2D model pages.
+- Save custom and automatic figures together in the run figures folder, with PNG and editable FIG; add editable final-frame snapshots alongside animations.
+- Automatically validate additional space-time residual mean fields for custom DET/STC in both dimensions, using native polynomial/cubic spline bases and temporal/spatial holdouts. Keep the supported common correction when spatial validation fails. No extra user controls.
+- Preserve the fixed custom model and original outlier rejection. Propagate shared-data cross covariance and assigned-parameter uncertainty through the selected additional mean fit.
+- Remove residual diagnostic figures from PHASE output; retain original covariance plots and numeric diagnostic files.
+- Export candidate selection diagnostics and covariance review checks. Detrending does not certify stationarity; selected-field/regularisation uncertainty and bias are excluded from conditional output uncertainty.
+
+## PHASE v7.1.3
 
 - Size Excel report columns from displayed numeric values, including large UTM coordinates.
 - Store additional custom-model outputs under files/customModel; restore the original native two-panel covariance figure.

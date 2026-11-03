@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Prepare 7.1.4: group covariance controls, consolidate editable figures and automatically validate residual mean fields in custom modelling. Preserve native outlier/covariance estimators and record unsupported fits for review.
 
 ## [7.1.3] - 2026-11-03
 - Restore native covariance figures and organize custom outputs in files/customModel.

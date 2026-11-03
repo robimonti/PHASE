@@ -56,10 +56,4 @@ writetable(table((1:size(residuals,1))',pointSlope,pointCurvature,'VariableNames
     {'PS_index','LinearCoefficientAtStart_mmYear','QuadraticCoefficient_mmYear2'}), ...
     fullfile(folder,[name '_by_PS.csv']));
 phase_project.writeJson(fullfile(folder,[name '.json']),info);
-f=figure('Visible','off','Color','w');cleanup=onCleanup(@() close(f)); %#ok<NASGU>
-plot(times,means,'ko-');hold on;plot(times,linear,'b--');plot(times,quadratic,'m-');
-yline(0,':','HandleVisibility','off');grid on;xlabel('Time [days]');ylabel('Mean residual [mm]');
-legend('AOI mean residual','Linear diagnostic','Quadratic diagnostic','Location','best');
-title('Temporal residual diagnostic — not a stationarity test');
-savefig(f,fullfile(folder,[name '.fig']));phase_model_beta.exportFigure(f,fullfile(folder,[name '.png']));
 end

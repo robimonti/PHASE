@@ -12,6 +12,9 @@ for name={'customOriginX','customOriginY'}
         error('PHASE:customOrigin','Origins must be finite or empty for automatic centering.');
     end
 end
+if isfield(config,'customResidualField') && ~ismember(config.customResidualField,{'automatic','common'})
+    error('PHASE:customResidualField','Unknown residual deterministic field policy.');
+end
 limit=config.customMemoryGB;
 if ~isnumeric(limit)||~isscalar(limit)||~isfinite(limit)||limit<0.1
     error('PHASE:customOption','The STC memory budget must be at least 0.1 GiB.');

@@ -11,7 +11,11 @@ m=m-m0;
 customMean=m; temporalMean=zeros(size(m));
 if isfield(fit,'temporalTrend') && fit.temporalTrend.degree>0
     trend=fit.temporalTrend;
-    Bq=phase_model_science.trendBasis(q(:,4),referenceDay,trend.scale,trend.degree);
+    if isfield(trend,'kind')
+        Bq=phase_model_science.spaceTimeBasis(q,trend,referenceDay);
+    else
+        Bq=phase_model_science.trendBasis(q(:,4),referenceDay,trend.scale,trend.degree);
+    end
     temporalMean=Bq*trend.coefficients;
     m=m+temporalMean;
     Jq=[Jq Bq];

@@ -281,7 +281,7 @@ def test_model_beta_temporal_mode_skips_spatial_grid_and_exports_report_figures(
 
     assert "if strcmp(procType, 'temporal')" in engine
     assert "Pure temporal mode: spatial grid generation skipped." in engine
-    assert engine.count("phase_model_beta.exportFigure") == 5
+    assert engine.count("phase_model_beta.exportFigure") == 6
     assert "exportgraphics" in exporter
     assert "figureExportFailed" in exporter
 

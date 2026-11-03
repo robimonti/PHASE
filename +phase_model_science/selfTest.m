@@ -1,7 +1,7 @@
 function selfTest()
 %SELFTEST Independent algebraic checks for trend removal/restoration and error.
 addpath(fullfile(phase_model_beta.projectRoot(),'MatlabFunctions'));
-c=phase_model_beta.defaultConfig();c.temporalTrend='quadratic';
+c=phase_model_beta.defaultConfig();c.temporalTrend='quadratic';c.customResidualField='common';
 c.customExpression='a*t+b.*sin(t/90)';
 c.customParameters='[{"name":"a","value":0.02,"estimate":true,"std":null},{"name":"b","value":0.2,"estimate":false,"std":0.1}]';
 d=phase_model_custom.parseDefinition(c);times=0:30:600;
@@ -64,5 +64,10 @@ for family={'gaussian','exponential','gaussian_cosine'}
     [bounded,info]=phase_model_science.constrainCovariance(coeff,fun,lags,fun(coeff,lags),weights,model,opts,'Space');
     assert(info.enabled&&bounded(2)^(-1/power)>=40-1e-6&&bounded(2)^(-1/power)<=55+1e-6);
 end
+% Opposite local trends have zero AOI mean but negative long-lag products.
+symmetric=[times-mean(times);-(times-mean(times))];
+assert(max(abs(mean(symmetric,1)))==0);
+[products,~,~]=f1DEmpCovEst_accum(symmetric(1,:),times,30,false);
+assert(products(end,1)/products(end,2)<0);
 disp('Residual controls passed: remove/restore, shared-data uncertainty, blocked diagnostics, native/manual ranges.');
 end

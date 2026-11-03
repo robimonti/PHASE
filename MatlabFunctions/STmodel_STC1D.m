@@ -1054,7 +1054,7 @@ yl = [ ...
 ylim(ax1, yl)
 ylim(ax2, yl)
 
-print(gcf, fullfile(figsDir, 'STC_cov2D.png'), '-dpng', '-r300')
+phase_model_beta.exportFigure(gcf, fullfile(figsDir, 'STC_cov1D.png'))
 
 
 % --- end ---
@@ -1728,6 +1728,9 @@ for t = 1:length(t_full)
     end
 
     % clear only gif figure
+    if t==numel(dates_full)
+        phase_model_beta.exportFigure(gif_fig,fullfile(figsDir,'STstc_displ1d.png'));
+    end
     clf(gif_fig);
 
 end
@@ -1752,7 +1755,7 @@ c.Label.FontSize = 15;
 title(c, '[mm]', 'FontSize', 15);
 set(gca, 'FontSize', 15)
 filename = strcat(figsDir, filesep, 'STstc_displ1D.png');
-print(gcf, filename, '-dpng', '-r300')
+phase_model_beta.exportFigure(gcf, filename)
 delete(gif_fig)
 
 disp('GIF creation completed.');

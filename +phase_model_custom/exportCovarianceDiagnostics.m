@@ -1,6 +1,6 @@
 function exportCovarianceDiagnostics(settings,folder)
 %EXPORTCOVARIANCEDIAGNOSTICS Original STmodel_STC covariance figure, unchanged.
-figsDir=fullfile(folder,'figures');if ~isfolder(figsDir),mkdir(figsDir);end
+figsDir=phase_model_beta.figureFolder(folder);if ~isfolder(figsDir),mkdir(figsDir);end
 lag_t=settings.lagTime; eCovF_mean_t=settings.covarianceTime;
 lag_s=settings.lagSpace; eCovF_mean_s=settings.covarianceSpace;
 c1_t=settings.timeParameters; c1_s=settings.spaceParameters;

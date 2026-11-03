@@ -1885,6 +1885,9 @@ for t = 1:length(t_full)
     end
 
     % clear only gif figure
+    if t==numel(dates_full)
+        phase_model_beta.exportFigure(gif_fig,fullfile(figsDir,'STdet_displ1d.png'));
+    end
     clf(gif_fig);
 
 end
@@ -1909,7 +1912,7 @@ c.Label.FontSize = 15;
 title(c, '[mm]', 'FontSize', 15);
 set(gca, 'FontSize', 15)
 filename = strcat(figsDir, filesep, 'STdet_displ1D.png');
-print(gcf, filename, '-dpng', '-r300')
+phase_model_beta.exportFigure(gcf, filename)
 delete(gif_fig)
 
 disp('GIF creation completed.');

@@ -169,7 +169,7 @@ function renderPage() {
   byId("section-kicker").textContent = group.kicker || "Configuration";
   byId("section-title").textContent = group.title || "";
   byId("section-subtitle").textContent = group.subtitle || "";
-  const fields = asArray(ModelUI.schema.fields).filter(item => item.group === group.id);
+  const fields = asArray(ModelUI.schema.fields).filter(item => (item.group === "spatialModel" ? (ModelUI.config.projDim === "1D" ? "spatial1d" : "spatial2d") : item.group) === group.id);
   const relevant = fields.filter(isRelevant);
   byId("section-meta").textContent = `${relevant.length} control${relevant.length === 1 ? "" : "s"}`;
   const grid = byId("form-grid");
@@ -188,6 +188,23 @@ function renderPage() {
     details.appendChild(coordinateFields);
     // Append after the basic model fields below.
     coordinateSection = details;
+  }
+  const covarianceSections = new Map();
+  const covarianceDirection = id => {
+    if (id === "temporalTrend" || id.startsWith("dtCov") || id.startsWith("tCovModel") || id.startsWith("correlationTime")) return "Temporal covariance";
+    if (id.startsWith("dsCov") || id.startsWith("sCovModel") || id.startsWith("correlationSpace")) return "Spatial covariance";
+    return "";
+  };
+  const covariancePage = ["spatial1d", "spatial2d"].includes(group.id) && ModelUI.config.procType === "spatialSTC";
+  if (covariancePage) {
+    for (const title of ["Temporal covariance", "Spatial covariance"]) {
+      const section = document.createElement("section");
+      section.className = "covariance-section";
+      const heading = document.createElement("h2"); heading.textContent = title;
+      const controls = document.createElement("div"); controls.className = "form-grid";
+      section.append(heading,controls); grid.appendChild(section);
+      covarianceSections.set(title,controls);
+    }
   }
   fields.forEach(meta => {
     if (group.id === "aoi" && meta.id === "flag_AOIbb") {
@@ -215,6 +232,8 @@ function renderPage() {
     if (!isRelevant(meta)) card.classList.add("inactive");
     if (coordinateFields && ["customCoordinates","customOriginX","customOriginY"].includes(meta.id)) {
       coordinateFields.appendChild(card);
+    } else if (covariancePage && covarianceDirection(meta.id)) {
+      covarianceSections.get(covarianceDirection(meta.id)).appendChild(card);
     } else {
       grid.appendChild(card);
     }
@@ -243,7 +262,7 @@ function renderContextNote(groupId) {
   if (groupId === "processing") {
     message = `${processingLabel()} · ${ModelUI.config.projDim || "1D"} project`;
   } else if (groupId === "custom") {
-    message = "PHASE supplies PS and output coordinates and acquisition times. By default x and y are metres from the selected PS centre, and t is days from the first acquisition. Define your model and parameters; no manual coordinate preparation is needed.";
+    message = "PHASE supplies PS and output coordinates and acquisition times. By default x and y are metres from the selected PS centre, and t is days from the first acquisition. Define your model and parameters. PHASE automatically validates an additional residual mean field in space and time; its contribution is restored in predictions.";
   } else if (groupId === "spatial1d" || groupId === "spatial2d") {
     message = ModelUI.config.procType === "spatialDET"
       ? "Showing deterministic spline controls for the selected project dimension."
@@ -414,7 +433,7 @@ function isRelevant(meta) {
   const custom = c.deterministicModelMode === "custom";
   const rules = {
     deterministicModelMode: spatial,
-    temporalTrend: spatial,
+    temporalTrend: spatial && !custom,
     correlationSpace: stochastic, correlationSpaceMax: stochastic,
     correlationTime: stochastic, correlationTimeMax: stochastic,
     correlationTolerance: stochastic,

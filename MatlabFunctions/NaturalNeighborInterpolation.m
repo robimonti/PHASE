@@ -79,6 +79,9 @@ switch projDim
             else
                 imwrite(imind, cm, fullfile(figsDir, 'NNI_displ2D.gif'), 'gif', 'WriteMode', 'append', 'DelayTime', 0.5);
             end
+            if t==numel(t_dateIN)
+                phase_model_beta.exportFigure(fig,fullfile(figsDir,'NNI_displ2d.png'));
+            end
             cla(gx);
         end
         close(fig);
@@ -169,6 +172,9 @@ switch projDim
                 imwrite(imind, cm, fullfile(figsDir, 'NNI_displ1D.gif'), 'gif', 'Loopcount', inf, 'DelayTime', 0.5);
             else
                 imwrite(imind, cm, fullfile(figsDir, 'NNI_displ1D.gif'), 'gif', 'WriteMode', 'append', 'DelayTime', 0.5);
+            end
+            if t==numel(t_dateIN)
+                phase_model_beta.exportFigure(fig,fullfile(figsDir,'NNI_displ1d.png'));
             end
             cla(gx);
         end

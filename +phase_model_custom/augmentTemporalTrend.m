@@ -8,19 +8,42 @@ options=phase_model_science.options(config);
 matrix=nan(size(fit.context.xy,1),numel(fit.context.times));
 matrix(sub2ind(size(matrix),ids,it))=y-fit.mean;
 diagnostic=phase_model_science.temporalDiagnostic(fit.context.times,matrix,folder,'temporal_before');
-degree=0;
-switch options.temporalTrend
-    case 'auto',degree=diagnostic.suggestedDegree;
-    case 'linear',degree=1;
-    case 'quadratic',degree=2;
+automatic=~isfield(config,'customResidualField') || strcmp(config.customResidualField,'automatic');
+if automatic
+    [trend,B,M]=phase_model_science.selectResidualField(c,y-fit.mean,ids,config.projDim,fit.context.referenceDay,config);
+    trend.diagnostic=diagnostic;trend.scale=trend.timeScale;
+    fit.temporalTrend=trend;
+    degree=trend.degree;
+    if degree==0 && diagnostic.suggestedDegree>0
+        % Retain the independently diagnosed common mean if a spatial field
+        % cannot generalise. Do not replace it with an unsupported local fit.
+        trend.degree=diagnostic.suggestedDegree;trend.spatialDegree=0;
+        trend.spatialKind='polynomial';trend.spatialIntervals=0;trend.lambda=0;
+        trend.reason=['Common-mean fallback. ' trend.reason];
+        B=phase_model_science.spaceTimeBasis(c,trend,fit.context.referenceDay);
+        M=pinv(B);trend.coefficients=M*(y-fit.mean);
+        fit.temporalTrend=trend;degree=trend.degree;
+    end
+    if degree==0
+        fprintf('Residual field: %s\n',trend.reason);
+        return
+    end
+    beta=trend.coefficients;
+else
+    degree=0;
+    switch options.temporalTrend
+        case 'auto',degree=diagnostic.suggestedDegree;
+        case 'linear',degree=1;
+        case 'quadratic',degree=2;
+    end
+    fit.temporalTrend=struct('degree',degree,'policy',options.temporalTrend, ...
+        'diagnostic',diagnostic,'scale',max(range(fit.context.times),1),'coefficients',[]);
+    if degree==0,return;end
+    B=phase_model_science.trendBasis(c(:,4),fit.context.referenceDay,fit.temporalTrend.scale,degree);
+    if rank(B)<degree,error('PHASE:temporalTrend','Insufficient epochs for the residual polynomial.');end
+    M=pinv(B);
+    beta=M*(y-fit.mean);
 end
-fit.temporalTrend=struct('degree',degree,'policy',options.temporalTrend, ...
-    'diagnostic',diagnostic,'scale',max(range(fit.context.times),1),'coefficients',[]);
-if degree==0,return;end
-B=phase_model_science.trendBasis(c(:,4),fit.context.referenceDay,fit.temporalTrend.scale,degree);
-if rank(B)<degree,error('PHASE:temporalTrend','Insufficient epochs for the residual polynomial.');end
-M=pinv(B);
-beta=M*(y-fit.mean);
 Ltrend=M-(M*fit.J)*fit.L;
 [~,assignedJ]=phase_model_custom.evaluate(fit.definition,fit.values,c,fit.context);
 assignedTrend=-M*(assignedJ+fit.J*fit.assignedSensitivity);
@@ -30,5 +53,5 @@ fit.assignedSensitivity=[fit.assignedSensitivity;assignedTrend];
 fit.temporalTrend.coefficients=beta;
 matrix(sub2ind(size(matrix),ids,it))=y-fit.mean;
 fit.temporalTrend.after=phase_model_science.temporalDiagnostic(fit.context.times,matrix,folder,'temporal_after');
-fprintf('Residual temporal polynomial: degree %d, subtracted before residual fit and restored in predictions.\n',degree);
+fprintf('Residual deterministic correction: temporal degree %d, %d coefficients; subtracted before residual fitting and restored in predictions.\n',degree,numel(beta));
 end

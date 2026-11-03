@@ -2080,6 +2080,9 @@ for t = 1:length(t_full)
     end
 
     % clear only gif figure
+    if t==numel(dates_full)
+        phase_model_beta.exportFigure(gif_fig,fullfile(figsDir,'STdet_displ2d.png'));
+    end
     clf(gif_fig);
 
 end

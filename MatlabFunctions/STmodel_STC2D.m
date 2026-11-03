@@ -1050,7 +1050,7 @@ yl = [ ...
 ylim(ax1, yl)
 ylim(ax2, yl)
 
-print(gcf, fullfile(figsDir, 'STC_cov2D.png'), '-dpng', '-r300')
+phase_model_beta.exportFigure(gcf, fullfile(figsDir, 'STC_cov2D.png'))
 
 
 % --- end ---
@@ -1746,6 +1746,9 @@ for t = 1:length(t_full)
     end
     
     % 4. Explicitly clear gif_fig, leaving the waitbar completely alone
+    if t==numel(dates_full)
+        phase_model_beta.exportFigure(gif_fig,fullfile(figsDir,'STstc_displ2d.png'));
+    end
     clf(gif_fig);
 end
 close(h); 

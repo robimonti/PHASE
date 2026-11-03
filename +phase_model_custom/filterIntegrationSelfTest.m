@@ -47,12 +47,13 @@ for dimension={'1D','2D'}
         assert(all(queryFile.ID=="GNSS_TEST")&&all(isfinite(queryFile.Std_mm)));
         assert(max(abs(queryFile.Total_mm-query(:)))<1e-8);
         diagnostic=load(fullfile(resultFolder,'custom_model_results.mat'),'clean');
-        assert(isfile(fullfile(resultFolder,'figures','custom_residual_mean.png')));
+        assert(~isfile(fullfile(folder,'figures','custom_residual_mean.png')));
+        assert(isfile(fullfile(resultFolder,'custom_residual_mean.json')));
         if strcmp(family{1},'STC')
             for direction={'time','space'}
                 base=['custom_covariance_' direction{1}];
-                assert(isfile(fullfile(resultFolder,'figures',['STC_cov' dimension{1} '.png'])));
-                assert(isfile(fullfile(resultFolder,'figures',['STC_cov' dimension{1} '.fig'])));
+                assert(isfile(fullfile(folder,'figures',['STC_cov' dimension{1} '.png'])));
+                assert(isfile(fullfile(folder,'figures',['STC_cov' dimension{1} '.fig'])));
                 curves=readtable(fullfile(resultFolder,[base '.csv']));
                 assert(all(curves.PairCount>0)&&all(isfinite(curves.FittedSignal_mm2)));
             end

@@ -9,6 +9,8 @@ try
 catch
     print(fig,pathValue,'-dpng','-r300');
 end
+[folder,base]=fileparts(pathValue);
+savefig(fig,fullfile(folder,[base '.fig']));
 drawnow;
 if ~isfile(pathValue)
     error('PHASE_Model_beta:figureExportFailed', ...

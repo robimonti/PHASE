@@ -1453,7 +1453,7 @@ classdef ProcessingEngine < dynamicprops
                         title(sprintf('Modelled displacement for point %s (%.3f, %.3f)', idEXTR{i}, latEXTR(i), lonEXTR(i)), 'Interpreter', 'none', 'FontSize', 20);
                         xtickangle(45);
                         figEXTRnames{i} = fullfile(figsDir, sprintf('ExtrDispl_%s.png', idEXTR{i}));
-                        print(f, figEXTRnames{i}, '-dpng', '-r300');
+                        phase_model_beta.exportFigure(f, figEXTRnames{i});
                         close(f);
                     end
 

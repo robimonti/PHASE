@@ -70,10 +70,14 @@ writetable(table(ids,c(:,4),y,customMean,fit.mean-customMean,residualForCovarian
     'VariableNames',{'PS_index','Time_days','Observed_mm','CustomModel_mm','TemporalTrend_mm','ResidualUsed_mm'}), ...
     fullfile(outputDir,'custom_observation_components.csv'));
 meanDiagnostics=phase_model_custom.meanDiagnostics(c,y-fit.mean,ids,context,outputDir);
-phase_model_custom.exportResidualMeanDiagnostics(c,y-fit.mean,ids,context,outputDir);
 fprintf('Custom residual fit: %s.\n',config.procType);
 phase_model_custom.reportProgress(config,56,'Estimating residual structure and uncertainty');
 residual=phase_model_custom.prepareResidual(c,y,ids,fit,config);
+covarianceReview=struct();
+if strcmp(residual.kind,'STC')
+    covarianceReview=phase_model_science.covarianceReview(residual.settings,meanDiagnostics);
+    phase_project.writeJson(fullfile(outputDir,'covariance_review.json'),covarianceReview);
+end
 if strcmp(residual.kind,'STC')
     residual.parameterCovariance=fit.L*residual.C*fit.L';
     residual.whitenedJacobian=residual.factor\fit.J;
@@ -138,10 +142,11 @@ metadata=struct('workflow','custom two-stage','family',config.procType, ...
     'inputReferenceDate',char(string(datesIN(master))), ...
     'outputReferenceDate',char(string(datesIN(1))), ...
     'units','LOS displacement mm; metric x,y,s; time days', ...
-    'uncertainty','Local sampling/prediction uncertainty, conditional on selected covariance/spline settings and outlier mask; includes deterministic-residual cross covariance. Excludes covariance hyperparameter uncertainty, spline bias and model discrepancy.');
+    'uncertainty','Local sampling/prediction uncertainty, conditional on selected covariance/spline settings and outlier mask; includes deterministic-residual cross covariance. Excludes covariance hyperparameter/mean-field selection uncertainty, regularisation bias and model discrepancy.');
 metadata.temporalTrend=fit.temporalTrend;
+metadata.covarianceReview=covarianceReview;
 metadata.augmentedParameterNames=[{definition.parameters(fit.free).name}, ...
-    cellstr("residualTemporalDegree"+string(1:fit.temporalTrend.degree))];
+    cellstr("residualMeanCoefficient"+string(1:(size(fit.J,2)-numel(fit.free))))];
 metadata.augmentedParameterCovariance=parameterCovariance+fit.assignedSensitivity*definition.assignedCovariance*fit.assignedSensitivity';
 metadata.residualMeanPolicy=config.customResidualMean;metadata.meanDiagnostics=meanDiagnostics;
 metadata.coordinateSystem=config.customCoordinates;metadata.modelCoordinateOrigin=context.origin;
