@@ -29,6 +29,9 @@ if automatic
         return
     end
     beta=trend.coefficients;
+    if isfield(trend,'spatialPredictionNeedsReview') && trend.spatialPredictionNeedsReview
+        warning('PHASE:residualFieldCoverage','Observed residual drift was corrected, but prediction in withheld spatial regions needs review. Output uncertainty is conditional on the selected mean field; spatial extrapolation/model bias is not included.');
+    end
 else
     degree=0;
     switch options.temporalTrend

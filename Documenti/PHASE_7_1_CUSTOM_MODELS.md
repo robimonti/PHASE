@@ -160,13 +160,15 @@ linear/quadratic time terms with common, affine/quadratic spatial coefficients,
 or the existing native cubic spatial spline basis at coarse resolutions. All
 terms are referenced to the input master and restored at prediction locations.
 The fixed custom model is unchanged. Regularisation and complexity are selected
-using five contiguous time blocks and five contiguous spatial groups. Both
-held-out errors must improve by at least 10% over no additional correction;
-the simplest field within 10% of the best joint score is retained. Tiny effects
+using five contiguous time blocks and five contiguous spatial groups. The held-out temporal error must improve by at least 10% over no additional
+correction. The simplest field within 10% of the best temporal score is retained;
+spatial holdouts guide regularisation among temporally equivalent fits and
+report interpolation/coverage limitations, without vetoing removal of an
+observed temporal trend. Tiny effects
 and numerically weak fits are rejected. Scores are conditional on the upstream
 custom fit and outlier mask, not an independent validation of the full pipeline.
 
-If no spatial field generalises, the separately supported common temporal mean
+If no spatial field passes temporal validation, the separately supported common temporal mean
 is retained; otherwise no additional correction is applied. The reason and all
 candidate scores are saved. The method never forces an empirical covariance
 tail towards zero by increasing deterministic complexity until it disappears.

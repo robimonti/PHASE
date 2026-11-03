@@ -1,7 +1,8 @@
 function [state,B,M]=selectResidualField(c,r,ids,dimension,referenceDay,config)
 %SELECTRESIDUALFIELD Select a low-dimensional residual mean, not a covariance.
-% Held-out contiguous time blocks AND spatial blocks guard against absorbing
-% stochastic fluctuations. Selection is conditional on the upstream custom
+% Held-out contiguous time blocks guard against absorbing
+% stochastic fluctuations. Spatial holdouts describe coverage separately.
+% Selection is conditional on the upstream custom
 % fit. Fold scores are descriptive prediction diagnostics, not iid tests.
 % M is the exact linear map for the selected weighted, regularised mean fit.
 if nargin<6,config=struct();end
@@ -13,7 +14,7 @@ state=struct('kind','space-time residual field','dimension',dimension,'degree',0
     'spatialDegree',0,'spatialKind','polynomial','spatialIntervals',0, ...
     'spatialBounds',[min((positions-origin)./spatialScale);max((positions-origin)./spatialScale)],'origin',origin,'spatialScale',spatialScale, ...
     'timeScale',max(range(c(:,4)),1),'coefficients',[],'lambda',0, ...
-    'policy','Automatic residual field: blocked temporal and spatial validation', ...
+    'policy','Automatic residual field: temporal selection; spatial coverage diagnostics', ...
     'selectionScope','Conditional on the upstream custom fit and retained outlier mask; not proof of stationarity.');
 B=zeros(numel(r),0);M=zeros(0,numel(r));
 [dates,~,epoch]=unique(c(:,4));
@@ -44,12 +45,13 @@ for timeDegree=1:2
         trial.spatialDegree=spaceDegree;
         if candidate>3
             if any(diff(state.spatialBounds,1,1)<=1e-10),continue;end
+            spaceDegree=3;trial.spatialDegree=3;
             trial.spatialKind='native cubic splines';trial.spatialIntervals=candidate-2;
         end
         A=phase_model_science.spaceTimeBasis(c,trial,referenceDay);p=size(A,2);
         % Spatial geometry and sample size must identify every retained term.
         if distinctPositions<max(6,2*p/timeDegree)||rank(A)<p,continue;end
-        for lambda=[0 .001 .01 .1 1]
+        for lambda=[0 1e-6 1e-5 1e-4 .001 .01 .1 1]
             phase_model_custom.checkStop(config);
             losses=nan(2,5);
             for axis=1:2
@@ -60,23 +62,27 @@ for timeDegree=1:2
                     losses(axis,fold)=weightedMSE(r(test)-A(test,:)*beta,weights(test));
                 end
             end
-            if any(~isfinite(losses(:))),continue;end
+            if any(~isfinite(losses(1,:))),continue;end
             ratio=sum(losses,2)./max(sum(base,2),eps);
             records(end+1)=struct('timeDegree',timeDegree,'spatialDegree',spaceDegree, ...
                 'spatialKind',trial.spatialKind,'spatialIntervals',trial.spatialIntervals, ...
                 'lambda',lambda,'timeRatio',ratio(1),'spaceRatio',ratio(2), ...
-                'score',max(ratio),'coefficientCount',p); %#ok<AGROW>
+                'score',ratio(1),'coefficientCount',p); %#ok<AGROW>
         end
     end
 end
 state.candidates=records;
-if isempty(records),state.reason='No identifiable field passed blocked validation geometry.';return;end
-acceptable=find([records.timeRatio]<.9 & [records.spaceRatio]<.9);
-if isempty(acceptable),state.reason='No field improved both blocked errors by at least 10 percent.';return;end
+if isempty(records),state.reason='No identifiable field passed temporal validation geometry.';return;end
+acceptable=find([records.timeRatio]<.9);
+if isempty(acceptable),state.reason='No field improved blocked temporal error by at least 10 percent.';return;end
 best=min([records(acceptable).score]);
 shortlist=acceptable([records(acceptable).score]<=1.1*best+1e-8);
-% Prefer fewer coefficients; then lower held-out error. No user tuning needed.
-[~,ordering]=sortrows([[records(shortlist).coefficientCount]' [records(shortlist).score]'],[1 2]);
+% Among temporally equivalent models prefer the simplest spatial field.
+% Spatial holdouts then guide its regularisation, without vetoing observed drift.
+countsShort=[records(shortlist).coefficientCount];
+shortlist=shortlist(countsShort==min(countsShort));
+spatialScores=[records(shortlist).spaceRatio];spatialScores(~isfinite(spatialScores))=Inf;
+[~,ordering]=sortrows([spatialScores' [records(shortlist).timeRatio]'],[1 2]);
 chosen=records(shortlist(ordering(1)));
 state.degree=chosen.timeDegree;state.spatialDegree=chosen.spatialDegree;state.spatialKind=chosen.spatialKind;
 state.spatialIntervals=chosen.spatialIntervals;state.lambda=chosen.lambda;
@@ -91,7 +97,9 @@ if sqrt(weightedMSE(B*beta,weights))<max(.5,.1*sqrt(weightedMSE(r,weights)))
     state.reason='Validated correction was too small to justify additional mean terms.';return
 end
 state.coefficients=beta;state.selected=chosen;
-state.reason='Selected the simplest field within 10 percent of the best joint blocked score.';
+state.spatialPredictionNeedsReview=~isfinite(chosen.spaceRatio)||chosen.spaceRatio>=1;
+state.spatialValidationRole='Diagnostic of prediction in withheld regions; does not veto removal of observed temporal drift.';
+state.reason='Temporal validation selects the simplest supported field; spatial validation guides regularisation among equivalent temporal fits.';
 end
 function [beta,M]=solve(A,y,w,lambda)
 % Penalise scaled spatial/time coefficients, while retaining exact sensitivity.

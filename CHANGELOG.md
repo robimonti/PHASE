@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [7.1.5] - 2026-11-03
+- Separate temporal trend selection from spatial prediction validation; refine regularisation among temporally supported mean fields.
+- Add independent-noise, oscillatory-signal and valid long-range covariance regression checks.
+- Align application and installer versions to 7.1.5.
 - Prepare 7.1.4: group covariance controls, consolidate editable figures and automatically validate residual mean fields in custom modelling. Preserve native outlier/covariance estimators and record unsupported fits for review.
 
 ## [7.1.3] - 2026-11-03

@@ -66,5 +66,22 @@ assert(max(abs(p.variance-p.deterministicVariance-p.residualVariance-2*p.crossCo
 line=c;line(:,3)=c(:,1);
 [one,A,~]=phase_model_science.selectResidualField(line,r,ids,'1D',ref);
 assert(one.degree==1&&one.spatialDegree==1&&max(abs(A*one.coefficients-r))<1e-7);
+% Do not manufacture a deterministic correction for independent noise.
+stream=RandStream('mt19937ar','Seed',715);
+noise=20*randn(stream,size(c,1),1);
+[quiet,~,~]=phase_model_science.selectResidualField(c,noise,ids,'2D',ref);
+assert(quiet.degree==0,'Independent noise was incorrectly assigned a deterministic field.');
+% A resolved multi-cycle signal must not be flattened by the polynomial mean.
+oscillatory=8*(1+.003*c(:,1)).*sin(2*pi*(c(:,4)-ref)/120);
+[cycle,Acycle,~]=phase_model_science.selectResidualField(c,oscillatory,ids,'2D',ref);
+if cycle.degree>0
+    retained=oscillatory-Acycle*cycle.coefficients;
+    assert(norm(retained)>.9*norm(oscillatory),'An oscillatory residual was absorbed into the mean.');
+end
+% A valid covariance can decay monotonically throughout a finite observation
+% window: long correlation length does not imply a deterministic trend.
+longRange=exp(-abs(times'-times)/(10*range(times)));
+assert(all(diff(longRange(1,:))<0)&&longRange(1,end)>.9);
+[~,bad]=chol(longRange);assert(bad==0);
 disp('Automatic residual field passed: 1D/2D selection, held-out prediction, reference, derivatives and covariance oracle.');
 end

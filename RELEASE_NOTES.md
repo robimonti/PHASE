@@ -1,4 +1,13 @@
-# PHASE v7.1.4
+# PHASE v7.1.5
+
+- Correct automatic residual-field selection after custom modelling: temporal validation determines whether observed trends are removed. Spatial validation guides regularisation and reports prediction coverage; it no longer vetoes an observed temporal correction.
+- Refine the automatic regularisation search while retaining the native polynomial and cubic spline bases, original outlier filter and covariance estimators.
+- Subtract the selected additional mean before residual modelling and restore it at PS, grid and query locations with shared-data uncertainty propagation.
+- Retain covariance plots and numeric checks; no residual diagnostic figures are generated.
+- Verify covariance/derivative oracles, four custom paths, noise/oscillation safeguards, and a valid covariance that decays over the full finite observation range. Detrending does not certify stationarity; output uncertainty remains conditional on model selection and regularisation.
+- App and installer versions aligned to 7.1.5 on all platforms.
+
+## PHASE v7.1.4
 
 - Group temporal/spatial covariance controls in the 1D model / 2D model pages.
 - Save custom and automatic figures together in the run figures folder, with PNG and editable FIG; add editable final-frame snapshots alongside animations.
