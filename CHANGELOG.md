@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.9] - 2026-11-04
+- Prepare/repair the Windows Triangle runtime independently of system Git, replacing its complete DLL set and checking the real executable operation.
+- Exercise production installer helpers in Windows CI for absent, partial and reused runtime caches. Correct misleading failure messages; align all app/installer versions to 7.1.9.
+
 ## [7.1.8] - 2026-11-04
 - Consolidate the validated custom-model workflow: exclusive expression/function selection, shapefile map preview, clearer coordinate/preview controls, covariance ordering and output sections.
 - Replace hub alerts wording with relative anomalies; remove temporary UI actions while preserving the validated scientific calculations.

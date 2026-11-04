@@ -5,7 +5,8 @@ def test_installer_bundles_mingw_runtime_and_probes_triangle(phase_root):
     source = (phase_root / "installer" / "install-phase.ps1").read_text(encoding="utf-8-sig")
     for name in ("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll"):
         assert name in source
-    assert "PHASE\\portable-git\\mingw64\\bin" in source
+    assert "Install-PortableGit -RequireTriangleRuntime" in source
+    assert "'mingw64\\bin'" in source
     assert "Install-TriangleRuntime -TriangleBinDir $triangleBinDir" in source
     assert "Start-Process -FilePath $triangle -ArgumentList '-e', 'phase-probe.1.node'" in source
     assert "phase-probe.2.edge" in source

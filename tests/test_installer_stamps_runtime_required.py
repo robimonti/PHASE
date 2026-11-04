@@ -13,8 +13,8 @@ def test_missing_stamps_native_binaries_are_fatal(phase_root):
     block = source[failed_branch:end]
 
     assert "9 mandatory StaMPS binaries ready" in block
-    assert "step 6 cannot run without snaphu.exe" in block
-    assert 'throw "The mandatory StaMPS Windows binaries could not be installed.' in block
+    assert "See the preceding error for the exact failing file or probe" in block
+    assert 'throw "StaMPS executables or runtime dependencies could not be prepared.' in block
 
 
 def test_installer_creates_unified_hub_shortcut(phase_root):

@@ -1,41 +1,76 @@
-# CI-only functional smoke test of the same Windows Triangle binary PHASE installs.
+# Functional regression of production installer helpers, without launching WPF.
 $ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Add-Type -AssemblyName System.Windows.Forms
+$installer = Join-Path $PSScriptRoot '..\installer\install-phase.ps1'
+$tokens = $null; $errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile(
+    (Resolve-Path $installer).Path, [ref]$tokens, [ref]$errors)
+if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+$names = @('Find-Git', 'Get-RemoteFile', 'Install-PortableGit',
+           'Install-TriangleRuntime', 'Invoke-StampsBinariesDownload')
+$definitions = $ast.FindAll({ param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+    $names -contains $node.Name
+}, $true)
+if ($definitions.Count -ne $names.Count) { throw 'Production installer helpers not found.' }
+foreach ($definition in $definitions) { Invoke-Expression $definition.Extent.Text }
+$urlAssignment = $ast.Find({ param($node)
+    $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+    $node.Left.Extent.Text -eq '$Script:GitPortableUrl'
+}, $true)
+if (-not $urlAssignment) { throw 'Pinned Portable Git URL not found.' }
+Invoke-Expression $urlAssignment.Extent.Text
+
 $probeDir = Join-Path $env:RUNNER_TEMP 'phase-triangle-smoke'
 New-Item -ItemType Directory -Path $probeDir -Force | Out-Null
-$zip = Join-Path $probeDir 'stamps-win64-binaries.zip'
-Invoke-WebRequest -Uri 'https://github.com/pyccino/StaMPS/releases/download/windows-port-bins-v1/stamps-win64-binaries.zip' -OutFile $zip
-$extract = Join-Path $probeDir 'archive'
-Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
-$triangleSource = Get-ChildItem -LiteralPath $extract -Recurse -Filter triangle.exe -File | Select-Object -First 1
-if (-not $triangleSource) { throw 'Windows StaMPS archive has no triangle.exe.' }
-$runtimeDir = Join-Path $probeDir 'runtime'
-New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
-Copy-Item -LiteralPath $triangleSource.FullName -Destination $runtimeDir
-$portableArchive = Join-Path $probeDir 'PortableGit-2.45.2-64-bit.7z.exe'
-Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.45.2.windows.1/PortableGit-2.45.2-64-bit.7z.exe' -OutFile $portableArchive
-$gitRoot = Join-Path $probeDir 'portable-git'
-New-Item -ItemType Directory -Path $gitRoot -Force | Out-Null
-$unpack = Start-Process -FilePath $portableArchive -ArgumentList "-o`"$gitRoot`"", '-y' `
-    -Wait -PassThru -NoNewWindow
-if ($unpack.ExitCode -ne 0) { throw "Portable Git extraction failed (exit $($unpack.ExitCode))." }
-$mingwBin = Join-Path $gitRoot 'mingw64\bin'
-foreach ($dll in @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')) {
-    $source = Join-Path $mingwBin $dll
-    if (-not (Test-Path -LiteralPath $source)) { throw "Missing Git for Windows runtime: $source" }
-    Copy-Item -LiteralPath $source -Destination $runtimeDir
+$savedLocalAppData = $env:LOCALAPPDATA
+$env:LOCALAPPDATA = Join-Path $probeDir ([guid]::NewGuid().ToString('N'))
+$gitRoot = Join-Path $env:LOCALAPPDATA 'PHASE\portable-git'
+$stamps = Join-Path $probeDir ([guid]::NewGuid().ToString('N'))
+$runtimeDir = Join-Path $stamps 'external\triangle\bin'
+$status = { param($message) Write-Host $message }
+try {
+    $systemGit = Find-Git
+    if (-not $systemGit -or $systemGit.StartsWith($env:LOCALAPPDATA)) {
+        throw 'Regression fixture requires an existing system Git and no PHASE private cache.'
+    }
+    if (Test-Path -LiteralPath $gitRoot) { throw 'Expected an empty private runtime cache.' }
+    Write-Host "Regression: system Git already exists at $systemGit; PHASE private runtime absent."
+    if (-not (Invoke-StampsBinariesDownload -StampsRoot $stamps -StatusCallback $status)) {
+        throw 'Fresh runtime preparation failed with existing system Git.'
+    }
+    $mingwBin = Join-Path $gitRoot 'mingw64\bin'
+    $dlls = @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')
+    foreach ($dll in $dlls) {
+        $a = (Get-FileHash -Algorithm SHA256 (Join-Path $mingwBin $dll)).Hash
+        $b = (Get-FileHash -Algorithm SHA256 (Join-Path $runtimeDir $dll)).Hash
+        if ($a -ne $b) { throw "Unexpected installed Triangle DLL: $dll" }
+    }
+
+    # Reproduce an incomplete cache with git.exe still present and an incorrect
+    # DLL retained beside triangle.exe by an earlier/manual repair attempt.
+    Remove-Item -LiteralPath (Join-Path $mingwBin 'libgcc_s_seh-1.dll') -Force
+    [System.IO.File]::WriteAllText((Join-Path $runtimeDir 'libstdc++-6.dll'), 'invalid copied DLL')
+    if (-not (Test-Path -LiteralPath (Join-Path $gitRoot 'bin\git.exe'))) {
+        throw 'Partial-cache fixture lost git.exe.'
+    }
+    if (-not (Invoke-StampsBinariesDownload -StampsRoot $stamps -StatusCallback $status)) {
+        throw 'Repair of incomplete cache or manually copied DLL failed.'
+    }
+    foreach ($dll in $dlls) {
+        $a = (Get-FileHash -Algorithm SHA256 (Join-Path $mingwBin $dll)).Hash
+        $b = (Get-FileHash -Algorithm SHA256 (Join-Path $runtimeDir $dll)).Hash
+        if ($a -ne $b) { throw "Runtime repair left a mixed DLL set: $dll" }
+    }
+
+    # A complete cache must work without another Portable Git download.
+    $Script:GitPortableUrl = 'https://invalid.example/should-not-be-requested.exe'
+    if (-not (Invoke-StampsBinariesDownload -StampsRoot $stamps -StatusCallback $status)) {
+        throw 'Complete runtime reuse unexpectedly required a download.'
+    }
+    if ((Find-Git) -ne $systemGit) { throw 'Installer changed system Git selection.' }
+    Write-Output 'Production Windows installer passed: system Git, absent/partial/reused cache, DLL repair and real Triangle edge-file probes.'
+} finally {
+    $env:LOCALAPPDATA = $savedLocalAppData
 }
-$node = Join-Path $probeDir 'phase-probe.1.node'
-[System.IO.File]::WriteAllText($node, "3 2 0 0`n1 0 0`n2 1 0`n3 0 1`n")
-$triangle = Join-Path $runtimeDir 'triangle.exe'
-$stdout = Join-Path $probeDir 'triangle.out'
-$stderr = Join-Path $probeDir 'triangle.err'
-$probe = Start-Process -FilePath $triangle -ArgumentList '-e', 'phase-probe.1.node' `
-    -WorkingDirectory $probeDir -Wait -PassThru -NoNewWindow `
-    -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-$edge = Join-Path $probeDir 'phase-probe.2.edge'
-if ($probe.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $edge)) {
-    Get-Content -LiteralPath $stdout -ErrorAction SilentlyContinue
-    Get-Content -LiteralPath $stderr -ErrorAction SilentlyContinue
-    throw "Windows Triangle functional probe failed (exit $($probe.ExitCode))."
-}
-Write-Output 'Windows Triangle created a valid edge file.'

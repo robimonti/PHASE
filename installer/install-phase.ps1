@@ -321,41 +321,49 @@ function Add-DirToUserPath {
 function Install-PortableGit {
     param(
         [Parameter(Mandatory)] [scriptblock]$StatusCallback,
-        [Parameter(Mandatory)] [scriptblock]$ProgressCallback
+        [Parameter(Mandatory)] [scriptblock]$ProgressCallback,
+        [switch]$RequireTriangleRuntime
     )
     $destDir = Join-Path $env:LOCALAPPDATA 'PHASE\portable-git'
     $gitExe  = Join-Path $destDir 'bin\git.exe'
-
-    if (Test-Path $gitExe) {
-        & $StatusCallback "Portable Git already present at $destDir"
+    $required = @('bin\git.exe')
+    if ($RequireTriangleRuntime) {
+        $required += @('mingw64\bin\libstdc++-6.dll',
+                       'mingw64\bin\libgcc_s_seh-1.dll',
+                       'mingw64\bin\libwinpthread-1.dll')
+    }
+    $missing = @($required | Where-Object {
+        -not (Test-Path -LiteralPath (Join-Path $destDir $_) -PathType Leaf)
+    })
+    if ($missing.Count -eq 0) {
+        & $StatusCallback "Portable Git and requested runtime files ready at $destDir"
         return $gitExe
     }
 
-    & $StatusCallback 'Download Portable Git (~50 MB)...'
+    & $StatusCallback "Preparing pinned Portable Git runtime; missing: $($missing -join ', ')"
     $tmpExe = Join-Path $env:TEMP "PortableGit-installer_$(Get-Random).exe"
     try {
         Get-RemoteFile -Url $Script:GitPortableUrl -OutFile $tmpExe -ProgressCallback $ProgressCallback | Out-Null
-        & $StatusCallback 'Extracting Portable Git...'
-
-        if (-not (Test-Path $destDir)) {
+        & $StatusCallback 'Extracting Portable Git (repairs incomplete runtime files)...'
+        if (-not (Test-Path -LiteralPath $destDir)) {
             New-Item -ItemType Directory -Path $destDir -Force | Out-Null
         }
-        # 7-zip SFX flags: -o<dir> directory output, -y assume yes
-        # NB: il comando va passato senza spazio tra -o e il path.
         $proc = Start-Process -FilePath $tmpExe `
             -ArgumentList "-o`"$destDir`"", '-y' `
             -Wait -PassThru -NoNewWindow
-        if ($proc.ExitCode -ne 0 -and -not (Test-Path $gitExe)) {
-            throw "Estrazione Portable Git fallita (exit $($proc.ExitCode))"
+        if ($proc.ExitCode -ne 0) {
+            throw "Portable Git extraction failed (exit $($proc.ExitCode))."
         }
-
-        if (-not (Test-Path $gitExe)) {
-            throw "Portable Git extracted but git.exe not found at $gitExe"
+        $missing = @($required | Where-Object {
+            -not (Test-Path -LiteralPath (Join-Path $destDir $_) -PathType Leaf)
+        })
+        if ($missing.Count -gt 0) {
+            throw "Portable Git runtime incomplete after extraction: $($missing -join ', ')."
         }
-        & $StatusCallback "[OK] Portable Git installed in $destDir"
+        & $StatusCallback "[OK] Portable Git and requested runtime verified in $destDir"
         return $gitExe
     } finally {
-        Remove-Item $tmpExe -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $tmpExe -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -1305,25 +1313,30 @@ function Invoke-StampsBinariesDownload {
 
 # The upstream Windows archive contains only executables. Its Triangle build
 # imports MinGW's C++/GCC runtime; merely finding triangle.exe is insufficient.
-# Use the pinned Portable Git installed above, not arbitrary system DLLs.
+# Prepare the pinned runtime here even when cloning uses an existing system Git.
 function Install-TriangleRuntime {
     param(
         [Parameter(Mandatory)] [string]$TriangleBinDir,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
-    $mingwBin = Join-Path $env:LOCALAPPDATA 'PHASE\portable-git\mingw64\bin'
-    $dlls = @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')
-    foreach ($dll in $dlls) {
-        $source = Join-Path $mingwBin $dll
-        $destination = Join-Path $TriangleBinDir $dll
-        if (-not (Test-Path -LiteralPath $destination)) {
-            if (-not (Test-Path -LiteralPath $source)) {
-                & $StatusCallback "ERROR: Triangle requires $dll, missing from Portable Git: $source"
-                return $false
-            }
-            Copy-Item -LiteralPath $source -Destination $destination -Force
+    try {
+        # A system Git is sufficient for cloning, but does not prepare PHASE's
+        # private DLL cache. Also repair a cache with git.exe but missing DLLs.
+        $runtimeGit = Install-PortableGit -RequireTriangleRuntime `
+            -StatusCallback $StatusCallback -ProgressCallback { param($pct) }
+        $mingwBin = Join-Path (Split-Path (Split-Path $runtimeGit -Parent) -Parent) 'mingw64\bin'
+        $dlls = @('libstdc++-6.dll', 'libgcc_s_seh-1.dll', 'libwinpthread-1.dll')
+        foreach ($dll in $dlls) {
+            $source = Join-Path $mingwBin $dll
+            $destination = Join-Path $TriangleBinDir $dll
+            # Refresh the whole set, including DLLs copied manually in an
+            # earlier attempt, instead of retaining a potentially mixed set.
+            Copy-Item -LiteralPath $source -Destination $destination -Force -ErrorAction Stop
             & $StatusCallback "Installed Triangle runtime: $dll"
         }
+    } catch {
+        & $StatusCallback "ERROR: Triangle runtime preparation failed: $($_.Exception.Message)"
+        return $false
     }
 
     # Exercise the actual -e operation used by StaMPS Step 8. The Windows
@@ -1617,7 +1630,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.1.8 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.1.9 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2990,9 +3003,9 @@ function Invoke-FullSetup {
         Update-Task -Key 'stamps-bin' -Status 'done'
         Add-SetupLog "[OK] 9 mandatory StaMPS binaries ready (including triangle.exe and snaphu.exe)"
     } else {
-        Update-Task -Key 'stamps-bin' -Status 'error' -Detail 'download failed - mt_prep_snap will not work'
-        Add-SetupLog "[FATAL] StaMPS binaries download failed - step 6 cannot run without snaphu.exe."
-        throw "The mandatory StaMPS Windows binaries could not be installed. PHASE cannot complete installation because step 6 requires snaphu.exe. Check network/antivirus access to the pyccino/StaMPS release and retry."
+        Update-Task -Key 'stamps-bin' -Status 'error' -Detail 'StaMPS executables or runtime verification failed'
+        Add-SetupLog "[FATAL] StaMPS executables or runtime dependencies could not be prepared. See the preceding error for the exact failing file or probe."
+        throw "StaMPS executables or runtime dependencies could not be prepared. Check the preceding installation log for the exact missing file, extraction error or failed native test, then retry this installer."
     }
 
     # Task 6: GMT

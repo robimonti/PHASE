@@ -1,4 +1,12 @@
-# PHASE v7.1.8
+# PHASE v7.1.9
+
+- Fix Windows installation on PCs with an existing Git: prepare PHASE's pinned private Triangle DLL runtime independently of the Git used for cloning.
+- Repair incomplete Portable Git caches even when git.exe exists; require the requested runtime files and successful extraction. Refresh all three Triangle DLLs together, including files left by previous/manual attempts, then run the real three-point edge-generation check.
+- Report a native-executable/runtime failure accurately, referring to the preceding log instead of incorrectly blaming SNAPHU, antivirus or the network.
+- Windows CI now calls the production installer helpers and tests system Git with an absent cache, recovery of a missing cached DLL and invalid local DLL, and complete-cache reuse without another download.
+- Retry the new installer using the same destination; no deletion of projects or reinstall of MATLAB/SNAP/Python/system Git is needed. App and all installer versions aligned to 7.1.9; scientific calculations unchanged.
+
+## PHASE v7.1.8
 
 Consolidated custom-model workflow with interface refinements, following the completed user validation. Existing deterministic reduction, covariance estimation, collocation, outlier rejection and uncertainty calculations are unchanged.
 
