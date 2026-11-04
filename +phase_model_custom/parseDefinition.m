@@ -2,6 +2,15 @@ function definition = parseDefinition(config)
 %PARSEDEFINITION Validate a reproducible custom deterministic model.
 definition = struct('expression',strtrim(config.customExpression), ...
     'functionFile',strtrim(config.customFunctionFile));
+% Empty source preserves pre-selector profiles and direct API configurations.
+source='';if isfield(config,'customModelSource'),source=config.customModelSource;end
+if ~ismember(source,{'','expression','function'})
+    error('PHASE:customSource','Choose expression or MATLAB function as model source.');
+end
+if strcmp(source,'expression'),definition.functionFile='';end
+if strcmp(source,'function') && isempty(definition.functionFile)
+    error('PHASE:customFunction','Select a MATLAB model function .m file.');
+end
 try
     parameters = jsondecode(config.customParameters);
 catch ME

@@ -323,3 +323,27 @@ The temporary temporal-example button has been removed. The normal expression,
 parameter table and preview remain. Residual-mean/full assigned-covariance
 editors remain hidden; existing profile settings are preserved and indicated.
 No residual diagnostic figures are generated. Numeric checks remain available.
+
+## Consolidated interface (7.1.8)
+
+At the top of **Custom deterministic model**, choose **Enter expression** or
+**Load MATLAB function (.m)**. Only the active source is displayed and evaluated.
+Switching preserves the expression and file path, but an inactive file never
+overrides an expression. Profiles created before this selector infer their
+source from the previously saved function path. Parameters, coordinates and the
+restore-trend choice are shared by both modes.
+
+The full-width preview evaluates current fixed/initial values at illustrative
+positions; it does not estimate parameters or run the modelling workflow.
+Coordinate convention is followed by X/Y origins on the same row.
+
+The AOI page shows the shapefile boundary below its path using the same reader
+and CRS transformation as processing. File mode permits navigation and fitting
+the extent, with drawing controls hidden. Drawing mode retains polygon editing.
+
+The 1D/2D covariance sections show model, bin with optional manual value, and
+suggested/maximum correlation length in that order. The secondary shared
+refinement section bounds refinement around supplied suggestions; it has no
+effect when both suggested lengths are empty. Output controls are grouped into
+PS time-series export and query-point interpolation. These interface changes do
+not modify the validated numerical modelling or uncertainty calculations.

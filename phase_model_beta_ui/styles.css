@@ -406,3 +406,27 @@ h1 { margin: 0; color: var(--graphite); font-size: 32px; line-height: 1.05; lett
 
 .covariance-section { grid-column: 1 / -1; min-width: 0; margin: 8px 0 16px; }
 .covariance-section h2 { margin: 0 0 18px; color: var(--ink); font-size: 19px; font-weight: 650; }
+
+/* Consolidated modelling controls, with explicit rows inside each direction. */
+#aoi-map-panel { grid-column: 1 / -1; min-width: 0; }
+.source-switch { display:flex; flex-wrap:wrap; gap:10px; }
+.model-preview { grid-column:1 / -1; width:100%; padding:16px; }
+.section-description { margin:0 0 12px; color:var(--muted); font-size:12px; line-height:1.6; }
+.section-description.wide { grid-column:1 / -1; }
+.secondary-section { padding:18px; border:1px solid var(--line); border-radius:18px; background:#f8faff; }
+.secondary-section h2 { font-size:15px; color:var(--muted); }
+.covariance-controls > .field-card.covariance-model { grid-row:1; grid-column:1 / -1; }
+.covariance-controls > .field-card.pair-method { grid-row:2; grid-column:1; }
+.covariance-controls > .field-card.pair-value { grid-row:2; grid-column:2; }
+.covariance-controls > [data-field^="correlation"] { grid-row:3; }
+.covariance-controls > [data-field="correlationTime"],
+.covariance-controls > [data-field="correlationSpace"] { grid-column:1; }
+.covariance-controls > [data-field="correlationTimeMax"],
+.covariance-controls > [data-field="correlationSpaceMax"] { grid-column:2; }
+.covariance-controls > .covariance-check { grid-column:1 / -1; grid-row:4; }
+@media(max-width:980px) {
+  .covariance-controls > .field-card { grid-column:1 !important; grid-row:auto !important; }
+  .covariance-controls > .covariance-model { order:-3; }
+  .covariance-controls > .pair-method { order:-2; }
+  .covariance-controls > .pair-value { order:-1; }
+}

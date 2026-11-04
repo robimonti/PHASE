@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.8] - 2026-11-04
+- Consolidate the validated custom-model workflow: exclusive expression/function selection, shapefile map preview, clearer coordinate/preview controls, covariance ordering and output sections.
+- Replace hub alerts wording with relative anomalies; remove temporary UI actions while preserving the validated scientific calculations.
+- Align application and all installers to 7.1.8.
+
 ## [7.1.7] - 2026-11-03
 - Remove temporary example UI; choose whether to restore the automatic custom residual field, with target-consistent uncertainty and component exports.
 - Enable native temporal checks by default, including local PS trends and identifiable time-space interactions; preserve atmospheric-offset semantics.

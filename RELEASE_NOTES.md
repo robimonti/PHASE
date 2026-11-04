@@ -1,4 +1,18 @@
-# PHASE v7.1.7
+# PHASE v7.1.8
+
+Consolidated custom-model workflow with interface refinements, following the completed user validation. Existing deterministic reduction, covariance estimation, collocation, outlier rejection and uncertainty calculations are unchanged.
+
+- Replace the hub's alerts wording with relative anomalies.
+- Display the loaded AOI shapefile on the satellite basemap directly below its path. Preserve pan/zoom and multipart boundaries while hiding drawing tools in file mode.
+- Select **Enter expression** or **Load MATLAB function (.m)** at the top of the custom panel. Show only the active source, preserve both values when switching, and evaluate only the selected one. Older profiles retain their original source.
+- Align optional X/Y coordinate origins on one row below the coordinate convention. Make preview full width and explain that it evaluates current/initial values without fitting.
+- Order temporal and spatial covariance controls as model, bin/manual value, suggested/maximum length. Put shared refinement in a separate secondary section with explanatory text.
+- Group outputs under **Extrapolate PS** and **Interpolate query points**. No temporary example/test actions remain in the interface.
+- Align app and Windows/macOS/Linux installer versions to 7.1.8. Automated checks cover source selection, configuration compatibility, interface navigation/layout and scientific regressions. Linux remains experimental; the macOS DMG remains unsigned/not notarized.
+
+See the [custom-model guide](Documenti/PHASE_7_1_CUSTOM_MODELS.md).
+
+## PHASE v7.1.7
 
 - Remove the temporary temporal-example button from the custom panel.
 - Add **Restore automatic residual trend** for custom DET/STC, enabled by default. Disabled treats the removed field as a systematic observation component; residual modelling remains unchanged. Propagate uncertainty for the selected target, including shared-data and assigned-parameter cross terms.

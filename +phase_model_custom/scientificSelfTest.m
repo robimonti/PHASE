@@ -81,6 +81,17 @@ config.customFunctionFile=fullfile(root,'examples','custom_models','DSC_quadrati
 config.customParameters='[]';d=phase_model_custom.parseDefinition(config);
 v=phase_model_custom.evaluate(d,[],[-0.01884026,-0.00542769,0,540],struct('origin',[0,0],'referenceDay',0));
 assert(abs(v-127.96313029450918)<1e-8);
+% Explicit source selection must ignore a retained inactive source.
+config.customModelSource='function';config.customExpression='inactive invalid expression';
+d=phase_model_custom.parseDefinition(config);
+assert(~isempty(d.functionFile));
+config.customModelSource='expression';config.customFunctionFile='/inactive/missing.m';
+config.customExpression='0*t';d=phase_model_custom.parseDefinition(config);
+assert(isempty(d.functionFile));
+v=phase_model_custom.evaluate(d,[],[0 0 0 540],struct('origin',[0 0],'referenceDay',0));
+assert(v==0);
+config.customModelSource='function';config.customFunctionFile='';
+mustFail(@() phase_model_custom.parseDefinition(config));
 result=struct('ok',true,'message','Scientific tests passed: covariance oracle, Monte Carlo, assigned uncertainties, residual mean, nonlinear fit and DSC example.');
 disp(result.message);
 end

@@ -81,7 +81,7 @@ def test_model_beta_dynamic_sections_and_pair_layout(phase_root):
     assert "covarianceModelRole(meta.id)" in js
     assert ".field-card.covariance-model" in css
     assert "spline_method_DET2D: deterministic &&" in js
-    assert "Export interpolated PS observations" in schema
+    assert "Export modelled PS time series" in schema
 
 
 def test_model_beta_engine_does_not_load_config_through_hidden_widgets(phase_root):

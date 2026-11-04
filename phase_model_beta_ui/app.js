@@ -52,7 +52,7 @@ function wireStaticControls() {
       if (requests?.length) send("MapTilesRequested", { requests });
     },
     onDrawingChanged: drawing => {
-      byId("map-draw").classList.toggle("hidden", drawing);
+      byId("map-draw").classList.toggle("hidden", drawing || !ModelUI.config.flag_AOIbb);
       byId("map-finish").classList.toggle("hidden", !drawing);
     },
   });
@@ -76,6 +76,7 @@ function receiveState(state) {
   ModelUI.state = state;
   ModelUI.schema = state.schema || { groups: [], fields: [] };
   ModelUI.config = { ...(state.config || {}) };
+  if (!ModelUI.config.customModelSource) ModelUI.config.customModelSource = ModelUI.config.customFunctionFile ? "function" : "expression";
   ModelUI.localDirty = Boolean(state.dirty);
   ModelUI.logs = asArray(state.logs);
   ModelUI.clockReceivedAt = Date.now();
@@ -162,7 +163,7 @@ function renderPage() {
   const group = visibleGroups().find(item => item.id === ModelUI.active) || visibleGroups()[0];
   if (!group) return;
   ModelUI.active = group.id;
-  byId("aoi-map-panel").classList.toggle("hidden", group.id !== "aoi" || !ModelUI.config.flag_AOIbb);
+  byId("aoi-map-panel").classList.toggle("hidden", group.id !== "aoi");
   const aoiSource = byId("aoi-source");
   aoiSource.innerHTML = "";
   aoiSource.classList.toggle("hidden", group.id !== "aoi");
@@ -173,6 +174,8 @@ function renderPage() {
   const relevant = fields.filter(isRelevant);
   byId("section-meta").textContent = `${relevant.length} control${relevant.length === 1 ? "" : "s"}`;
   const grid = byId("form-grid");
+  const mapPanel=byId("aoi-map-panel");
+  if (grid.contains(mapPanel)) grid.before(mapPanel);
   grid.innerHTML = "";
   let coordinateFields, coordinateSection;
   if (group.id === "custom") {
@@ -189,23 +192,48 @@ function renderPage() {
     // Append after the basic model fields below.
     coordinateSection = details;
   }
-  const covarianceSections = new Map();
+  const sections = new Map();
   const covarianceDirection = id => {
     if (id === "temporalTrend" || id.startsWith("dtCov") || id.startsWith("tCovModel") || id.startsWith("correlationTime")) return "Temporal covariance";
     if (id.startsWith("dsCov") || id.startsWith("sCovModel") || id.startsWith("correlationSpace")) return "Spatial covariance";
+    if (id === "correlationTolerance") return "Fit refinement · optional";
     return "";
   };
   const covariancePage = ["spatial1d", "spatial2d"].includes(group.id) && ModelUI.config.procType === "spatialSTC";
-  if (covariancePage) {
-    for (const title of ["Temporal covariance", "Spatial covariance"]) {
-      const section = document.createElement("section");
-      section.className = "covariance-section";
-      const heading = document.createElement("h2"); heading.textContent = title;
-      const controls = document.createElement("div"); controls.className = "form-grid";
-      section.append(heading,controls); grid.appendChild(section);
-      covarianceSections.set(title,controls);
-    }
+  function section(title,secondary=false) {
+    const element = document.createElement("section");
+    element.className = `covariance-section${secondary ? " secondary-section" : ""}`;
+    const heading = document.createElement("h2"); heading.textContent = title;
+    const controls = document.createElement("div"); controls.className = "form-grid";
+    element.append(heading,controls); grid.appendChild(element); sections.set(title,controls);
+    return controls;
   }
+  if (covariancePage) {
+    section("Temporal covariance").classList.add("covariance-controls");
+    section("Spatial covariance").classList.add("covariance-controls");
+    const refinement=section("Fit refinement · optional",true);
+    const note=document.createElement("p");note.className="section-description wide";
+    note.textContent="When a suggested correlation length is supplied, this percentage bounds how far the fit may refine it above or below that value. It applies to both temporal and spatial suggestions, also respecting each maximum. Empty suggestions keep the native automatic fit; this setting then has no effect.";
+    refinement.appendChild(note);
+  }
+  if (group.id === "export") {
+    section("Extrapolate PS");section("Interpolate query points");
+  }
+  if (group.id === "aoi") {
+    // One persistent map: below the file path in shapefile mode, above the
+    // coordinate fields in drawing mode. Moving it preserves tiles and zoom.
+    if (ModelUI.config.flag_AOIbb) aoiSource.after(byId("aoi-map-panel"));
+    byId("map-title").textContent=ModelUI.config.flag_AOIbb ? "Draw the modelling area" : "Check the selected shapefile";
+    byId("map-description").textContent=ModelUI.config.flag_AOIbb
+      ? "Draw a polygon around the PS to model. PHASE stores the shape and updates the bounding coordinates below."
+      : "The shapefile boundary is shown on the satellite basemap. Pan, zoom or fit the AOI to check its location; the loaded geometry is kept unchanged.";
+    for (const id of ["map-draw","map-finish","map-rectangle"]) byId(id).classList.toggle("hidden", !ModelUI.config.flag_AOIbb || id === "map-finish");
+    if (!ModelUI.config.flag_AOIbb) ModelUI.aoiMap?.cancelDrawing();
+  }
+  fields.sort((a,b)=>{
+    const order=id=> id === "customModelSource" ? -3 : id === "customExpression" || id === "customFunctionFile" ? -2 : id === "customParameters" ? -1 : 0;
+    return order(a.id)-order(b.id);
+  });
   fields.forEach(meta => {
     if (group.id === "aoi" && meta.id === "flag_AOIbb") {
       const source = document.createElement("div");
@@ -228,25 +256,40 @@ function renderPage() {
       return;
     }
     if (group.id === "aoi" && !isRelevant(meta)) return;
+    if (group.id === "custom" && !isRelevant(meta)) return;
     const card = createField(meta);
     if (!isRelevant(meta)) card.classList.add("inactive");
     if (coordinateFields && ["customCoordinates","customOriginX","customOriginY"].includes(meta.id)) {
       coordinateFields.appendChild(card);
+      if (meta.id === "customCoordinates") card.classList.add("wide");
     } else if (covariancePage && covarianceDirection(meta.id)) {
-      covarianceSections.get(covarianceDirection(meta.id)).appendChild(card);
+      sections.get(covarianceDirection(meta.id)).appendChild(card);
+      if (meta.id === "temporalTrend") card.classList.add("covariance-check");
+    } else if (group.id === "export") {
+      sections.get(meta.id === "flag_PSinterp" ? "Extrapolate PS" : "Interpolate query points").appendChild(card);
     } else {
       grid.appendChild(card);
+      if (group.id === "aoi" && meta.id === "filepathAOI") grid.appendChild(byId("aoi-map-panel"));
     }
   });
+  if (covariancePage) {
+    for (const [title,controls] of sections) {
+      if (!title.endsWith("covariance")) continue;
+      const rank=id=> /CovModel/.test(id) ? 0 : /Cov_method/.test(id) ? 1 : /^(dtCov|dsCov)_STC/.test(id) ? 2 : id === "temporalTrend" ? 5 : id.endsWith("Max") ? 4 : 3;
+      [...controls.children].sort((a,b)=>rank(a.dataset.field)-rank(b.dataset.field)).forEach(card=>controls.appendChild(card));
+    }
+  }
   if (group.id === "custom") {
     grid.appendChild(coordinateSection);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "browse-button";
+    button.className = "browse-button model-preview";
     button.textContent = "Preview model at current parameter values";
+    const explanation=document.createElement("p");explanation.className="section-description wide";
+    explanation.textContent="Preview plots the model at illustrative positions using fixed values or initial estimates. It does not fit parameters or run the modelling pipeline.";
     button.disabled = Boolean(ModelUI.state?.running);
     button.addEventListener("click", () => { collectVisibleForm(false); send("PreviewCustomModel", payload()); });
-    grid.appendChild(button);
+    grid.append(button,explanation);
   }
   renderContextNote(group.id);
   const groups = visibleGroups();
@@ -282,6 +325,7 @@ function createField(meta) {
   const card = document.createElement("div");
   card.className = `field-card${meta.type === "path" ? " wide" : ""}`;
   if (meta.id === "flag_AOIbb" || meta.type === "multiline") card.classList.add("wide");
+  if (["customModelSource","customCoordinates"].includes(meta.id)) card.classList.add("wide");
   const role = pairRole(meta.id);
   if (role) card.classList.add(`pair-${role}`);
   const covarianceRole = covarianceModelRole(meta.id);
@@ -338,6 +382,18 @@ function createFullPsExtentAction() {
 function createControl(meta) {
   if (meta.id === "customParameters") return createCustomParameterEditor(meta);
   if (meta.id === "queryPoints") return createQueryPointEditor(meta);
+  if (meta.id === "customModelSource") {
+    const row=document.createElement("div");row.className="source-switch";
+    [["expression","Enter expression"],["function","Load MATLAB function (.m)"]].forEach(([value,label])=>{
+      const button=document.createElement("button");button.type="button";
+      button.className=`button ${ModelUI.config.customModelSource === value ? "primary" : "secondary"}`;
+      button.textContent=label;button.setAttribute("aria-pressed",String(ModelUI.config.customModelSource === value));
+      button.disabled=Boolean(ModelUI.state?.running);
+      button.addEventListener("click",()=>{collectVisibleForm(false);ModelUI.config.customModelSource=value;localChange();renderAll();});
+      row.appendChild(button);
+    });
+    return row;
+  }
   const value = ModelUI.config[meta.id];
   if (meta.type === "boolean") {
     const wrap = document.createElement("div");
@@ -439,6 +495,8 @@ function isRelevant(meta) {
   const custom = c.deterministicModelMode === "custom";
   const rules = {
     deterministicModelMode: spatial,
+    customExpression: c.customModelSource !== "function",
+    customFunctionFile: c.customModelSource === "function",
     temporalTrend: spatial && !custom,
     correlationSpace: stochastic, correlationSpaceMax: stochastic,
     correlationTime: stochastic, correlationTimeMax: stochastic,
@@ -719,16 +777,16 @@ function renderStatus() {
 
 function renderMap() {
   if (!ModelUI.aoiMap || !ModelUI.state?.map) return;
-  const polygon = matrix(ModelUI.state.map.polygon?.length
+  const polygon = ModelUI.config.flag_AOIbb ? matrix(ModelUI.state.map.polygon?.length
     ? ModelUI.state.map.polygon
-    : ModelUI.config.aoi_polygon_lonlat);
+    : ModelUI.config.aoi_polygon_lonlat) : [];
   const footprints = asArray(ModelUI.state.map.footprints);
   ModelUI.aoiMap.setData({
     coastlines: asArray(ModelUI.state.map.coastlines),
     footprints,
     polygon,
   });
-  const selectedFootprints = footprints.filter(item => Boolean(item?.selected));
+  const selectedFootprints = footprints.filter(item => Boolean(item?.selected) && (ModelUI.config.flag_AOIbb || String(item?.id).startsWith("aoi-shapefile-")));
   const selectedPoints = selectedFootprints.flatMap(item => matrix(item?.coordinates));
   const visibleAoi = polygon.length ? polygon : selectedPoints;
   const signature = JSON.stringify(visibleAoi);
@@ -782,7 +840,7 @@ function useCoordinateRectangle() {
 function updateMapMeta(polygon, partCount = 1) {
   const points = matrix(polygon);
   if (!points.length) {
-    byId("map-bbox").textContent = "No AOI drawn";
+    byId("map-bbox").textContent = ModelUI.config.flag_AOIbb ? "No AOI drawn" : "Select a readable AOI shapefile";
     byId("map-vertices").textContent = "—";
     return;
   }
