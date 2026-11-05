@@ -1,4 +1,13 @@
-# PHASE v7.1.12
+# PHASE v7.1.13
+
+- Fix the COSMO-SkyMed runner referencing the Sentinel-1-only `update_processed_run` variable after master processing. Sentinel-1 update mode is unchanged.
+- Stage manually selected CSK masters in the same date-folder layout used by automatic selection. Fail explicitly when the selected acquisition is absent; support previous flat manual-master layouts in the subset script.
+- Propagate nonzero SNAP master exit codes and detect missing master output. Stream and save master-selection/subset diagnostics, including exceptions and GPT output, instead of returning success without a product.
+- Create a persistent preprocessing run log before loading input settings, retaining MATLAB errors that occur before SNAP starts. The run monitor prints the full log path; logs remain under the project's preprocessing/logs folder.
+- Verify automatic/manual Python flows, legacy flat input, missing acquisition, failed GPT and missing product. Exercise the actual MATLAB runner through master-to-slave handoff using controlled GPT/slave processes; a real-data CSK/SNAP run remains to be validated on the affected imagery. DEM settings and SNAP operators are unchanged.
+- Align application and all installer versions to 7.1.13.
+
+## PHASE v7.1.12
 
 - Fix certificate verification failures in the macOS updater when Python's default CA store is incomplete. Preserve system/custom trust roots and additionally load certifi's CA bundle for both GitHub release metadata and asset downloads/redirects.
 - Keep certificate-chain and hostname verification enabled, together with the existing release URL validation and SHA-256 archive verification. If certifi is unavailable, retain verified system trust; never retry with unverified TLS.

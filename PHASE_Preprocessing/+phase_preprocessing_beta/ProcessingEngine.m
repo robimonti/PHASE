@@ -6,6 +6,7 @@ classdef ProcessingEngine < handle
         ProjectRoot = ''
         InstallRoot = ''
         StopFlag = false
+        RunLogPath = ''
         ActiveProcess = []
         GenerateCoherence = true
         GenerateLia = true
@@ -23,6 +24,13 @@ classdef ProcessingEngine < handle
 
         function updateOutput(app,message)
             message = char(string(message));
+            if ~isempty(app.RunLogPath)
+                fid=fopen(app.RunLogPath,'a','n','UTF-8');
+                if fid~=-1
+                    fprintf(fid,'[%s] %s\n',char(datetime('now','Format','HH:mm:ss')),message);
+                    fclose(fid);
+                end
+            end
             if ~isempty(app.ExternalLogCallback)
                 app.ExternalLogCallback(message);
             else
@@ -268,6 +276,14 @@ classdef ProcessingEngine < handle
 
 
         function run(app)
+            logs=fullfile(phase_preprocessing_beta.dataFolder(app.ProjectRoot),'logs');
+            if ~isfolder(logs),mkdir(logs);end
+            app.RunLogPath=fullfile(logs,['PHASE_preprocessing_' ...
+                char(datetime('now','Format','yyyyMMdd_HHmmss_SSS')) '.log']);
+            fid=fopen(app.RunLogPath,'w','n','UTF-8');
+            if fid==-1,error('PHASE:LogCreateFailed','Cannot create preprocessing run log: %s',app.RunLogPath);end
+            fclose(fid);
+            app.updateOutput(['Preprocessing run log: ' app.RunLogPath]);
 
 
             if app.constellation == "SEN"
@@ -1140,7 +1156,9 @@ classdef ProcessingEngine < handle
 
                         % Change lamp color to red (error)
 
-                        % Show the actual error
+                        % Keep errors raised before SNAP starts in the run log too.
+                        updateOutput(app,getReport(ME,'extended','hyperlinks','off'));
+                        updateOutput(app,['Full preprocessing log: ' app.RunLogPath]);
                         rethrow(ME)
 
                     end
@@ -1325,7 +1343,11 @@ classdef ProcessingEngine < handle
                             end
 
                             % 3. EXECUTE MASTER SELECTOR AND MASTER PREP BATCH SCRIPT
-                            updateOutput(app, 'Running automated CSK Master Auto-Selector and Subsetting...');
+                            if auto_master == 1
+                                updateOutput(app, 'Running CSK automatic master selection and subsetting...');
+                            else
+                                updateOutput(app, ['Preparing selected CSK master ' master_date ' and subsetting...']);
+                            end
                             step_selector = phase_preprocessing_beta.scriptCommand(python, 'CSK_master_selector.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
                             step_selector_cmd = step_selector;
                             step1_master = phase_preprocessing_beta.scriptCommand(python, 'CSK_subset_master.py', fullfile(project_path_full, 'snap2stamps', 'bin', 'project_master.conf'), app.InstallRoot);
@@ -1624,11 +1646,6 @@ classdef ProcessingEngine < handle
                                 end
                             end
 
-                        if update_processed_run
-                            step_slaves_5 = [dp step5_slaves];
-                            updateOutput(app, 'Update mode: stack-wide average intensity deferred until existing products are restored.');
-                        end
-
                         path_1_slaves = fullfile(project_path_full, par, 'snap2stamps', par, 'bin');
                         slaves_proof = strcat(project_path_full, par, 'slaves', par, 'dummyDownload.txt');
 
@@ -1891,7 +1908,9 @@ classdef ProcessingEngine < handle
 
                         % Change lamp color to red (error)
 
-                        % Show the actual error
+                        % Keep errors raised before SNAP starts in the run log too.
+                        updateOutput(app,getReport(ME,'extended','hyperlinks','off'));
+                        updateOutput(app,['Full preprocessing log: ' app.RunLogPath]);
                         rethrow(ME)
 
                     end

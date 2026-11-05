@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import re
@@ -182,3 +183,38 @@ def _forward(chunk):
     if sys.stdout is not None:
         sys.stdout.write(chunk.decode("utf-8", errors="replace"))
         sys.stdout.flush()
+
+
+class _LogTee:
+    def __init__(self, stream, log):
+        self.stream, self.log = stream, log
+
+    def write(self, text):
+        if self.stream is not None:
+            self.stream.write(text)
+            self.stream.flush()
+        self.log.write(text)
+        self.log.flush()
+        return len(text)
+
+    def flush(self):
+        if self.stream is not None:
+            self.stream.flush()
+        self.log.flush()
+
+
+@contextmanager
+def log_console(path):
+    """Keep streamed SNAP diagnostics on disk, including exceptions."""
+    import traceback
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'a', encoding='utf-8') as log:
+        stdout, stderr = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = _LogTee(stdout, log), _LogTee(stderr, log)
+        try:
+            yield
+        except Exception:
+            traceback.print_exc(file=log)
+            raise
+        finally:
+            sys.stdout, sys.stderr = stdout, stderr

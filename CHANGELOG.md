@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.13] - 2026-11-05
+- Correct CSK automatic/manual master orchestration and remove the Sentinel-1-only update guard from the CSK branch.
+- Persist early MATLAB and SNAP diagnostics and fail on unsuccessful master subsetting. Add Python and MATLAB orchestration regressions; align all app/installer versions to 7.1.13.
+
 ## [7.1.12] - 2026-11-05
 - Load certifi roots in the verified TLS context used for updater metadata and asset downloads, preserving system/custom trust and checksum verification.
 - Reproduce and fix Python 3.11 macOS certificate failures; add secure-context regressions and align all app/installer versions to 7.1.12.

@@ -47,11 +47,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - name: Verify Excel report images on Windows Python 3.14
+      - name: Verify Python workflows on Windows 3.14
         shell: powershell
         run: |
           python -m pip install pytest openpyxl Pillow certifi
-          python -m pytest -q tests/test_phase_report_images.py tests/test_phase_update_tls.py
+          python -m pytest -q tests/test_phase_report_images.py tests/test_phase_update_tls.py tests/test_phase_preprocessing_csk.py
 
       - name: Compile installer tied to this tag
         shell: powershell

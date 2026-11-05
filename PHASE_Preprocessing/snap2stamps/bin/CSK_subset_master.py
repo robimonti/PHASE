@@ -1,112 +1,72 @@
-### Python script to use SNAP as InSAR processor compatible with StaMPS PSI processing
-# Modified for Flat Architecture and Regex Date Extraction
-
-import os
-import sys
-import glob
-import subprocess
-import time
+"""Subset the selected CSK master; report missing inputs or SNAP failures."""
+from pathlib import Path
 import re
-from phase_subprocess import live_popen
+import subprocess
+import sys
+import time
+from xml.sax.saxutils import escape
+from phase_subprocess import live_popen, log_console
 
-inputfile = sys.argv[1]
-bar_message='\n#####################################################################\n'
 
-# Getting configuration variables from inputfile
-print("############################# STEP 2 (MASTER) ################################\n")
-print("## INPUT PARAMETERS ##")
-try:
-    with open(inputfile, 'r') as in_file:
-        for line in in_file.readlines():
-            if "PROJECTFOLDER" in line:
-                    PROJECT = line.split('=')[1].strip()
-                    print("\n- PROJECT FOLDER: ")
-                    print(PROJECT)
-            if "GRAPHSFOLDER" in line:
-                    GRAPH = line.split('=')[1].strip()
-                    print("\n- GRAPH FOLDER: ")
-                    print(GRAPH)
-            if "GPTBIN_PATH" in line:
-                    GPT = line.split('=')[1].strip()
-                    print("\n- GPT: ")
-                    print(GPT)
-            if "LONMIN" in line:
-                    LONMIN = line.split('=')[1].strip()
-                    print("\n- LONMIN: ")
-                    print(LONMIN)
-            if "LATMIN" in line:
-                    LATMIN = line.split('=')[1].strip()
-                    print("\n- LATMIN: ")
-                    print(LATMIN)
-            if "LONMAX" in line:
-                    LONMAX = line.split('=')[1].strip()
-                    print("\n- LONMAX: ")
-                    print(LONMAX)
-            if "LATMAX" in line:
-                    LATMAX = line.split('=')[1].strip()
-                    print("\n- LATMAX: ")
-                    print(LATMAX)
-            if "CACHE" in line:
-                    CACHE = line.split('=')[1].strip()
-            if "CPU" in line:
-                    CPU = line.split('=')[1].strip()
-except Exception as e:
-    print(f"Error reading config: {e}")
-    sys.exit(1)
+def subset(config):
+    required = ['PROJECTFOLDER', 'GRAPHSFOLDER', 'GPTBIN_PATH', 'LONMIN', 'LONMAX', 'LATMIN', 'LATMAX', 'CACHE', 'CPU']
+    missing = [key for key in required if not config.get(key)]
+    if missing:
+        raise ValueError('Missing CSK master configuration: ' + ', '.join(missing))
+    project = Path(config['PROJECTFOLDER'])
+    master = project / 'master'
+    inputs = sorted(master.rglob('*.h5'))
+    if not inputs:
+        raise FileNotFoundError(f'No selected CSK master HDF5 file in {master}.')
+    dates = {}
+    for path in inputs:
+        match = re.search(r'_(\d{8})\d{6}_', path.name)
+        if not match:
+            raise ValueError(f'Cannot determine CSK acquisition date: {path.name}')
+        dates.setdefault(match.group(1), []).append(path)
+    if len(dates) != 1:
+        raise ValueError('Selected master contains multiple acquisition dates: ' + ', '.join(dates))
+    date, products = next(iter(dates.items()))
+    source = products[0]  # Same first-product policy as the original CSK graph.
+    if len(products) > 1:
+        print(f'CSK master date {date}: {len(products)} products; subsetting {source.name}.', flush=True)
+    graph = Path(config['GRAPHSFOLDER']) / 'CSK_AOI_subset.xml'
+    polygon = ('POLYGON (({LONMIN} {LATMIN},{LONMAX} {LATMIN},'
+               '{LONMAX} {LATMAX},{LONMIN} {LATMAX},{LONMIN} {LATMIN}))').format(**config)
+    output = master / f'{date}_sub.dim'
+    contents = graph.read_text(encoding='utf-8')
+    for key, value in [('INPUTFILE', str(source)), ('OUTPUTFILE', str(output)), ('POLYGON', polygon)]:
+        contents = contents.replace(key, escape(value))
+    graphs = project / 'graphs'
+    graphs.mkdir(parents=True, exist_ok=True)
+    generated = graphs / 'CSK_subsetMgraph2run.xml'
+    generated.write_text(contents, encoding='utf-8')
+    command = [config['GPTBIN_PATH'], str(generated), '-c', config['CACHE'], '-q', config['CPU']]
+    print('################ STEP 1: CSK master subsetting ################', flush=True)
+    print(f'Master input: {source}\nMaster output: {output}', flush=True)
+    print('SNAP command: ' + repr(command), flush=True)
+    started = time.time()
+    process = live_popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process.communicate()
+    if process.returncode != 0:
+        raise RuntimeError(f'SNAP CSK master subsetting failed (exit {process.returncode}). See the SNAP output above.')
+    if not output.is_file():
+        raise RuntimeError(f'SNAP returned success but did not create the CSK master: {output}')
+    print(f'CSK master completed in {time.time() - started:.2f} seconds: {output}', flush=True)
 
-polygon = f'POLYGON (({LONMIN} {LATMIN},{LONMAX} {LATMIN},{LONMAX} {LATMAX},{LONMIN} {LATMAX},{LONMIN} {LATMIN}))'
 
-masterfolder = os.path.join(PROJECT, 'master')
-logfolder = os.path.join(PROJECT, 'logs')
-graphfolder = os.path.join(PROJECT, 'graphs')
+def main():
+    config = {}
+    for line in Path(sys.argv[1]).read_text(encoding='utf-8-sig').splitlines():
+        if line.strip() and not line.lstrip().startswith('#') and '=' in line:
+            key, value = line.split('=', 1)
+            config[key.strip()] = value.strip()
+    if not config.get('PROJECTFOLDER'):
+        raise ValueError('Missing PROJECTFOLDER in CSK master configuration.')
+    log = Path(config['PROJECTFOLDER']) / 'logs' / 'CSK_subsetM_proc_stdout.log'
+    with log_console(log):
+        subset(config)
 
-for f in [masterfolder, logfolder, graphfolder]:
-    if not os.path.exists(f):
-        os.makedirs(f)
 
-graph2run = os.path.join(graphfolder, 'CSK_subsetMgraph2run.xml')
-outlog = os.path.join(logfolder, 'CSK_subsetM_proc_stdout.log')
-
-with open(outlog, 'a') as out_file:
-    err_file = out_file
-    print(bar_message)
-    out_file.write(bar_message)
-    k = 0
-    # Reading from subfolder just like S1
-    for acdatefolder in sorted(os.listdir(masterfolder)):
-        folder_path = os.path.join(masterfolder, acdatefolder)
-        if not os.path.isdir(folder_path): continue
-
-        k += 1
-        print(f'[{k}] Folder: {acdatefolder}')
-        files = glob.glob(os.path.join(folder_path, '*.h5'))
-        if not files: continue
-
-        filename = os.path.basename(files[0])
-        # Safe Regex Extraction
-        match = re.search(r'_(\d{8})\d{6}_', filename)
-        master_date = match.group(1) if match else filename[37:45]
-
-        outputname = f"{master_date}_sub.dim"
-        output_path = os.path.join(masterfolder, outputname) # Outputs to /master root like before
-        graphxml = os.path.join(GRAPH, 'CSK_AOI_subset.xml')
-
-        with open(graphxml, 'r') as file:
-            filedata = file.read()
-
-        filedata = filedata.replace('INPUTFILE', files[0])
-        filedata = filedata.replace('OUTPUTFILE', output_path)
-        filedata = filedata.replace('POLYGON', polygon)
-
-        with open(graph2run, 'w') as file:
-            file.write(filedata)
-
-        args = [GPT, graph2run, '-c', CACHE, '-q', CPU]
-        process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        timeStarted = time.time()
-        stdout = process.communicate()[0].decode('utf-8', errors='ignore')
-        timeDelta = time.time() - timeStarted
-
-        msg = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'
-        print(msg)
-        out_file.write(msg)
+if __name__ == '__main__':
+    main()
