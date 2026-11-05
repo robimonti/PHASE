@@ -470,7 +470,7 @@ function Install-PythonPackages {
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
     # Existing Python installations need the same dependency check as new ones.
-    $probeCode = 'import openpyxl; import PIL.Image; import requests; import asf_search; import shapely'
+    $probeCode = 'import openpyxl; import PIL.Image; import requests; import asf_search; import shapely; import certifi'
     $probe = Start-Process -FilePath $PythonExe -ArgumentList '-c', ('"' + $probeCode + '"') -Wait -PassThru -NoNewWindow
     if ($probe.ExitCode -eq 0) {
         & $StatusCallback '[OK] Python packages, including Pillow for Excel images, are available.'
@@ -481,7 +481,7 @@ function Install-PythonPackages {
     #   requests    -> download HTTP
     #   asf_search  -> ricerca e download dati SAR da ASF (Sentinel-1)
     #   shapely     -> geometrie / footprint AOI
-    $packages = @('openpyxl', 'Pillow', 'requests', 'asf_search', 'shapely')
+    $packages = @('openpyxl', 'Pillow', 'requests', 'asf_search', 'shapely', 'certifi')
     foreach ($pkg in $packages) {
         & $StatusCallback "pip install $pkg..."
         $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', $pkg -Wait -PassThru -NoNewWindow
@@ -1637,7 +1637,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.1.11 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.1.12 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>

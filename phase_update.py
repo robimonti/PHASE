@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
+import ssl
 import sys
 import tempfile
 import urllib.request
@@ -72,11 +73,28 @@ def version_tuple(tag: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in match.groups())
 
 
+def tls_context() -> ssl.SSLContext:
+    """Keep system/custom roots and add certifi for Python macOS installs.
+
+    Loading a CA bundle does not disable hostname or certificate validation.
+    Both GitHub metadata and release-asset redirects use this same policy.
+    """
+    context = ssl.create_default_context()
+    try:
+        import certifi
+    except ImportError:
+        # Existing installations may not have certifi; retain verified system
+        # trust rather than silently using an unverified connection.
+        return context
+    context.load_verify_locations(cafile=certifi.where())
+    return context
+
+
 def release_info() -> dict:
     request = urllib.request.Request(API_URL, headers={
         "Accept": "application/vnd.github+json", "User-Agent": "PHASE-7-Updater"
     })
-    with urllib.request.urlopen(request, timeout=15) as response:
+    with urllib.request.urlopen(request, timeout=15, context=tls_context()) as response:
         data = json.load(response)
     if data.get("draft") or data.get("prerelease"):
         raise RuntimeError("Latest GitHub release is not a stable PHASE release.")
@@ -113,7 +131,7 @@ def download_verified(url: str, digest: str, destination: Path) -> None:
     request = urllib.request.Request(url, headers={"User-Agent": "PHASE-7-Updater"})
     hash_value = hashlib.sha256()
     total = 0
-    with urllib.request.urlopen(request, timeout=60) as response, destination.open("wb") as output:
+    with urllib.request.urlopen(request, timeout=60, context=tls_context()) as response, destination.open("wb") as output:
         while True:
             chunk = response.read(1024 * 1024)
             if not chunk:

@@ -1,4 +1,12 @@
-# PHASE v7.1.11
+# PHASE v7.1.12
+
+- Fix certificate verification failures in the macOS updater when Python's default CA store is incomplete. Preserve system/custom trust roots and additionally load certifi's CA bundle for both GitHub release metadata and asset downloads/redirects.
+- Keep certificate-chain and hostname verification enabled, together with the existing release URL validation and SHA-256 archive verification. If certifi is unavailable, retain verified system trust; never retry with unverified TLS.
+- Declare certifi explicitly in Windows dependency preparation (macOS/Linux already install it). Test empty/default CA stores, missing/invalid certifi, HTTPS contexts and checksum validation on Windows Python 3.14 as well as Linux.
+- Verify the fix with the Python 3.11 interpreter of the affected macOS installation against both GitHub endpoints. A development installation blocked before contacting GitHub can bootstrap by running the new DMG once, using its existing installation destination.
+- Align application and Windows/macOS/Linux installer versions to 7.1.12. Projects and scientific calculations are unchanged.
+
+## PHASE v7.1.11
 
 - Include Pillow explicitly in Windows/macOS/Linux Python dependencies. Check existing Python installations as well as newly installed ones and verify actual PNG embedding into XLSX during installation.
 - Before modelling, check openpyxl/Pillow in the exact report interpreter, automatically install missing packages and verify in a fresh process. Remove the interactive command-window package prompt.
