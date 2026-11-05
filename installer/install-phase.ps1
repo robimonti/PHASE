@@ -469,15 +469,22 @@ function Install-PythonPackages {
         [Parameter(Mandatory)] [string]$PythonExe,
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
+    # Existing Python installations need the same dependency check as new ones.
+    $probeCode = 'import openpyxl; import PIL.Image; import requests; import asf_search; import shapely'
+    $probe = Start-Process -FilePath $PythonExe -ArgumentList '-c', ('"' + $probeCode + '"') -Wait -PassThru -NoNewWindow
+    if ($probe.ExitCode -eq 0) {
+        & $StatusCallback '[OK] Python packages, including Pillow for Excel images, are available.'
+        return
+    }
     # Pacchetti Python richiesti da PHASE:
     #   openpyxl    -> export/lettura Excel
     #   requests    -> download HTTP
     #   asf_search  -> ricerca e download dati SAR da ASF (Sentinel-1)
     #   shapely     -> geometrie / footprint AOI
-    $packages = @('openpyxl', 'requests', 'asf_search', 'shapely')
+    $packages = @('openpyxl', 'Pillow', 'requests', 'asf_search', 'shapely')
     foreach ($pkg in $packages) {
         & $StatusCallback "pip install $pkg..."
-        $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--upgrade', $pkg -Wait -PassThru -NoNewWindow
+        $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', $pkg -Wait -PassThru -NoNewWindow
         if ($proc.ExitCode -ne 0) {
             throw "pip install $pkg fallito con exit code $($proc.ExitCode)"
         }
@@ -1630,7 +1637,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.1.9 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.1.10 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -1764,7 +1771,7 @@ function Install-TriangleRuntime {
             <!-- Page 4: Python -->
             <StackPanel x:Name="Page4_Python" Visibility="Collapsed">
                 <TextBlock Text="Python" FontSize="28" FontWeight="Light" Margin="0,0,0,10"/>
-                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl, requests, asf_search and shapely libraries. The installer can download and install everything automatically."
+                <TextBlock Text="PHASE requires Python 3.11 or newer with the openpyxl, Pillow, requests, asf_search and shapely libraries. The installer can download and install everything automatically."
                            TextWrapping="Wrap" FontSize="13" Foreground="#4A5168" Margin="0,0,0,20"/>
 
                 <TextBlock x:Name="PythonStatus" Text="" FontWeight="SemiBold" Margin="0,0,0,12"/>
@@ -2930,6 +2937,9 @@ function Invoke-FullSetup {
     Add-SetupLog "Python:  $($Script:State.PythonExe) ($($Script:State.PythonVersion))"
     Add-SetupLog "Dest:    $(Join-Path $Script:State.InstallDir 'PHASE')"
 
+    Add-SetupLog 'Checking Python dependencies for the selected interpreter...'
+    Install-PythonPackages -PythonExe $Script:State.PythonExe -StatusCallback { param($m) Add-SetupLog $m }
+
     # Task 1: git
     Set-SetupProgress 5 'detecting git'
     Update-Task -Key 'git' -Status 'running' -Detail 'looking for git on PATH...'
@@ -2973,6 +2983,9 @@ function Invoke-FullSetup {
     Update-Task -Key 'clone-phase' -Status 'running' -Detail $Script:PhaseRepo
     Invoke-GitClone -GitExe $git -Repo $Script:PhaseRepo -Branch $Script:PhaseBranch `
         -Destination $phaseDir -StatusCallback { param($m) Add-SetupLog $m; Set-TaskDetail -Key 'clone-phase' -Detail $m }
+    $reportProbe = Join-Path $phaseDir 'pythonScripts\reportDependencies.py'
+    $probe = Start-Process -FilePath $Script:State.PythonExe -ArgumentList ('"' + $reportProbe + '"'), '--ensure' -Wait -PassThru -NoNewWindow
+    if ($probe.ExitCode -ne 0) { throw 'Python cannot embed Excel report images. Check the selected interpreter and dependency installation.' }
     Update-Task -Key 'clone-phase' -Status 'done'
     Add-SetupLog "[OK] PHASE cloned at $phaseDir"
 

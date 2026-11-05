@@ -22,7 +22,9 @@ def test_model_engine_is_native_m_source_without_hidden_app_designer(phase_root)
     assert "createComponents" not in engine
     assert "UIFigure" not in engine
     assert "LegacyEngine" not in controller
-    assert "phase_model_beta.runCommandHidden(app, command" in engine
+    assert "phase_model_beta.runReportCommand(app, command" in engine
+    wrapper = _text(phase_root / "+phase_model_beta" / "runReportCommand.m")
+    assert "phase_model_beta.runCommandHidden(app,command" in wrapper
     assert "waitbar(" not in engine
 
 

@@ -1,0 +1,9 @@
+function assertReportComplete(app,folder)
+%ASSERTREPORTCOMPLETE Formatting failure cannot become a successful run.
+if ~isempty(app.ReportFormattingErrors)
+    error('PHASE_Model_beta:reportIncomplete', ...
+        ['Modelling results and workbook were saved in %s, but %d report formatting step(s) failed. ' ...
+         'The report is incomplete. Close Excel and repair the saved report without rerunning modelling. ' ...
+         'First failure: %s'],folder,numel(app.ReportFormattingErrors),app.ReportFormattingErrors{1});
+end
+end

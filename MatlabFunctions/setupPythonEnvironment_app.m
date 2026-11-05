@@ -11,7 +11,7 @@ if pyInfo.Status == "Loaded"
     disp(pyInfo.Executable);
 else
     % Prompt the user to provide the Python path
-    fprintf('MATLAB is not currently using a valid Python environment.\n');
+    fprintf('Configuring the selected Python interpreter.\n');
     pythonPath = pythonPath_input;
     
     % Set the provided Python environment
@@ -23,25 +23,8 @@ else
     end
 end
 
-% Validate the required Python package
-try
-    py.importlib.import_module('openpyxl');
-    disp('The required package "openpyxl" is available.');
-catch
-    % Install the package if not found
-    fprintf('The "openpyxl" package is not installed in the current Python environment.\n');
-    choice = input('Would you like to install it automatically? (y/n): ', 's');
-    if lower(choice) == 'y'
-        try
-            system([pyenv().Executable, ' -m pip install openpyxl']);
-            disp('Successfully installed "openpyxl".');
-        catch ME
-            error('Failed to install "openpyxl": %s\n', ME.message);
-        end
-    else
-        error('Cannot proceed without the "openpyxl" package.');
-    end
-end
+% Report dependencies are checked externally by the Model engine before
+% processing, using the exact interpreter used by report formatters.
 
 % Share resolved Python executable with StaMPS on Windows via
 % %APPDATA%\PHASE\python.txt so the .bat shim can honor the same

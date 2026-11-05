@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install pytest
+      - run: python -m pip install pytest openpyxl Pillow
       - run: python -m pytest -q
       - run: sh -n installer/PHASE-Linux-Installer.sh
 
@@ -43,6 +43,15 @@ jobs:
       - name: Verify Windows Triangle functional runtime
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File .\tests\windows_triangle_smoke.ps1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Verify Excel report images on Windows Python 3.14
+        shell: powershell
+        run: |
+          python -m pip install pytest openpyxl Pillow
+          python -m pytest -q tests/test_phase_report_images.py
 
       - name: Compile installer tied to this tag
         shell: powershell

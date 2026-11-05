@@ -291,6 +291,15 @@ function renderPage() {
     button.addEventListener("click", () => { collectVisibleForm(false); send("PreviewCustomModel", payload()); });
     grid.append(button,explanation);
   }
+  if (group.id === "export") {
+    const repair=document.createElement("button");repair.type="button";
+    repair.className="button secondary model-preview";repair.textContent="Repair saved Excel report";
+    repair.disabled=Boolean(ModelUI.state?.running);
+    repair.addEventListener("click",()=>{collectVisibleForm(false);send("RepairExcelReport",payload());});
+    const explanation=document.createElement("p");explanation.className="section-description wide";
+    explanation.textContent="Restore figures in an existing PHASE workbook from its saved PNGs, without rerunning modelling. A backup is kept under files/report_backups.";
+    grid.append(repair,explanation);
+  }
   renderContextNote(group.id);
   const groups = visibleGroups();
   const index = groups.findIndex(item => item.id === group.id);

@@ -77,7 +77,7 @@ $ps2exeArgs = @{
     description = 'PHASE 7 unified hub installer'
     company    = 'Roberto Monti and pyccino'
     product    = 'PHASE'
-    version    = '7.1.9.0'
+    version    = '7.1.10.0'
     noConsole  = $true
     requireAdmin = $false
     STA        = $true
@@ -102,7 +102,7 @@ try {
         }
         $scriptText = $scriptText.Replace($marker, "[string]`$PhaseBranch = '$DefaultPhaseBranch'")
         if ($DefaultPhaseBranch -match '^v7\.\d+\.\d+$') {
-            $scriptText = $scriptText.Replace('v7.1.9 preview', $DefaultPhaseBranch)
+            $scriptText = $scriptText.Replace('v7.1.10 preview', $DefaultPhaseBranch)
         }
         Write-Host "Embedded PHASE branch: $DefaultPhaseBranch"
     }

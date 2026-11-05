@@ -8,6 +8,7 @@ classdef ProcessingEngine < dynamicprops
         OutputRoot = ''
         outputDir = ''
         StopRequested = false
+        ReportFormattingErrors = {}
         ExternalLogCallback = []
         ExternalProgressCallback = []
     end
@@ -87,6 +88,8 @@ classdef ProcessingEngine < dynamicprops
 
                 % - 0.3) Setup the python environment
                 setupPythonEnvironment_app(app.pythonPath);
+                app.ReportFormattingErrors = {};
+                phase_model_beta.ensureReportDependencies(app, char(pyenv().Executable));
 
                 % - 0.4) Get the current date
                 currentDT = datetime('now');
@@ -1571,10 +1574,10 @@ classdef ProcessingEngine < dynamicprops
                 end
 
                 % prepare the command
-                command = sprintf('%s "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, figuresAndPositions, sheetName1);
+                command = sprintf('"%s" "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, figuresAndPositions, sheetName1);
 
                 % run the Python script from MATLAB
-                [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                 % check for errors
                 if status == 0
@@ -1628,8 +1631,8 @@ classdef ProcessingEngine < dynamicprops
                 pythonExecutable = pyenv().Executable;
 
                 % command to format the second sheet and execution
-                command = sprintf('%s "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig3_filename, sheetName2);
-                [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                command = sprintf('"%s" "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig3_filename, sheetName2);
+                [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                 % check for success
                 if status == 0
@@ -1687,8 +1690,8 @@ classdef ProcessingEngine < dynamicprops
                 pythonExecutable = pyenv().Executable;
 
                 % command to format the third sheet and execution
-                command = sprintf('%s "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig4_filename, sheetName3);
-                [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                command = sprintf('"%s" "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig4_filename, sheetName3);
+                [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                 % check for success
                 if status == 0
@@ -1751,8 +1754,8 @@ classdef ProcessingEngine < dynamicprops
                 pythonExecutable = pyenv().Executable;
 
                 % command to format the third sheet and execution
-                command = sprintf('%s "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig5_filename, sheetName4);
-                [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                command = sprintf('"%s" "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, fig5_filename, sheetName4);
+                [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                 % check for success
                 if status == 0
@@ -1798,8 +1801,8 @@ classdef ProcessingEngine < dynamicprops
                 pythonExecutable = pyenv().Executable;
 
                 % command to format the fourth sheet and execution
-                command = sprintf('%s "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName5);
-                [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                command = sprintf('"%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName5);
+                [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                 % check for success
                 if status == 0
@@ -1874,8 +1877,8 @@ classdef ProcessingEngine < dynamicprops
                     figuresArg = strjoin(figEXTRnames, ',');
 
                     % command to format the sixth sheet and execution
-                    command = sprintf('%s "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName6, figuresArg);
-                    [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                    command = sprintf('"%s" "%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName6, figuresArg);
+                    [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                     % check for success
                     if status == 0
@@ -1936,8 +1939,8 @@ classdef ProcessingEngine < dynamicprops
                     pythonExecutable = pyenv().Executable;
 
                     % command to format the sixth sheet and execution
-                    command = sprintf('%s "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName7);
-                    [status, cmdout] = phase_model_beta.runCommandHidden(app, command, 'Excel report formatting');
+                    command = sprintf('"%s" "%s" "%s" "%s"', pythonExecutable, pythonScript, filenameOUT_e, sheetName7);
+                    [status, cmdout] = phase_model_beta.runReportCommand(app, command);
 
                     % check for success
                     if status == 0
@@ -1950,6 +1953,8 @@ classdef ProcessingEngine < dynamicprops
 
                     disp('Modeled PS exported to Excel successfully.');
                 end
+
+                phase_model_beta.assertReportComplete(app,outputDir);
 
                 % update progress (100%)
                 app.notifyBetaProgress(100, 'Processing complete!');

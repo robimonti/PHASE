@@ -28,7 +28,7 @@ import venv
 PHASE_REPO = "https://github.com/robimonti/PHASE.git"
 STAMPS_COMMIT = "7cabf05eddf8ebe8694e5346fe0f9d48aaef4962"
 TRAIN_COMMIT = "6d0273ae67d2a9f07a696b6a14298ef2c31607d8"
-PYTHON_PACKAGES = ("openpyxl", "requests", "asf_search", "shapely", "certifi")
+PYTHON_PACKAGES = ("openpyxl", "Pillow", "requests", "asf_search", "shapely", "certifi")
 MACOS_PSI_TOOLS = (
     "bin/calamp", "bin/cpxsum", "bin/pscphase", "bin/pscdem",
     "bin/psclonlat", "bin/selpsc_patch", "bin/selsbc_patch",
@@ -338,7 +338,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.1.9"
+            version = "v7.1.10"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],
@@ -456,6 +456,8 @@ def install(args: argparse.Namespace) -> dict[str, str]:
                 str(staged_python), "-m", "pip", "install", "--disable-pip-version-check",
                 "--no-input", *PYTHON_PACKAGES
             ], check=True)
+            subprocess.run([str(staged_python),
+                str(stage / "engine" / "pythonScripts" / "reportDependencies.py")], check=True)
             installed_python = prefix / "venv" / "bin" / "python"
         write_launcher(stage / "launch-phase.sh", prefix, matlab, gpt, installed_python)
         if system == "macos":
