@@ -1,7 +1,7 @@
 from reportColumnWidths import autofit_numeric_columns
 import sys
 import openpyxl
-from reportImages import add_report_image
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment
 
 def format_excel(report_path, figures_and_positions, sheet_name):
@@ -10,11 +10,14 @@ def format_excel(report_path, figures_and_positions, sheet_name):
     sheet = wb[sheet_name]
 
     # Parse figures and positions (input is in "path1,pos1,width1,height1;path2,pos2,width2,height2;...")
-    figures = [item.rsplit(',', 3) for item in figures_and_positions.split(';')] if isinstance(figures_and_positions, str) else figures_and_positions
-    for figure_path, position, width, height in figures:
+    for fig_pos in figures_and_positions.split(';'):
+        figure_path, position, width, height = fig_pos.split(',')
 
         # Insert the image
-        add_report_image(sheet, figure_path, position, width, height)
+        img = Image(figure_path)
+        img.width = int(width)  # Set width in pixels
+        img.height = int(height)  # Set height in pixels
+        sheet.add_image(img, position)
 
     # General text formatting for other cells
     for row in sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=2):

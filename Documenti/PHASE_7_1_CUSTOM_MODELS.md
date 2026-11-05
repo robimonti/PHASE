@@ -348,17 +348,10 @@ effect when both suggested lengths are empty. Output controls are grouped into
 PS time-series export and query-point interpolation. These interface changes do
 not modify the validated numerical modelling or uncertainty calculations.
 
-## Excel report dependencies and repair (7.1.10)
+## Excel report dependencies (7.1.11)
 
 PNG embedding requires both openpyxl and Pillow. Installation and the modelling
 preflight verify actual PNG insertion into an XLSX using the report interpreter;
 missing packages are prepared before the numerical model starts. An image or
 formatting failure is reported as an incomplete report, with saved numerical
-results retained.
-
-For an existing report, close it in Excel and select **Outputs → Repair saved
-Excel report**, then choose the run workbook. Keep its `figures` folder beside
-it. This repairs the report without rerunning preprocessing, PSI or modelling.
-A backup is kept under `files/report_backups`; the existing workbook is replaced
-only after all repair steps succeed. Repeating repair replaces the PHASE figures
-at their own anchors, preserving other images and numerical cell values.
+results retained. The scientific model and uncertainty calculations are unchanged.

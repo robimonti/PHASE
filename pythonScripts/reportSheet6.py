@@ -1,7 +1,7 @@
 from reportColumnWidths import autofit_numeric_columns
 import sys
 import openpyxl
-from reportImages import add_report_image
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, numbers
 
 def format_excel_sheet6(report_path, sheet_name, figure_paths):
@@ -10,8 +10,7 @@ def format_excel_sheet6(report_path, sheet_name, figure_paths):
     sheet = wb[sheet_name]
 
     # Convert figure paths string into a list
-    figure_paths = figure_paths.split(',') if isinstance(figure_paths, str) else figure_paths
-    figure_paths = [path for path in figure_paths if path]
+    figure_paths = figure_paths.split(',')
 
     # Initialize starting row
     start_row = 9  # First figure position
@@ -28,7 +27,10 @@ def format_excel_sheet6(report_path, sheet_name, figure_paths):
     for i, fig_path in enumerate(figure_paths):
         # Insert the figure
         figure_position = f"A{start_row}"  # Adjust dynamically
-        add_report_image(sheet, fig_path, figure_position, 900, 450)
+        img = Image(fig_path)
+        img.width = 900  # Set figure width
+        img.height = 450  # Set figure height
+        sheet.add_image(img, figure_position)
 
         # Apply number format for displacement time series (columns after metadata)
         data_start_row = subtitle_row + 2  # Data starts two rows after the subtitle

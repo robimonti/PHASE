@@ -7,10 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [7.1.10] - 2026-11-05
+## [7.1.11] - 2026-11-05
 - Prepare and verify Pillow/openpyxl image support in the actual report interpreter, including existing Python installations on all platforms.
-- Detect incomplete report formatting without losing modelling data or declaring success. Add safe GUI repair from saved figures with backups and no duplicate images.
-- Test report images/data preservation on Windows Python 3.14 and align application/installer versions to 7.1.10.
+- Detect incomplete report formatting without losing modelling data or declaring success. Test all report sheets on Windows Python 3.14; align app and installers to 7.1.11.
 
 ## [7.1.9] - 2026-11-04
 - Prepare/repair the Windows Triangle runtime independently of system Git, replacing its complete DLL set and checking the real executable operation.

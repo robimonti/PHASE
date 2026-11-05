@@ -176,8 +176,6 @@ classdef App < handle
                         obj.browseFromPayload(payload);
                     case 'estimatepsbounds'
                         obj.estimatePsBoundsFromPayload(payload);
-                    case 'repairexcelreport'
-                        obj.repairExcelReport(payload);
                     case 'previewcustommodel'
                         obj.updateFromPayload(payload);
                         phase_model_custom.preview(obj.Config);
@@ -324,36 +322,6 @@ classdef App < handle
             obj.StopRequested = false;
             obj.endDiary();
             obj.sendState();
-        end
-
-        function repairExcelReport(obj,payload)
-            if obj.IsRunning, return; end
-            [name,folder]=uigetfile('*.xlsx','Select the saved PHASE report',obj.ProjectDir);
-            if isequal(name,0),return;end
-            report=fullfile(folder,name);
-            candidate=obj.payloadConfig(payload);
-            python=phase_model_beta.resolvePythonPath(candidate.pythonPath);
-            script=fullfile(obj.RootDir,'pythonScripts','repairExcelReport.py');
-            obj.IsRunning=true;obj.StopRequested=false;obj.Engine.StopRequested=false;
-            obj.Status='running';obj.StatusDetail='Repairing saved Excel report';
-            obj.RunStartedAt=datetime('now');
-            obj.Progress=struct('percentage',10,'phase',obj.StatusDetail,'elapsedSeconds',0);
-            cleanup=onCleanup(@()obj.finishReportRepair()); %#ok<NASGU>
-            obj.beginDiary();obj.appendLog(['Repairing saved report: ' report]);obj.sendState();
-            command=sprintf('"%s" "%s" "%s"',python,script,report);
-            [status,output]=phase_model_beta.runCommandHidden(obj.Engine,command,'Excel report repair');
-            if status~=0
-                error('PHASE_Model_beta:reportRepair','Report repair did not complete successfully. Check the log for details: %s',output);
-            end
-            obj.Status='success';obj.StatusDetail=['Report repaired: ' report];
-            obj.Progress=struct('percentage',100,'phase','Excel report repaired', ...
-                'elapsedSeconds',elapsedSeconds(obj.RunStartedAt));
-            obj.appendLog(obj.StatusDetail);
-        end
-
-        function finishReportRepair(obj)
-            obj.IsRunning=false;obj.StopRequested=false;obj.Engine.StopRequested=false;
-            obj.endDiary();obj.sendState();
         end
 
         function browseFromPayload(obj,payload)

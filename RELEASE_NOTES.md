@@ -1,11 +1,10 @@
-# PHASE v7.1.10
+# PHASE v7.1.11
 
-- Include Pillow explicitly in Windows/macOS/Linux Python dependencies. Check existing Python installations as well as newly installed ones; verify actual PNG embedding into XLSX during installation.
-- Before modelling, check openpyxl/Pillow in the exact interpreter used for report formatting, automatically install missing packages, and verify in a fresh process. Remove the interactive command-window installation prompt.
+- Include Pillow explicitly in Windows/macOS/Linux Python dependencies. Check existing Python installations as well as newly installed ones and verify actual PNG embedding into XLSX during installation.
+- Before modelling, check openpyxl/Pillow in the exact report interpreter, automatically install missing packages and verify in a fresh process. Remove the interactive command-window package prompt.
 - Preserve saved modelling/workbook data when formatting fails, but report an incomplete report instead of successful processing. Quote Python executable paths containing spaces.
-- Add **Outputs → Repair saved Excel report**: restore figures from the saved run PNGs, without rerunning modelling, using a staged workbook and original backup under files/report_backups. Replace PHASE images at their intended anchors without duplication.
-- Regression tests verify all seven sheets, embedded image counts, unchanged numerical values, repeat repairs and safe failure. CI also checks report images on Windows Python 3.14, matching the reported interpreter.
-- Align application and all installer versions to 7.1.10. Scientific modelling and uncertainty equations are unchanged.
+- Test PNG embedding in all seven report sheets and unchanged numerical values. CI also checks reports on Windows Python 3.14, matching the reported interpreter.
+- Align application and all installer versions to 7.1.11. Scientific modelling and uncertainty equations are unchanged.
 
 ## PHASE v7.1.9
 

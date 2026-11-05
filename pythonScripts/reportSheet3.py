@@ -1,7 +1,7 @@
 from reportColumnWidths import autofit_numeric_columns
 import sys
 import openpyxl
-from reportImages import add_report_image
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, numbers
 
 def format_excel_sheet3(report_path, figure_path, sheet_name):
@@ -11,7 +11,10 @@ def format_excel_sheet3(report_path, figure_path, sheet_name):
 
     # Insert the figure
     figure_position = "A7"  # Start of figure space
-    add_report_image(sheet, figure_path, figure_position, 900, 450)
+    img = Image(figure_path)
+    img.width = 900  # Set figure width
+    img.height = 450  # Set figure height
+    sheet.add_image(img, figure_position)
 
     # General formatting for the table
     subtitle_row = 31  # Start of the table (below figure space)
