@@ -2,6 +2,7 @@ function ui = configToUi(cfg)
 %CONFIGTOUI Convert MAT-compatible values to JSON-safe form controls.
 
 ui = struct();
+ui.psi_polygon = cfg.psi_polygon;
 ui.prepare_data = logical(cfg.stamps_preparation == 0);
 ui.train_enabled = logical(cfg.train_flag == 0);
 ui.export_grid_diagnostics = logical(cfg.export_grid_diagnostics);
@@ -12,7 +13,7 @@ textFields = {'installation_folder','project_path','master_date','export_name', 
     'unwrap_spatial_cost_func_flag','unwrap_prefilter_flag','unwrap_patch_phase', ...
     'unwrap_la_error_flag','unwrap_hold_good_values','subtr_tropo','tropo_method', ...
     'select_reest_gamma_flag','scla_deramp','scla_method','scn_kriging_flag', ...
-    'ph_output','stamps_first_step','stamps_last_step','export_atmosphere'};
+    'ph_output','stamps_first_step','stamps_last_step','export_atmosphere','psi_area_mode'};
 for k = 1:numel(textFields)
     name = textFields{k};
     ui.(name) = char(string(cfg.(name)));

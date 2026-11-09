@@ -3,6 +3,9 @@ function cfg = defaultConfig()
 
 cfg = struct();
 cfg.stamps_preparation = 0;
+cfg.psi_area_mode = 'full';
+cfg.psi_polygon = zeros(0,2);
+cfg.psi_source_dataset = ''; % Internal sibling dataset identity; never a source path.
 cfg.installation_folder = '';
 cfg.project_path = '';
 cfg.amplitude_threshold = 0.40;

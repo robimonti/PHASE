@@ -4,6 +4,19 @@ function [errors, warnings] = validateConfig(cfg, forStart)
 if nargin < 2, forStart = false; end
 errors = {};
 warnings = {};
+if ~any(strcmp(cfg.psi_area_mode,{'full','subarea'}))
+    errors{end+1}='PSI processing area must be full or subarea.';
+elseif strcmp(cfg.psi_area_mode,'subarea')
+    try,phase_stamps_beta.validatePsiPolygon(cfg.psi_polygon);
+    catch ME,errors{end+1}=ME.message;end
+    if forStart
+        if cfg.stamps_preparation==0 && ~strcmp(cfg.stamps_first_step,'1')
+            errors{end+1}='Preparing a PSI sub-area requires first step 1; disable Prepare data to resume an existing area from a later step.';
+        end
+        try,phase_stamps_beta.psiGrid(cfg);
+        catch ME,errors{end+1}=ME.message;end
+    end
+end
 
 if numel(cfg.master_date) ~= 8 || any(~isstrprop(cfg.master_date, 'digit'))
     errors{end+1} = 'Master date must contain exactly eight digits (YYYYMMDD).';

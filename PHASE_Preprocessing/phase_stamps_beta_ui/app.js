@@ -15,12 +15,20 @@ const PhaseUI = {
   runStartedAt: null,
   runProgress: { percentage: 0, phase: "Ready", step: 0 },
   progressLineCount: 0,
+  areaMap: null,
+  areaMapSource: "",
 };
 
 function setup(htmlComponent) {
   PhaseUI.bridge = htmlComponent;
   htmlComponent.addEventListener("DataChanged", () => receiveState(htmlComponent.Data));
   htmlComponent.addEventListener("PhaseLog", event => appendLog(event.Data));
+  htmlComponent.addEventListener("PsiMap", event => {
+    PhaseUI.areaMapSource = `${PhaseUI.config.project_path}|${PhaseUI.config.master_date}`;
+    PhaseUI.areaMap.setData({ ...event.Data, polygon: PhaseUI.config.psi_polygon || [] });
+    PhaseUI.state.psiMap = event.Data; updateAreaMessage();
+  });
+  htmlComponent.addEventListener("MapTilesReady", event => PhaseUI.areaMap?.retryTiles(asArray(event.Data.keys)));
   document.addEventListener("DOMContentLoaded", wireStaticControls, { once: true });
   if (document.readyState !== "loading") wireStaticControls();
   htmlComponent.sendEventToMATLAB("Ready", {});
@@ -42,10 +50,22 @@ function wireStaticControls() {
     send("OpenTsPicker", payload());
   });
   byId("clear-log").addEventListener("click", () => { PhaseUI.logs = []; renderLogs(); });
-  byId("advanced-toggle").addEventListener("change", event => {
-    document.body.classList.toggle("show-advanced", event.target.checked);
+  PhaseUI.areaMap = new PhaseMap(byId("psi-map"), {
+    onPolygonChanged: polygon => { PhaseUI.config.psi_polygon = polygon; markDirty(); updateAreaMessage(); },
+    onTilesRequested: requests => send("MapTilesRequested", { requests }),
+    onDrawingChanged: drawing => {
+      byId("psi-draw").classList.toggle("hidden", drawing);
+      byId("psi-finish").classList.toggle("hidden", !drawing);
+    },
   });
-  document.body.classList.toggle("show-advanced", byId("advanced-toggle").checked);
+  byId("psi-draw").addEventListener("click", () => PhaseUI.areaMap.startDrawing());
+  byId("psi-finish").addEventListener("click", () => PhaseUI.areaMap.finishDrawing());
+  byId("psi-clear").addEventListener("click", () => {
+    PhaseUI.areaMap.cancelDrawing(); PhaseUI.config.psi_polygon = [];
+    PhaseUI.areaMap.setPolygon([], false); markDirty(); updateAreaMessage();
+  });
+  byId("psi-fit").addEventListener("click", () => PhaseUI.areaMap.fitToFootprints());
+  byId("psi-refresh").addEventListener("click", () => send("RefreshPsiMap", payload()));
   byId("previous-section").addEventListener("click", () => moveSection(-1));
   byId("next-section").addEventListener("click", () => moveSection(1));
 }
@@ -134,12 +154,14 @@ function renderPage() {
   byId("section-title").textContent = group.title;
   byId("section-subtitle").textContent = group.subtitle || "";
   const items = PhaseUI.schema.items.filter(item =>
-    item.group === group.id && isItemVisible(item)
+    item.group === group.id && item.type !== "polygon" && isItemVisible(item)
   );
   byId("section-meta").textContent = `${items.length} controls`;
   const grid = byId("form-grid");
   grid.innerHTML = "";
-  items.forEach(item => grid.appendChild(createField(item)));
+  const areaControls = byId("area-controls"); areaControls.innerHTML = "";
+  items.forEach(item => (item.type === "area" ? areaControls : grid).appendChild(createField(item)));
+  renderAreaMap(group.id);
   const index = PhaseUI.schema.groups.findIndex(candidate => candidate.id === group.id);
   byId("previous-section").disabled = index <= 0;
   byId("next-section").disabled = index >= PhaseUI.schema.groups.length - 1;
@@ -147,7 +169,7 @@ function renderPage() {
 
 function createField(item) {
   const wrapper = document.createElement("div");
-  wrapper.className = `field${item.advanced ? " advanced" : ""}${item.type === "path" ? " full" : ""}${PhaseUI.detected.has(item.id) ? " detected" : ""}`;
+  wrapper.className = `field${["path", "area"].includes(item.type) ? " full" : ""}${PhaseUI.detected.has(item.id) ? " detected" : ""}`;
   wrapper.dataset.field = item.id;
   const heading = document.createElement("div");
   heading.className = "field-label-row";
@@ -155,7 +177,21 @@ function createField(item) {
   wrapper.appendChild(heading);
 
   let control;
-  if (item.type === "choice") {
+  if (item.type === "area") {
+    const row = document.createElement("div"); row.className = "psi-area-switch";
+    [["full", "Use full preprocessing area"], ["subarea", "Select sub-area on map"]].forEach(([value,label]) => {
+      const button = document.createElement("button"); button.type = "button";
+      button.className = `button secondary${PhaseUI.config.psi_area_mode === value ? " selected" : ""}`;
+      button.textContent = label; button.setAttribute("aria-pressed", PhaseUI.config.psi_area_mode === value);
+      button.addEventListener("click", () => {
+        if (PhaseUI.state?.running) return;
+        collectVisibleForm(); PhaseUI.config.psi_area_mode = value; markDirty(); renderPage();
+      }); row.appendChild(button);
+    });
+    wrapper.appendChild(row);
+    const help = document.createElement("p"); help.className = "field-help"; help.textContent = item.help;
+    wrapper.appendChild(help); return wrapper;
+  } else if (item.type === "choice") {
     control = document.createElement("select");
     asArray(item.options).forEach(option => {
       const element = document.createElement("option");
@@ -419,8 +455,8 @@ function renderRunProgress() {
   byId("processing-elapsed").textContent = `${Math.floor(seconds/60)}m ${String(seconds%60).padStart(2,"0")}s`;
 }
 
-function save() { collectVisibleForm(); send("Save", payload()); }
-function start() { collectVisibleForm(); PhaseUI.active = "run"; renderNavigation(); renderPage(); send("Start", payload()); }
+function save() { if (!areaDrawingFinished()) return; collectVisibleForm(); send("Save", payload()); }
+function start() { if (!areaDrawingFinished()) return; collectVisibleForm(); PhaseUI.active = "run"; renderNavigation(); renderPage(); send("Start", payload()); }
 function payload() { return { config: { ...PhaseUI.config } }; }
 function send(name, data) {
   if (!PhaseUI.bridge) { toast("MATLAB bridge is not connected."); return; }
@@ -457,3 +493,27 @@ window.addEventListener("error", event => {
   if (!banner) return;
   banner.textContent = `Interface error: ${event.message}`; banner.classList.remove("hidden");
 });
+
+function renderAreaMap(group) {
+  byId("psi-map").style.pointerEvents = PhaseUI.state?.running ? "none" : "";
+  const shown = group === "project" && PhaseUI.config.psi_area_mode === "subarea";
+  byId("psi-map-panel").classList.toggle("hidden", !shown);
+  if (!shown) { PhaseUI.areaMap?.cancelDrawing(); return; }
+  PhaseUI.areaMap?.setPolygon(PhaseUI.config.psi_polygon || [], false);
+  ["psi-draw", "psi-finish", "psi-clear", "psi-refresh"].forEach(id => byId(id).disabled = Boolean(PhaseUI.state?.running));
+  const source = `${PhaseUI.config.project_path}|${PhaseUI.config.master_date}`;
+  if (PhaseUI.areaMapSource !== source) {
+    PhaseUI.areaMapSource = source; send("RefreshPsiMap", payload());
+  }
+  requestAnimationFrame(() => PhaseUI.areaMap?.render()); updateAreaMessage();
+}
+function updateAreaMessage() {
+  const count = (PhaseUI.config.psi_polygon || []).length;
+  const message = PhaseUI.state?.psiMap?.message || "Refresh coverage if the SNAP dataset changed.";
+  byId("psi-map-message").textContent = `${count >= 4 ? "Polygon selected. Start prepares a separate PSI dataset." : "Draw a polygon before starting sub-area processing."} ${message}`;
+}
+
+function areaDrawingFinished() {
+  if (PhaseUI.areaMap?.drawing) { toast("Finish or cancel the PSI polygon before saving or starting."); return false; }
+  return true;
+}

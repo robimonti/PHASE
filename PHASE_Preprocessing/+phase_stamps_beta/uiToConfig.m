@@ -5,6 +5,12 @@ if nargin < 2 || isempty(base)
     base = phase_stamps_beta.defaultConfig();
 end
 cfg = base;
+if isfield(ui,'psi_polygon')
+    value=ui.psi_polygon;
+    if iscell(value),value=cell2mat(value);end
+    if isempty(value),value=zeros(0,2);end
+    cfg.psi_polygon=double(value);
+end
 
 cfg.stamps_preparation = double(~logicalValue(ui, 'prepare_data'));
 cfg.train_flag = double(~logicalValue(ui, 'train_enabled'));
@@ -16,7 +22,7 @@ textFields = {'installation_folder','project_path','master_date','export_name', 
     'unwrap_spatial_cost_func_flag','unwrap_prefilter_flag','unwrap_patch_phase', ...
     'unwrap_la_error_flag','unwrap_hold_good_values','subtr_tropo','tropo_method', ...
     'select_reest_gamma_flag','scla_deramp','scla_method','scn_kriging_flag', ...
-    'ph_output','stamps_first_step','stamps_last_step','export_atmosphere'};
+    'ph_output','stamps_first_step','stamps_last_step','export_atmosphere','psi_area_mode'};
 for k = 1:numel(textFields)
     name = textFields{k};
     if isfield(ui, name)

@@ -314,6 +314,14 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
             stamps_path = which('StaMPS_CONFIG.ps1');
         end
         s2s_export_path = phase_stamps_beta.exportPath(project_path, master_date);
+        areaConfig=phase_stamps_beta.loadConfig(app.WorkDir);
+        [psiMask,psiAreaInfo]=phase_stamps_beta.preparePsiArea(areaConfig,app.WorkDir);
+        prepArguments={};
+        if ~isempty(psiMask)
+            prepArguments={'1','1','50','50',psiMask};
+            updateOutput(app,sprintf('PSI sub-area mask: %d of %d radar pixels included. Source SNAP rasters are unchanged.', ...
+                psiAreaInfo.includedPixels,psiAreaInfo.totalPixels));
+        end
         mt_prep_snap = ('mt_prep_snap');
         source = ('source');
         space = (' ');
@@ -340,6 +348,10 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
                 phase_stamps_beta.quotePosix(master_date), ...
                 phase_stamps_beta.quotePosix(s2s_export_path), ...
                 phase_stamps_beta.quotePosix(amplitude_threshold)},' ');
+            if ~isempty(prepArguments)
+                quoted=cellfun(@phase_stamps_beta.quotePosix,prepArguments,'UniformOutput',false);
+                source_snap=[source_snap ' ' strjoin(quoted,' ')];
+            end
             source_stamps = strjoin({source_stamps, stamps_pythonpath}, ' && ');
         else
             source_stamps = [source space stamps_path ' -echo'];
@@ -368,7 +380,9 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
                logic_selpsc = contains(elements_cell_name, 'selpsc.txt'); % find elements with name selpsc.txt
                logic_width = contains(elements_cell_name, 'width.txt'); % find elements with name width.txt
                logic_export = contains(elements_cell_name, 'EXPORT'); % find folder with name EXPORT
-               logic_all = logic_stamps + logic_patch + logic_calamp + logic_len + logic_parms ...
+               logic_area = startsWith(elements_cell_name, 'psi_area.') | ...
+                   startsWith(elements_cell_name, 'input_StaMPS.');
+               logic_all = logic_area + logic_stamps + logic_patch + logic_calamp + logic_len + logic_parms ...
                    + logic_patch_list + logic_processor + logic_psparms + logic_psc + logic_rsc + logic_selpsc + logic_width + logic_export;
                for i = 1:length(logic_all)
                    if logic_all(i) == 0
@@ -394,7 +408,7 @@ end
 else
     [mt_prep_snap_status, mt_prep_snap_output] = ...
     phase_stamps_beta.runCommandHidden(app, ...
-        {which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, ...
+        [{which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, prepArguments], ...
         'StaMPS data preparation');
     if mt_prep_snap_status ~= 0
 error('PHASE_StaMPS:mtPrepSnapFailed', ...
@@ -409,7 +423,7 @@ end % source all the softwares and prepare the data
 else
     [mt_prep_snap_status, mt_prep_snap_output] = ...
     phase_stamps_beta.runCommandHidden(app, ...
-        {which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, ...
+        [{which('mt_prep_snap.bat'), master_date, s2s_export_path, amplitude_threshold}, prepArguments], ...
         'StaMPS data preparation');
     if mt_prep_snap_status ~= 0
 error('PHASE_StaMPS:mtPrepSnapFailed', ...

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PHASE · StaMPS</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="map.css">
+  <script src="map.js"></script>
   <script src="app.js"></script>
 </head>
 <body>
@@ -48,10 +50,6 @@
       <nav id="navigation" class="navigation" aria-label="Processing sections"></nav>
 
       <div class="sidebar-footer">
-        <label class="advanced-toggle">
-          <input id="advanced-toggle" type="checkbox" checked>
-          <span>Show all parameters</span>
-        </label>
         <div id="version" class="version">PHASE StaMPS</div>
       </div>
     </aside>
@@ -71,6 +69,27 @@
             <p id="section-subtitle">Paths, preparation and output identity</p>
           </div>
           <div id="section-meta" class="section-meta"></div>
+        </div>
+        <div id="area-controls" class="form-grid"></div>
+        <div id="psi-map-panel" class="map-card psi-map-panel hidden">
+          <div class="map-heading">
+            <div><div class="eyebrow">Optional PSI sub-area</div><h2>Select the area to process</h2>
+              <p>Draw inside the SNAP coverage. The full-area dataset and preprocessing files stay intact.</p></div>
+            <div class="map-actions">
+              <button id="psi-draw" class="button primary" type="button">Draw polygon</button>
+              <button id="psi-finish" class="button primary hidden" type="button">Finish polygon</button>
+              <button id="psi-clear" class="button secondary" type="button">Clear polygon</button>
+              <button id="psi-fit" class="button secondary" type="button">Fit coverage</button>
+              <button id="psi-refresh" class="button secondary" type="button">Refresh coverage</button>
+            </div>
+          </div>
+          <div id="psi-map" class="phase-map" tabindex="0" aria-label="PSI sub-area selection map">
+            <svg role="img" aria-label="Radar coverage and selected PSI polygon"></svg>
+            <div class="map-tooltip hidden"></div>
+            <div class="map-coordinate">Scroll to zoom · drag to pan</div>
+            <div class="map-attribution">Esri World Imagery · PHASE overlays</div>
+          </div>
+          <p id="psi-map-message" class="psi-map-message">Load the SNAP coverage, then draw a polygon.</p>
         </div>
         <div id="form-grid" class="form-grid"></div>
         <div class="page-controls">

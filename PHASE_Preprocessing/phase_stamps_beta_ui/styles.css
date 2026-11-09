@@ -189,8 +189,6 @@ button { color: inherit; }
 .nav-text { flex: 1; font-size: 12px; font-weight: 520; }
 .nav-item.active .nav-text { font-weight: 620; }
 .sidebar-footer { margin-top: auto; padding: 14px 10px 0; border-top: 1px solid var(--line); }
-.advanced-toggle { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: 11px; cursor: pointer; }
-.advanced-toggle input { accent-color: var(--phase-blue); }
 .version { margin-top: 11px; color: var(--faint); font-family: var(--font-mono); font-size: 9px; }
 .processing-progress-card { margin:16px 0; padding:18px 21px; border:1px solid rgba(53,101,207,.13); border-radius:18px; background:linear-gradient(145deg,rgba(53,101,207,.06),rgba(203,46,108,.025)); box-shadow:var(--shadow); }
 .processing-progress-heading,.processing-progress-metrics { display:flex; justify-content:space-between; align-items:center; gap:18px; }
@@ -270,8 +268,7 @@ button { color: inherit; }
 }
 .field.full { grid-column: 1 / -1; }
 .field[data-field="prepare_data"] { grid-column: 1 / -1; }
-.field.advanced { display: none; }
-body.show-advanced .field.advanced { display: block; }
+
 .field.detected::after {
   content: "Auto";
   position: absolute;

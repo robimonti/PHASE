@@ -24,4 +24,11 @@ for k = 1:numel(files)
             'Could not publish %s: %s',files(k).name,message);
     end
 end
+% Keep the geographic selection with the delivered results, without copying
+% the full radar mask or source rasters into the user-facing export folder.
+areaMetadata=fullfile(workDir,'psi_area.json');
+if isfile(areaMetadata)
+    [ok,message]=copyfile(areaMetadata,fullfile(destination,'psi_area.json'),'f');
+    if ~ok,error('PHASE:AreaPublishFailed','Could not publish PSI area metadata: %s',message);end
+end
 end

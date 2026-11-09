@@ -76,7 +76,7 @@ def test_beta_default_config_is_fully_represented_in_ui_schema(phase_root):
         "ref_centre_lonlat": "ref_centre_lon",
         "ref_centre_lonlat_w": "ref_centre_lon_w",
     }
-    missing = {field for field in defaults if field not in schema_fields and field not in synthetic}
+    missing = {field for field in defaults if field not in schema_fields and field not in synthetic and field != "psi_source_dataset"}
     assert not missing
     assert set(synthetic.values()) <= schema_fields
     assert "density_rand" in schema_fields
@@ -260,7 +260,8 @@ def test_stamps_dataset_bar_and_progress_are_integrated(phase_root):
     assert "PHASE_Stamps_Dataset_UI.html" in hub
     assert "handleDatasetAction" in hub
     assert "border-radius:13px" in bar
-    assert 'id="advanced-toggle" type="checkbox" checked' in html
+    assert "advanced-toggle" not in html + js
+    assert "Show all parameters" not in html
     assert "processing-progress-bar" in html
     assert "updateProgressFromLine" in js
     assert "patch ${index}" in js

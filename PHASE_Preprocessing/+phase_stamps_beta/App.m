@@ -24,6 +24,7 @@ classdef App < handle
         LiveLogFile = ''
         LiveLogUrl = ''
         DiaryActive = false
+        MapTileBusy = false
     end
 
     methods
@@ -164,6 +165,12 @@ classdef App < handle
                 switch lower(name)
                     case 'ready'
                         obj.sendState();
+                    case 'refreshpsimap'
+                        if obj.IsRunning,return;end
+                        obj.updateFromPayload(payload);
+                        obj.refreshPsiMap();
+                    case 'maptilesrequested'
+                        obj.cachePsiTiles(payload);
                     case 'load'
                         obj.loadFromDisk();
                     case 'save'
@@ -231,6 +238,7 @@ classdef App < handle
             if ~isempty(errors)
                 error('PHASE_StaMPS_beta:invalidConfiguration', '%s', strjoin(errors, newline));
             end
+            candidate = obj.routePsiDataset(candidate);
             phase_stamps_beta.saveConfig(obj.WorkDir, candidate);
             obj.Config = candidate;
             obj.SavedConfig = candidate;
@@ -249,6 +257,7 @@ classdef App < handle
             if ~isempty(errors)
                 error('PHASE_StaMPS_beta:invalidConfiguration', '%s', strjoin(errors, newline));
             end
+            candidate = obj.routePsiDataset(candidate);
             savedBeforeRun = obj.IsDirty || ~isfile(fullfile(obj.WorkDir,'input_StaMPS.mat')) || ...
                 isempty(obj.SavedConfig) || ...
                 ~phase_stamps_beta.configsEqual(candidate, obj.SavedConfig);
@@ -380,6 +389,43 @@ classdef App < handle
                 error('PHASE_StaMPS_beta:missingConfig', 'The interface did not send a configuration.');
             end
             cfg = phase_stamps_beta.uiToConfig(payload.config, obj.Config);
+        end
+
+        function candidate = routePsiDataset(obj,candidate)
+            [target,candidate] = phase_stamps_beta.psiAreaWorkDir(obj.WorkDir,candidate);
+            target=char(java.io.File(target).getCanonicalPath());
+            if strcmp(target,obj.WorkDir),return;end
+            obj.closeTsPicker();
+            if ~isfolder(target),mkdir(target);end
+            obj.WorkDir=target;
+            obj.SavedConfig=[];obj.IsDirty=true;
+            obj.configureLiveLog();
+            obj.appendLog(['PSI dataset selected: ' target]);
+            if ~obj.OwnsFigure && isa(obj.UIFigure.UserData,'phase_hub.App')
+                obj.UIFigure.UserData.adoptStampsDataset(target);
+            end
+        end
+
+        function refreshPsiMap(obj)
+            try
+                data=phase_stamps_beta.psiAreaMap(obj.Config);
+            catch ME
+                data=struct('footprints',{{}},'coastlines',{{}},'message',ME.message);
+            end
+            sendEventToHTMLSource(obj.HTML,'PsiMap',data);
+        end
+
+        function cachePsiTiles(obj,payload)
+            if obj.MapTileBusy || ~isstruct(payload) || ~isfield(payload,'requests'),return;end
+            obj.MapTileBusy=true;
+            try
+                result=phase_stamps_beta.cachePsiMapTiles(obj.LauncherDir,obj.UiDir,payload.requests);
+                sendEventToHTMLSource(obj.HTML,'MapTilesReady',result);
+            catch ME
+                obj.appendLog(['Satellite background unavailable: ' ME.message]);
+                sendEventToHTMLSource(obj.HTML,'MapTilesReady',struct('keys',{{}},'failedCount',1));
+            end
+            obj.MapTileBusy=false;
         end
 
         function sendState(obj)

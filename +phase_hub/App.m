@@ -57,6 +57,13 @@ classdef App < handle
             obj.showSection('project');
         end
 
+        function adoptStampsDataset(obj,pathValue)
+            % The existing StaMPS controller moved to an isolated AOI dataset.
+            obj.SelectedStampsDir=pathValue;
+            obj.CurrentStampsDir=pathValue;
+            obj.refreshDatasets();
+        end
+
         function refreshDatasets(obj)
             if isempty(obj.ProjectRoot)
                 names = {'No project open'};
