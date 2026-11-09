@@ -1,6 +1,6 @@
 # Changelog
 
-## v7.1.14 — unreleased
+## v7.1.14 — 2026-11-09
 
 - Optional map-defined PSI sub-areas through the native StaMPS preparation mask, with isolated datasets, area provenance and resume guards.
 - Always show all StaMPS parameters; remove the advanced-parameter switch.

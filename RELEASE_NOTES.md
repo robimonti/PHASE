@@ -1,11 +1,11 @@
-# PHASE v7.1.14 (unreleased)
+# PHASE v7.1.14
 
 - Add an optional PSI processing-area switch in StaMPS Project configuration: use the full preprocessing export (default), or draw a polygon on the shared interactive satellite map.
 - Convert the geographic polygon into the native `mt_prep_snap` exclusion mask before amplitude normalization and PS candidate selection. Read SNAP big-endian geolocation rasters in bounded chunks; preserve all source raster files. Each polygon/master uses an isolated sibling `_AOI_` PSI dataset with separate results, visible in the hub.
 - Save the polygon and source-grid metadata in `psi_area.json`, including a copy beside published exports. Resume checks reject changed geolocation/area metadata or missing preparation; a new sub-area must start with data preparation and StaMPS Step 1.
 - Remove the Show all parameters checkbox: all StaMPS parameters are always visible, with existing method-dependent fields retained.
 - Verify radar byte/row ordering, invalid pixels, date-line polygons, dataset isolation and resume guards in MATLAB. Exercise the installed Apple Silicon `mt_prep_snap`, calamp and candidate-extraction binaries on a synthetic stack with the mask; full real-data PSI validation remains to be performed.
-- Align application and installer version labels to 7.1.14. This working copy has not been published as a release.
+- Align application and installer version labels to 7.1.14.
 
 ## PHASE v7.1.13
 
