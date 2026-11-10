@@ -64,7 +64,7 @@ if coreg_files:
     first_file = os.path.basename(coreg_files[0])
     master_date = first_file[:8] # Grabs the first 8 digits (Master Date)
 else:
-    master_date = "UNKNOWN"
+    raise FileNotFoundError(f'No CSK coregistered products in {coregfolder}.')
 
 outputexportfolder = os.path.join(PROJECT, f'INSAR_{master_date}')
 
@@ -94,6 +94,7 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
     message='['+str(k)+'] Exporting pair: master-slave pair '+tail+'\n'
     ifgdim = Path(ifgfolder+'/'+tail)
     print(ifgdim)
+    if not ifgdim.is_file(): raise FileNotFoundError(f'CSK interferogram is missing: {ifgdim}')
     if ifgdim.is_file():
         print(message)
         out_file.write(message)
@@ -112,6 +113,10 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
         process = live_popen(args, stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0]
+        if stdout: out_file.write(stdout if isinstance(stdout, str) else stdout.decode('utf-8', errors='replace'))
+        out_file.flush()
+        if process.returncode != 0:
+            raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
         timeDelta = time.time() - timeStarted                     # Get execution time.
         print(('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.'))
         out_file.write('['+str(k)+'] Finished process in '+str(timeDelta)+' seconds.\n')

@@ -425,10 +425,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\r\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\r\n', master_date);
                                 fprintf(f_project_conf_master,'%s\r\n', '# AOI BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\r\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\r\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\r\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\r\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\r\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\r\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\r\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\r\n', lat_max);
                                 fprintf(f_project_conf_master,'%s\r\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\r\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\r\n', '# COMPUTING RESOURCES');
@@ -453,10 +453,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
                                 fprintf(f_project_conf_master,'%s\n', '# AOI BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\n', '# COMPUTING RESOURCES');
@@ -481,10 +481,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
                                 fprintf(f_project_conf_master,'%s\n', '# AOI BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\n', '# COMPUTING RESOURCES');
@@ -647,10 +647,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'DEMRESAMPLING=%s\r\n', dem_resampling);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# AOI BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\r\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\r\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\r\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\r\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\r\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\r\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\r\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\r\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\r\n', gptbin_path);
@@ -687,10 +687,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'DEMRESAMPLING=%s\r\n', dem_resampling);
                             fprintf(f_project_conf_slaves,'%s\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\n', '# AOI BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\n', gptbin_path);
@@ -727,10 +727,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'DEMRESAMPLING=%s\r\n', dem_resampling);
                             fprintf(f_project_conf_slaves,'%s\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\n', '# AOI BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\n', gptbin_path);
@@ -829,12 +829,18 @@ classdef ProcessingEngine < handle
                             fprintf(f_snap2stamps_slaves,'@echo off \r\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\r\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_1);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_2);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_3);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_4);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_5);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             if coherence_tc == 0
                                 fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_6);
+                                fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             end
                             fprintf(f_snap2stamps_slaves,'cd "%s"\r\n',path_1_download);
                             fprintf(f_snap2stamps_slaves,'type nul > dummyDownload.txt \r\n');
@@ -1216,6 +1222,9 @@ classdef ProcessingEngine < handle
                         end
 
 
+                        phase_preprocessing_beta.validateCskResume(project_path_full, ...
+                            [lon_min lon_max lat_min lat_max],master_processing,first_step);
+
                         %% ------------------------ MASTER PROCESSING -----------------------------
 
                         if master_processing == 0 % check if the processing of the master has to be done or not
@@ -1278,10 +1287,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'%s\r\n', projectfolder);
                                 fprintf(f_project_conf_master,'%s\r\n', graphsfolder);
                                 fprintf(f_project_conf_master,'%s\r\n', '# SPLIT BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\r\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\r\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\r\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\r\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\r\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\r\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\r\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\r\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\r\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\r\n', master_date);
                                 fprintf(f_project_conf_master,'%s\r\n', '# SNAP GPT');
@@ -1303,10 +1312,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'%s\n', projectfolder);
                                 fprintf(f_project_conf_master,'%s\n', graphsfolder);
                                 fprintf(f_project_conf_master,'%s\n', '# SPLIT BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
@@ -1328,10 +1337,10 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'%s\n', projectfolder);
                                 fprintf(f_project_conf_master,'%s\n', graphsfolder);
                                 fprintf(f_project_conf_master,'%s\n', '# SPLIT BBOX DEFINITION');
-                                fprintf(f_project_conf_master,'LONMIN=%.3f\n', lon_min);
-                                fprintf(f_project_conf_master,'LATMIN=%.3f\n', lat_min);
-                                fprintf(f_project_conf_master,'LONMAX=%.3f\n', lon_max);
-                                fprintf(f_project_conf_master,'LATMAX=%.3f\n', lat_max);
+                                fprintf(f_project_conf_master,'LONMIN=%.10f\n', lon_min);
+                                fprintf(f_project_conf_master,'LATMIN=%.10f\n', lat_min);
+                                fprintf(f_project_conf_master,'LONMAX=%.10f\n', lon_max);
+                                fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
@@ -1485,10 +1494,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'NUMGCP=%.0f\n', num_gcp);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SPLIT BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\r\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\r\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\r\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\r\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\r\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\r\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\r\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\r\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\r\n', gptbin_path);
@@ -1521,10 +1530,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'NUMGCP=%.0f\n', num_gcp);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SPLIT BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\r\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\r\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\r\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\r\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\r\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\r\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\r\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\r\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\r\n', gptbin_path);
@@ -1557,10 +1566,10 @@ classdef ProcessingEngine < handle
                             fprintf(f_project_conf_slaves,'NUMGCP=%.0f\n', num_gcp);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SPLIT BBOX DEFINITION');
-                            fprintf(f_project_conf_slaves,'LONMIN=%.3f\r\n', lon_min);
-                            fprintf(f_project_conf_slaves,'LATMIN=%.3f\r\n', lat_min);
-                            fprintf(f_project_conf_slaves,'LONMAX=%.3f\r\n', lon_max);
-                            fprintf(f_project_conf_slaves,'LATMAX=%.3f\r\n', lat_max);
+                            fprintf(f_project_conf_slaves,'LONMIN=%.10f\r\n', lon_min);
+                            fprintf(f_project_conf_slaves,'LATMIN=%.10f\r\n', lat_min);
+                            fprintf(f_project_conf_slaves,'LONMAX=%.10f\r\n', lon_max);
+                            fprintf(f_project_conf_slaves,'LATMAX=%.10f\r\n', lat_max);
                             fprintf(f_project_conf_slaves,'%s\r\n', '##################################');
                             fprintf(f_project_conf_slaves,'%s\r\n', '# SNAP GPT');
                             fprintf(f_project_conf_slaves,'GPTBIN_PATH=%s\r\n', gptbin_path);
@@ -1659,12 +1668,18 @@ classdef ProcessingEngine < handle
                             fprintf(f_snap2stamps_slaves,'@echo off \r\n');
                             fprintf(f_snap2stamps_slaves,'cd "%s"\r\n',path_1_slaves);
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_1);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_2);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_3);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_4);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_5);
+                            fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             if coherence_tc == 0
                                 fprintf(f_snap2stamps_slaves,'%s\r\n',step_slaves_6);
+                                fprintf(f_snap2stamps_slaves,'if errorlevel 1 exit /b %%errorlevel%%\r\n');
                             end
                             fprintf(f_snap2stamps_slaves,'cd "%s"\r\n',path_1_download);
                             fprintf(f_snap2stamps_slaves,'type nul > dummyDownload.txt \r\n');

@@ -1,4 +1,14 @@
-# PHASE v7.1.14
+# PHASE v7.1.15
+
+- Refuse CSK resume when existing master/slave crops were created for a different AOI; preserve original graph provenance and explain when Step 1 with master processing is required. Retain ten decimal places when writing AOI bounds.
+- Read the external GeoTIFF DEM's declared GDAL NoData value (Classic TIFF/BigTIFF, both byte orders) and propagate it to CSK interferogram, topographic phase removal and terrain correction operators. Log an explicit warning when no value is declared.
+- Exclude invalid/NoData SNAP geolocation from full-area PSI preparation through the native StaMPS mask, as already done for polygon processing. Refuse resuming old candidates with invalid coordinates; do not change valid source rasters or scientific selection thresholds.
+- Preserve no-PS flags saved by StaMPS selection/weeding steps. Report empty patch merges and insufficient triangulation points explicitly instead of array-bound or Delaunay exceptions.
+- Propagate failed CSK SNAP stages and retain their output in logs; stop Windows slave pipelines after failed stages.
+- Verify MATLAB resume/mask/StaMPS control-flow regressions and Python NoData/error propagation. Real-data CSK reprocessing is required to validate coverage and coherence; these fixes do not guarantee PS retention or recover missing DEM data.
+- Align application and Windows/macOS/Linux installer labels to 7.1.15.
+
+## PHASE v7.1.14
 
 - Add an optional PSI processing-area switch in StaMPS Project configuration: use the full preprocessing export (default), or draw a polygon on the shared interactive satellite map.
 - Convert the geographic polygon into the native `mt_prep_snap` exclusion mask before amplitude normalization and PS candidate selection. Read SNAP big-endian geolocation rasters in bounded chunks; preserve all source raster files. Each polygon/master uses an isolated sibling `_AOI_` PSI dataset with separate results, visible in the hub.

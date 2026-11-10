@@ -23,7 +23,7 @@ for automatic=[false true]
     project=fullfile(folder,sprintf('CSK run %d & data',automatic));mkdir(project);
     cfg=phase_preprocessing_beta.defaultConfig();cfg.constellation='CSK';cfg.python=python;
     cfg.auto_master=automatic;cfg.master_date='20210815';cfg.process_master=true;
-    cfg.lon_min=9;cfg.lon_max=10;cfg.lat_min=45;cfg.lat_max=46;
+    cfg.lon_min=9.123456789;cfg.lon_max=10.234567891;cfg.lat_min=45.123456789;cfg.lat_max=46.234567891;
     cfg.cpu=1;cfg.cache='128M';cfg.gptbin_path=gpt;
     phase_preprocessing_beta.saveConfig(project,cfg);
     slaves=fullfile(phase_preprocessing_beta.dataFolder(project),'slaves');mkdir(slaves);
@@ -35,6 +35,8 @@ for automatic=[false true]
     try,engine.run();catch e,caught=strcmp(e.identifier,'PHASE:ExternalCommandFailed');end
     assert(caught,'CSK runner failed before reaching the controlled slave operation.');
     assert(isfile(fullfile(phase_preprocessing_beta.dataFolder(project),'master','20210815_sub.dim')));
+    masterConfig=fileread(fullfile(phase_preprocessing_beta.dataFolder(project),'snap2stamps','bin','project_master.conf'));
+    assert(contains(masterConfig,'LONMIN=9.1234567890')&&contains(masterConfig,'LATMAX=46.2345678910'));
     log=fileread(engine.RunLogPath);
     assert(contains(log,'Master processing finished')&&contains(log,'TEST SLAVE ENTRY REACHED'));
     assert(contains(log,'PHASE:ExternalCommandFailed')&&~contains(log,'Unrecognized function or variable'));

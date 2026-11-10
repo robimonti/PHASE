@@ -8,6 +8,7 @@ import subprocess
 import time
 import re
 from phase_subprocess import live_popen
+from phase_dem import external_dem_nodata
 
 inputfile = sys.argv[1]
 
@@ -54,6 +55,8 @@ except Exception as e:
     sys.exit(1)
 
 
+DEM_NODATA = external_dem_nodata(DEMNAME, DEMFILE)
+
 subsetfolder = os.path.join(PROJECT, 'subset')
 outputcoregfolder = os.path.join(PROJECT, 'coreg')
 outputifgfolder = os.path.join(PROJECT, 'ifg')
@@ -85,6 +88,7 @@ with open(outlog, 'a') as out_file:
 
     # Flat directory search for slaves (removed the /*/ subfolder requirement)
     slave_files = glob.glob(os.path.join(subsetfolder, '*.dim'))
+    if not slave_files: raise FileNotFoundError(f'No CSK slave subsets in {subsetfolder}.')
 
     for k, dimfile in enumerate(slave_files, start=1):
         slave_filename = os.path.basename(dimfile)
@@ -106,6 +110,7 @@ with open(outlog, 'a') as out_file:
         filedata = filedata.replace('SLAVE', dimfile)
         filedata = filedata.replace('DEMNAME', DEMNAME)
         filedata = filedata.replace('DEMFILE', DEMFILE)
+        filedata = filedata.replace('DEM_NODATA', DEM_NODATA)
         filedata = filedata.replace('NUMGCP', NUMGCP)
         filedata = filedata.replace('OUTPUTCOREGFOLDER', outputcoregfolder)
         filedata = filedata.replace('OUTPUTIFGFOLDER', outputifgfolder)
@@ -118,6 +123,10 @@ with open(outlog, 'a') as out_file:
         process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0].decode('utf-8', errors='ignore')
+        if stdout: out_file.write(stdout if isinstance(stdout, str) else stdout.decode('utf-8', errors='replace'))
+        out_file.flush()
+        if process.returncode != 0:
+            raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
         timeDelta = time.time() - timeStarted
 
         message_finish = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'

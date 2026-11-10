@@ -104,6 +104,10 @@ with open(outlog, 'a') as out_file:
         process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         timeStarted = time.time()
         stdout = process.communicate()[0].decode('utf-8', errors='ignore')
+        if stdout: out_file.write(stdout if isinstance(stdout, str) else stdout.decode('utf-8', errors='replace'))
+        out_file.flush()
+        if process.returncode != 0:
+            raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
         timeDelta = time.time() - timeStarted
 
         msg = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'

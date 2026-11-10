@@ -1,44 +1,72 @@
 function report = repairStaMPSCompatibility(installationFolder)
-%REPAIRSTAMPSCOMPATIBILITY Apply narrowly scoped fixes for known upstream bugs.
-%
-% StaMPS master currently contains a typo in ps_select.m (sfprintf rather
-% than sprintf). It is reached only when gamma_stdev_reject > 0, which made
-% normal configurations fail at Step 3 despite all PHASE inputs being valid.
-% Keep a one-time backup and change only that exact token.
-
-report = struct('changed', false, 'message', '');
-psSelect = fullfile(char(string(installationFolder)), 'matlab', 'ps_select.m');
-if ~isfile(psSelect)
-    report.message = ['ps_select.m was not found at ' psSelect];
-    return;
-end
-
-source = fileread(psSelect);
-if ~contains(source, 'sfprintf(')
-    return;
-end
-
-backup = [psSelect '.phase-original'];
-if ~isfile(backup)
-    [ok, message] = copyfile(psSelect, backup);
-    if ~ok
-        error('PHASE_StaMPS:compatibilityBackupFailed', ...
-            'Could not back up %s before applying the StaMPS compatibility fix: %s', ...
-            psSelect, message);
+%REPAIRSTAMPSCOMPATIBILITY Narrow, idempotent upstream control-flow fixes.
+% Scientific selection thresholds, covariance/phase operators and weeding
+% rules are unchanged. The ps_select typo is reached when gamma_stdev_reject > 0. Original files are retained as .phase-original.
+report=struct('changed',false,'message','');changed={};
+for entry={'ps_select.m','ps_weed.m','ps_merge_patches.m','stamps.m'}
+    name=entry{1};file=fullfile(char(string(installationFolder)),'matlab',name);
+    if ~isfile(file),continue;end
+    source=fileread(file);fixed=source;
+    switch name
+        case 'ps_select.m'
+            fixed = strrep(source, 'sfprintf(', 'sprintf(');
+        case 'ps_weed.m'
+            if ~contains(source,'% PHASE: require a triangulable PS network')
+                anchor='        step_name=''DROP NOISY'';';
+                guard=strjoin({ ...
+                    '        % PHASE: require a triangulable PS network', ...
+                    '        phase_points=unique(double(xy_weed(:,2:3)),''rows'');', ...
+                    '        if size(phase_points,1)<3 || any(~isfinite(phase_points),''all'') || rank(phase_points-phase_points(1,:))<2', ...
+                    '            error(''PHASE_StaMPS:insufficientPersistentScatterers'',''Only %d PS remain before noise weeding, or their positions cannot form a triangular network. Inspect coherence, coregistration and area selection; no PSI result was produced.'',size(phase_points,1));', ...
+                    '        end', ...
+                    '        clear phase_points'},newline);
+                fixed=strrep(fixed,anchor,[guard newline char(anchor)]);
+            end
+        case 'ps_merge_patches.m'
+            if ~contains(source,'% PHASE: reject empty patch merge')
+                guard=strjoin({ ...
+                    '% PHASE: reject empty patch merge', ...
+                    'if isfield(dirname,''name'')', ...
+                    '    phase_keep=arrayfun(@(v)ischar(v.name)&&~isempty(strtrim(v.name)),dirname);', ...
+                    '    dirname=dirname(phase_keep);', ...
+                    '    clear phase_keep', ...
+                    'end', ...
+                    'if ~isfield(dirname,''name'') || isempty(dirname)', ...
+                    '    error(''PHASE_StaMPS:noPersistentScatterers'',''No patch contains retained PS after selection/weeding. Inspect coherence and processing inputs; no PSI result was produced.'');', ...
+                    'end'},newline);
+                fixed=strrep(fixed,'n_patch=length(dirname);',[guard newline 'n_patch=length(dirname);']);
+                guard=strjoin({ ...
+                    '% PHASE: reject empty geographic merge', ...
+                    'if isempty(lonlat)', ...
+                    '    error(''PHASE_StaMPS:noPersistentScatterers'',''No PS remain after patch merging. Inspect selection, weeding and merge settings; no PSI result was produced.'');', ...
+                    'end'},newline);
+                fixed=strrep(fixed,'ll0=(max(lonlat)+min(lonlat))/2;',[guard newline 'll0=(max(lonlat)+min(lonlat))/2;']);
+            end
+        case 'stamps.m'
+            if ~contains(source,'% PHASE: reload flags saved by called step')
+                % Called functions save updated flags. The caller otherwise
+                % overwrites them immediately with its stale local copy.
+                pattern='(?m)^([ \t]*)(ps_select(?:\(1\))?;|ps_weed(?:\(0,1\))?;)[ \t]*$';
+                replacement=['$1$2' newline ...
+                    '$1% PHASE: reload flags saved by called step' newline ...
+                    '$1load(''no_ps_info.mat'',''stamps_step_no_ps'');'];
+                fixed=regexprep(fixed,pattern,replacement);
+            end
     end
+    if strcmp(fixed,source),continue;end
+    backup=[file '.phase-original'];
+    if ~isfile(backup)
+        [ok,message]=copyfile(file,backup);
+        if ~ok,error('PHASE_StaMPS:compatibilityBackupFailed','Cannot back up %s: %s',file,message);end
+    end
+    fid=fopen(file,'w');
+    if fid<0,error('PHASE_StaMPS:compatibilityWriteFailed','Cannot write %s.',file);end
+    fprintf(fid,'%s',fixed);fclose(fid);changed{end+1}=name; %#ok<AGROW>
 end
-
-fixed = strrep(source, 'sfprintf(', 'sprintf(');
-fid = fopen(psSelect, 'w');
-if fid == -1
-    error('PHASE_StaMPS:compatibilityWriteFailed', ...
-        'Could not write the StaMPS compatibility fix to %s.', psSelect);
+if ~isempty(changed)
+    clear ps_select ps_weed ps_merge_patches stamps
+    report.changed=true;
+    report.message=['Applied StaMPS compatibility fixes: ' strjoin(changed,', ') ...
+        ' (originals saved as .phase-original).'];
 end
-cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
-fprintf(fid, '%s', fixed);
-
-clear ps_select
-report.changed = true;
-report.message = ['Applied StaMPS compatibility fix in ' psSelect ...
-    ' (sfprintf -> sprintf; original saved as .phase-original).'];
 end

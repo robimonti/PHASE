@@ -1,5 +1,12 @@
 # Changelog
 
+## v7.1.15 — 2026-11-10
+
+- Check CSK crop/AOI provenance before resume and preserve AOI precision.
+- Respect declared external DEM NoData; mask invalid full-area PSI geolocation.
+- Preserve StaMPS no-PS flags and give explicit empty-network errors.
+- Persist failed SNAP output and stop downstream stages; align app/installer versions.
+
 ## v7.1.14 — 2026-11-09
 
 - Optional map-defined PSI sub-areas through the native StaMPS preparation mask, with isolated datasets, area provenance and resume guards.

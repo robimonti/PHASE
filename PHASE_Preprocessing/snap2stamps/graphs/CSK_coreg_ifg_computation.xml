@@ -89,7 +89,7 @@
       <subtractTopographicPhase>false</subtractTopographicPhase>
 	  <demName>DEMNAME</demName>
       <externalDEMFile>DEMFILE</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMNoDataValue>DEM_NODATA</externalDEMNoDataValue>
       <externalDEMApplyEGM/>
       <tileExtensionPercent/>
       <outputElevation>true</outputElevation>
@@ -105,7 +105,7 @@
       <orbitDegree>3</orbitDegree>
       <demName>DEMNAME</demName>
       <externalDEMFile>DEMFILE</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMNoDataValue>DEM_NODATA</externalDEMNoDataValue>
       <tileExtensionPercent>100</tileExtensionPercent>
       <outputTopoPhaseBand>true</outputTopoPhaseBand>
       <outputElevationBand>true</outputElevationBand>

@@ -7,6 +7,7 @@ import glob
 import subprocess
 import time
 from phase_subprocess import live_popen
+from phase_dem import external_dem_nodata
 
 inputfile = sys.argv[1]
 bar_message = '\n#####################################################################\n'
@@ -27,6 +28,8 @@ try:
 except Exception as e:
     print(f"Error reading config: {e}")
     sys.exit(1)
+
+DEM_NODATA = external_dem_nodata(DEMNAME, DEMFILE)
 
 coherencefolder = os.path.join(PROJECT, 'coherence')
 liafolder = os.path.join(PROJECT, 'lia')
@@ -97,6 +100,7 @@ if COH_FLAG == 0:
             filedata = filedata.replace('SLAVE', dimfile)
             filedata = filedata.replace('DEMNAME', DEMNAME)
             filedata = filedata.replace('DEMFILE', DEMFILE)
+            filedata = filedata.replace('DEM_NODATA', DEM_NODATA)
             filedata = filedata.replace('DEM_RESAMPLING', DEMRESAMPLING)
             filedata = filedata.replace('SOURCEBAND_LIA', sourceband_lia)
             filedata = filedata.replace('OUTPUTFILE_LIA', outputname_lia)
@@ -110,6 +114,10 @@ if COH_FLAG == 0:
             process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             timeStarted = time.time()
             stdout = process.communicate()[0].decode('utf-8', errors='ignore')
+            if stdout: out_file.write(stdout if isinstance(stdout, str) else stdout.decode('utf-8', errors='replace'))
+            out_file.flush()
+            if process.returncode != 0:
+                raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
             timeDelta = time.time() - timeStarted
             msg_finish = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'
             print(msg_finish)

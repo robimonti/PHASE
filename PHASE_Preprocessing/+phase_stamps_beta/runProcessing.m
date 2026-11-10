@@ -319,8 +319,12 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
         prepArguments={};
         if ~isempty(psiMask)
             prepArguments={'1','1','50','50',psiMask};
-            updateOutput(app,sprintf('PSI sub-area mask: %d of %d radar pixels included. Source SNAP rasters are unchanged.', ...
+            updateOutput(app,sprintf('PSI input mask: %d of %d radar pixels included. Source SNAP rasters are unchanged.', ...
                 psiAreaInfo.includedPixels,psiAreaInfo.totalPixels));
+        end
+        if isfield(psiAreaInfo,'invalidGeolocationPixels') && psiAreaInfo.invalidGeolocationPixels>0
+            updateOutput(app,sprintf('Warning: %d of %d export pixels (%.1f%%) have invalid/NoData geolocation and are excluded. Check DEM coverage and preprocessing outputs if this is unexpected.', ...
+                psiAreaInfo.invalidGeolocationPixels,psiAreaInfo.totalPixels,100*psiAreaInfo.invalidGeolocationPixels/psiAreaInfo.totalPixels));
         end
         mt_prep_snap = ('mt_prep_snap');
         source = ('source');
@@ -381,6 +385,7 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
                logic_width = contains(elements_cell_name, 'width.txt'); % find elements with name width.txt
                logic_export = contains(elements_cell_name, 'EXPORT'); % find folder with name EXPORT
                logic_area = startsWith(elements_cell_name, 'psi_area.') | ...
+                   startsWith(elements_cell_name, 'psi_geolocation.') | ...
                    startsWith(elements_cell_name, 'input_StaMPS.');
                logic_all = logic_area + logic_stamps + logic_patch + logic_calamp + logic_len + logic_parms ...
                    + logic_patch_list + logic_processor + logic_psparms + logic_psc + logic_rsc + logic_selpsc + logic_width + logic_export;

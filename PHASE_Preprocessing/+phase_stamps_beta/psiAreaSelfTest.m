@@ -10,6 +10,18 @@ writeRaster('lon',lon);writeRaster('lat',lat);
 base=fullfile(folder,'ASC_test');mkdir(base);
 writeText(fullfile(base,'original.txt'),'Keep the full dataset.');
 assert(isempty(phase_stamps_beta.preparePsiArea(cfg,base)));
+% Full-area processing must mask invalid coordinates, too (not just polygons).
+badLon=lon;badLat=lat;badLon(1,1)=0;badLat(1,1)=0;badLon(1,2)=NaN;
+writeRaster('lon',badLon);writeRaster('lat',badLat);
+[fullMask,fullInfo]=phase_stamps_beta.preparePsiArea(cfg,base);
+assert(isfile(fullMask)&&fullInfo.includedPixels==10&&fullInfo.invalidGeolocationPixels==2);
+fid=fopen(fullMask,'r');bytes=fread(fid,Inf,'uint8');fclose(fid);
+assert(isequal(bytes(:).',[1 1 zeros(1,10)]));
+lonlat=[0 0;9 45];save(fullfile(base,'ps1.mat'),'lonlat');
+resumeCfg=cfg;resumeCfg.stamps_preparation=1;
+mustFail(@()phase_stamps_beta.preparePsiArea(resumeCfg,base),'PHASE:InvalidPreparedGeolocation');
+delete(fullfile(base,'ps1.mat'));
+writeRaster('lon',lon);writeRaster('lat',lat);
 cfg.psi_area_mode='subarea';cfg.psi_polygon=[9.5 45.5;11.5 45.5;11.5 47.5;9.5 47.5;9.5 45.5];
 [target,cfg]=phase_stamps_beta.psiAreaWorkDir(base,cfg);mkdir(target);
 assert(~strcmp(base,target)&&strcmp(cfg.psi_source_dataset,'ASC_test'));
@@ -37,6 +49,8 @@ assert(strcmp(full,base)&&isempty(cfgFull.psi_source_dataset));
 cfg.psi_area_mode='subarea';
 % Same dimensions but changed geolocation must never silently reuse candidates.
 writeRaster('lon',lon+0.2);
+changedFile=java.io.File(fullfile(root,'geo','20200101.lon'));
+assert(changedFile.setLastModified(changedFile.lastModified()+2000));
 mustFail(@()phase_stamps_beta.preparePsiArea(cfg,target),'PHASE:PsiAreaChanged');
 writeRaster('lon',lon);cfg.stamps_preparation=0;
 % Invalid geolocation pixels are always excluded, including polygon boundaries.
