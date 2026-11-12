@@ -8,7 +8,9 @@ import subprocess
 import time
 import re
 from phase_subprocess import live_popen
-from phase_dem import external_dem_nodata
+from phase_dem import prepare_external_dem
+from phase_csk_geometry import product_paths, save_products
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 
@@ -55,7 +57,7 @@ except Exception as e:
     sys.exit(1)
 
 
-DEM_NODATA = external_dem_nodata(DEMNAME, DEMFILE)
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
 
 subsetfolder = os.path.join(PROJECT, 'subset')
 outputcoregfolder = os.path.join(PROJECT, 'coreg')
@@ -87,7 +89,8 @@ with open(outlog, 'a') as out_file:
     master_date = master_match.group(1) if master_match else "UNKNOWN_MASTER"
 
     # Flat directory search for slaves (removed the /*/ subfolder requirement)
-    slave_files = glob.glob(os.path.join(subsetfolder, '*.dim'))
+    slave_files = product_paths(subsetfolder)
+    coreg_outputs=[];ifg_outputs=[]
     if not slave_files: raise FileNotFoundError(f'No CSK slave subsets in {subsetfolder}.')
 
     for k, dimfile in enumerate(slave_files, start=1):
@@ -109,7 +112,7 @@ with open(outlog, 'a') as out_file:
         filedata = filedata.replace('MASTER', MASTER)
         filedata = filedata.replace('SLAVE', dimfile)
         filedata = filedata.replace('DEMNAME', DEMNAME)
-        filedata = filedata.replace('DEMFILE', DEMFILE)
+        filedata = filedata.replace('DEMFILE', escape(DEMFILE))
         filedata = filedata.replace('DEM_NODATA', DEM_NODATA)
         filedata = filedata.replace('NUMGCP', NUMGCP)
         filedata = filedata.replace('OUTPUTCOREGFOLDER', outputcoregfolder)
@@ -127,6 +130,8 @@ with open(outlog, 'a') as out_file:
         out_file.flush()
         if process.returncode != 0:
             raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
+        coreg_outputs.append(os.path.join(outputcoregfolder,outputname))
+        ifg_outputs.append(os.path.join(outputifgfolder,outputname))
         timeDelta = time.time() - timeStarted
 
         message_finish = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'
@@ -142,3 +147,6 @@ with open(outlog, 'a') as out_file:
             out_file.write(succ_message)
             print(bar_message)
             out_file.write(bar_message)
+
+save_products(outputcoregfolder,coreg_outputs)
+save_products(outputifgfolder,ifg_outputs)

@@ -22,3 +22,26 @@ All StaMPS parameters are now always shown. Method-dependent choices (for exampl
 - MATLAB: `phase_stamps_beta.selfTest`, `phase_stamps_beta.psiAreaSelfTest`, `phase_stamps_beta.projectSelfTest`.
 - Native runtime: set `PHASE_TEST_STAMPS_ROOT` to the StaMPS runtime and run `python -m pytest -q tests/test_phase_stamps_area_native.py`. Synthetic tests cover the actual `mt_prep_snap` dispatch and native normalization/extraction. Only its MATLAB initial-parameter-script invocation is bypassed in that preparation test.
 - Real-image PSI scientific results and the complete Windows/Linux runs still require end-to-end validation.
+
+
+## CSK ground AOIs from v7.1.16
+
+For COSMO-SkyMed, preprocessing projects the requested ground AOI into radar
+coordinates using the installed SNAP orbit model and selected DEM. Sampling
+uses DEM pixel centres and AOI boundaries; the subset retains a 128-pixel
+registration halo. No additional resampling of complex data is introduced.
+PSI preparation always clips that halo to the exact requested ground AOI,
+even with full-area processing selected. An optional PSI polygon further
+restricts the area. The PSI map shows DEM-corrected coverage and the requested
+preprocessing AOI; SNAP's radar-product World View can still show approximate
+geocoding and must not be used as the sole ground-coverage check.
+
+Pre-v7.1.16 CSK crops must be rebuilt from Step 1 with master processing enabled.
+Changes to the selected AOI or the external DEM also require rebuilding the
+crops. The original DEM is not edited: PHASE caches a GeoTIFF with an integer
+NoData sentinel, preserving all valid elevations and the original raster grid.
+Zero is preferred unless it would mask valid zero elevations. Missing DEM
+coverage is reported, never filled with invented zero-height terrain.
+
+Product inventories prevent old master/AOI products from entering a new run.
+A read-only diagnostic ZIP can be collected using `tools/diagnose_stamps_grid.m`.

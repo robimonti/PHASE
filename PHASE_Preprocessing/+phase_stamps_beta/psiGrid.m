@@ -25,6 +25,8 @@ grid.signature=struct('source',char(java.io.File(root).getCanonicalPath()),'mast
     'lonBytes',lons(1).bytes,'latBytes',lats(1).bytes, ...
     'lonModified',lons(1).datenum,'latModified',lats(1).datenum, ...
     'parModified',pars(1).datenum);
+[~,area]=phase_stamps_beta.preprocessingArea(root);
+if ~isempty(area),grid.signature.preprocessingAOI=area;end
 end
 
 function out=sortEntries(out)

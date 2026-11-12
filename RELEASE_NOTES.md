@@ -1,4 +1,20 @@
-# PHASE v7.1.15
+# PHASE v7.1.16
+
+- Select CSK ground AOIs with SNAP's native orbit and DEM model before subsetting. Sample DEM pixel centres and AOI boundaries, and retain one registration-window halo. Complex SAR data stay in the original radar grid; the scientific phase operators are unchanged.
+- Apply an exact preprocessing ground-AOI mask during PSI preparation, including full-area mode, so the registration halo is not included in PSI results. Show the requested AOI together with DEM-corrected coverage in the PSI map. Measure and save geographic occupancy from the actual export; scene edges, shadow and layover may leave physical coverage gaps.
+- Save crop/DEM provenance and verified product inventories. Refuse resuming old ellipsoid-geocoded CSK crops or changed AOI/DEM inputs, and exclude stale products from previous runs without deleting them. Existing results remain available.
+- Normalize external DEM NoData in a cached, verified GeoTIFF for CSK and Sentinel-1. Prefer zero; preserve valid zero elevations with an unused integer sentinel when needed. Preserve the source file, raster grid, valid elevations, scale/offset and vertical datum. Process in bounded strips and verify checksums before cache reuse.
+- Prepare Rasterio through installers and for existing processing interpreters. Ship the auditable Java source, Java 8 bytecode and checksum manifest for the SNAP geometry bridge; users do not need a JDK. Support short Java classpaths on Windows.
+- Include the single-ZIP, read-only CSK diagnostic collector. Align application and Windows/macOS/Linux installer versions to 7.1.16.
+- Validate MATLAB crop/resume/mask orchestration and Python normalization, inventory and packaging tests. Exercise the native SNAP geometry model with the supplied CSK metadata and DEM. A complete run on the original CSK HDF5 stack remains to be validated on the affected installation; validation is not a guarantee of PS density.
+
+## Upgrading an existing CSK project
+
+Update PHASE, restart it and verify v7.1.16. Keep the previous project; create a new project, import the original CSK acquisitions, select the original external DEM and desired ground AOI, then run preprocessing from Step 1 with master processing enabled. Check the DEM-corrected PSI coverage before preparing StaMPS from Step 1. Do not reuse the previous cropped master/slaves or PSI preparation.
+
+SNAP's World View of a radar product can retain its approximate geocoding and include the registration halo. Use the DEM-corrected PSI map and its requested-AOI overlay to assess ground coverage. No manual map shift or pre-projection/resampling of complex images is required.
+
+## PHASE v7.1.15
 
 - Refuse CSK resume when existing master/slave crops were created for a different AOI; preserve original graph provenance and explain when Step 1 with master processing is required. Retain ten decimal places when writing AOI bounds.
 - Read the external GeoTIFF DEM's declared GDAL NoData value (Classic TIFF/BigTIFF, both byte orders) and propagate it to CSK interferogram, topographic phase removal and terrain correction operators. Log an explicit warning when no value is declared.

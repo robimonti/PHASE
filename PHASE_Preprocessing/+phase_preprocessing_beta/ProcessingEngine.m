@@ -1223,7 +1223,7 @@ classdef ProcessingEngine < handle
 
 
                         phase_preprocessing_beta.validateCskResume(project_path_full, ...
-                            [lon_min lon_max lat_min lat_max],master_processing,first_step);
+                            [lon_min lon_max lat_min lat_max],master_processing,first_step,dem_name,dem_file);
 
                         %% ------------------------ MASTER PROCESSING -----------------------------
 
@@ -1293,6 +1293,8 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'LATMAX=%.10f\r\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\r\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\r\n', master_date);
+                                fprintf(f_project_conf_master,'DEMNAME=%s\r\n', dem_name);
+                                fprintf(f_project_conf_master,'DEMFILE=%s\r\n', dem_file);
                                 fprintf(f_project_conf_master,'%s\r\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\r\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\r\n', '# COMPUTING RESOURCES');
@@ -1318,6 +1320,8 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
+                                fprintf(f_project_conf_master,'DEMNAME=%s\n', dem_name);
+                                fprintf(f_project_conf_master,'DEMFILE=%s\n', dem_file);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\n', '# COMPUTING RESOURCES');
@@ -1343,6 +1347,8 @@ classdef ProcessingEngine < handle
                                 fprintf(f_project_conf_master,'LATMAX=%.10f\n', lat_max);
                                 fprintf(f_project_conf_master,'AUTO_MASTER=%.0f\n', auto_master);
                                 fprintf(f_project_conf_master,'MASTER_DATE=%s\n', master_date);
+                                fprintf(f_project_conf_master,'DEMNAME=%s\n', dem_name);
+                                fprintf(f_project_conf_master,'DEMFILE=%s\n', dem_file);
                                 fprintf(f_project_conf_master,'%s\n', '# SNAP GPT');
                                 fprintf(f_project_conf_master,'GPTBIN_PATH=%s\n', gptbin_path);
                                 fprintf(f_project_conf_master,'%s\n', '# COMPUTING RESOURCES');

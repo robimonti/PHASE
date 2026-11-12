@@ -11,6 +11,8 @@ import time
 import re
 import shutil
 from phase_subprocess import live_popen
+from phase_dem import prepare_external_dem
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 bar_message='\n#####################################################################\n'
@@ -40,6 +42,8 @@ try:
         if "CPU" in line: CPU = line.split('=')[1].strip()
 finally:
     in_file.close()
+
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
 
 # 1. Geometry and Path Extraction
 polygon = f"POLYGON (({LONMIN} {LATMIN},{LONMAX} {LATMIN},{LONMAX} {LATMAX},{LONMIN} {LATMAX},{LONMIN} {LATMIN}))"
@@ -150,8 +154,8 @@ for slave_date in sorted(os.listdir(slavesplittedfolder)):
     <parameters>
       <demName>{DEMNAME}</demName>
       <demResamplingMethod>{DEMRESAMPLING}</demResamplingMethod>
-      <externalDEMFile>{DEMFILE}</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMFile>{escape(DEMFILE)}</externalDEMFile>
+      <externalDEMNoDataValue>{DEM_NODATA}</externalDEMNoDataValue>
       <resamplingType>BILINEAR_INTERPOLATION</resamplingType>
     </parameters>
   </node>''')
@@ -191,8 +195,8 @@ for slave_date in sorted(os.listdir(slavesplittedfolder)):
       <outputElevation>true</outputElevation>
       <outputLatLon>true</outputLatLon>
       <demName>{DEMNAME}</demName>
-      <externalDEMFile>{DEMFILE}</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMFile>{escape(DEMFILE)}</externalDEMFile>
+      <externalDEMNoDataValue>{DEM_NODATA}</externalDEMNoDataValue>
     </parameters>
   </node>
   <node id="Deburst-Coreg-{swath}">
@@ -285,8 +289,8 @@ for slave_date in sorted(os.listdir(slavesplittedfolder)):
     <parameters>
       <orbitDegree>3</orbitDegree>
       <demName>{DEMNAME}</demName>
-      <externalDEMFile>{DEMFILE}</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMFile>{escape(DEMFILE)}</externalDEMFile>
+      <externalDEMNoDataValue>{DEM_NODATA}</externalDEMNoDataValue>
       <outputTopoPhaseBand>false</outputTopoPhaseBand>
       <outputElevationBand>true</outputElevationBand>
       <outputLatLonBands>true</outputLatLonBands>

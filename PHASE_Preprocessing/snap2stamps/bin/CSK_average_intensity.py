@@ -8,6 +8,9 @@ import time
 import glob
 import re
 from phase_subprocess import live_popen
+from phase_dem import prepare_external_dem
+from phase_csk_geometry import product_paths
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 bar_message = '\n#####################################################################\n'
@@ -27,6 +30,8 @@ except Exception as e:
     print(f"Error reading config: {e}")
     sys.exit(1)
 
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
+
 intensityfolder = os.path.join(PROJECT, 'intensity')
 coregfolder = os.path.join(PROJECT, 'coreg')
 logfolder = os.path.join(PROJECT, 'logs')
@@ -39,7 +44,7 @@ outlog = os.path.join(logfolder, 'CSK_avg_intensity_proc_stdout.log')
 graphxml = os.path.join(graphs_dir, 'CSK_stack_intensity.xml')
 
 # 1. Grab all Coregistered files
-coreg_files = glob.glob(os.path.join(coregfolder, "*.dim"))
+coreg_files = product_paths(coregfolder)
 if not coreg_files:
     print("ERROR: No coregistered .dim files found. Run Step 3 first.")
     sys.exit(1)
@@ -171,8 +176,8 @@ xml_content += f'''
     <parameters>
       <sourceBands>avgIntensity</sourceBands>
       <demName>{DEMNAME}</demName>
-      <externalDEMFile>{DEMFILE}</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMFile>{escape(DEMFILE)}</externalDEMFile>
+      <externalDEMNoDataValue>{DEM_NODATA}</externalDEMNoDataValue>
       <pixelSpacingInMeter>3.0</pixelSpacingInMeter>
       <saveSelectedSourceBand>true</saveSelectedSourceBand>
     </parameters>

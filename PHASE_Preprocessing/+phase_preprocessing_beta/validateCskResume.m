@@ -1,4 +1,4 @@
-function validateCskResume(folder,bounds,masterProcessing,firstStep)
+function validateCskResume(folder,bounds,masterProcessing,firstStep,demName,demFile)
 %VALIDATECSKRESUME Refuse to reuse CSK crops made for a different AOI.
 % Run before config/graph generation so original provenance is preserved.
 if masterProcessing==0 && firstStep>1
@@ -13,20 +13,40 @@ for k=1:numel(graphs)
         error('PHASE:CskResumeProvenanceMissing', ...
             'Cannot verify the AOI of existing CSK crops (%s missing). Start from step 1 with master processing enabled.',graphs{k});
     end
-    token=regexp(fileread(file),'(?s)<geoRegion>\s*POLYGON\s*\(\((.*?)\)\)\s*</geoRegion>','tokens','once');
-    if isempty(token),error('PHASE:CskResumeProvenanceMissing','Cannot read the applied CSK AOI from %s.',file);end
-    numbers=regexp(token{1},'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?','match');
-    values=str2double(numbers);
-    if mod(numel(values),2)~=0 || numel(values)<8 || any(~isfinite(values))
-        error('PHASE:CskResumeProvenanceMissing','Invalid applied CSK polygon in %s.',file);
+    geometryFile=replace(file,'.xml','.geometry.json');
+    if ~isfile(geometryFile)
+        error('PHASE:CskTerrainRebuildRequired', ...
+            'These CSK crops predate terrain-aware AOI selection. Start from step 1 with master processing enabled to rebuild them using DEM and orbit.');
     end
-    xy=reshape(values,2,[]).';
-    applied=[min(xy(:,1)) max(xy(:,1)) min(xy(:,2)) max(xy(:,2))];
+    saved=jsondecode(fileread(geometryFile));
+    if ~isfield(saved,'algorithm')||~strcmp(saved.algorithm,'terrain-aware-v1')|| ...
+            ~isfield(saved,'requestedBounds')||numel(saved.requestedBounds)~=4
+        error('PHASE:CskResumeProvenanceMissing','Invalid terrain-aware crop metadata: %s.',geometryFile);
+    end
+    applied=double(saved.requestedBounds(:).');
     matches=all(abs(applied-bounds)<=1e-9);
-    % Older releases wrote only 3 decimals. Compare the exact old rounding,
-    % rather than treating every nearby new AOI as the same selection.
-    legacy=all(abs(applied-round(applied,3))<=1e-12);
-    matches=matches || (legacy && all(abs(applied-round(bounds,3))<=1e-9));
+    if isfield(saved,'subsetGraphSHA256')&&~strcmp(saved.subsetGraphSHA256,sha256(file))
+        error('PHASE:CskResumeProvenanceMissing','CSK subset graph changed after processing. Rebuild from step 1 with master processing enabled.');
+    end
+    output='';
+    if isfield(saved,'output')
+        name=regexp(saved.output,'[^/\\]+$','match','once');
+        if startsWith(graphs{k},'CSK_subsetM'),subfolder='master';else,subfolder='subset';end
+        output=fullfile(folder,subfolder,name);
+    end
+    if isfield(saved,'output')&&(~isfile(output)|| ...
+            (isfield(saved,'outputHeaderSHA256')&&~strcmp(saved.outputHeaderSHA256,sha256(output))))
+        error('PHASE:CskResumeProvenanceMissing','The saved CSK subset is missing or changed. Rebuild it before resuming.');
+    end
+    if nargin>=6
+        if ~isfield(saved,'demName')||~strcmp(saved.demName,demName)
+            error('PHASE:CskResumeDemChanged','The DEM used for CSK cropping changed. Rebuild from step 1 with master processing enabled.');
+        end
+        if strcmpi(strtrim(demName),'External DEM')&& ...
+                (~isfile(demFile)||~isfield(saved,'demSourceSHA256')||~strcmp(saved.demSourceSHA256,sha256(demFile)))
+            error('PHASE:CskResumeDemChanged','The external DEM used for CSK cropping changed or is missing. Rebuild the master and slaves from step 1.');
+        end
+    end
     if ~matches
         values=num2cell([applied bounds firstStep]);
         message=sprintf(['The existing CSK crops use AOI [%.8f %.8f %.8f %.8f], but the selected AOI is [%.8f %.8f %.8f %.8f] ', ...
@@ -36,4 +56,15 @@ for k=1:numel(graphs)
         error('PHASE:CskResumeAreaChanged','%s',message);
     end
 end
+end
+
+function value=sha256(file)
+fid=fopen(file,'r');if fid<0,error('PHASE:CskResumeProvenanceMissing','Cannot read %s.',file);end
+cleanup=onCleanup(@()fclose(fid)); %#ok<NASGU>
+digest=java.security.MessageDigest.getInstance('SHA-256');
+while true
+    bytes=fread(fid,1048576,'*uint8');if isempty(bytes),break;end
+    digest.update(typecast(bytes,'int8'));
+end
+value=lower(reshape(dec2hex(typecast(digest.digest(),'uint8'),2).',1,[]));
 end

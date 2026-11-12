@@ -65,7 +65,21 @@ writeRaster('lon',[178 179 -179 -178;178 179 -179 -178;178 179 -179 -178]);
 cfg.psi_polygon=[178.5 44.5;-178.5 44.5;-178.5 47.5;178.5 47.5;178.5 44.5];
 [dateTarget,cfg]=phase_stamps_beta.psiAreaWorkDir(target,cfg);mkdir(dateTarget);
 [~,info]=phase_stamps_beta.preparePsiArea(cfg,dateTarget);assert(info.includedPixels==6);
-fprintf('PSI area regression passed: radar byte order, mask alignment, isolation, resume, invalid pixels and date line.\n');
+% Terrain-aware CSK halos are excluded even in full-area PSI mode.
+writeRaster('lon',lon);writeRaster('lat',lat);
+area=struct('algorithm','terrain-aware-v1','requestedBounds',[9.5 11.5 45.5 47.5]);
+areaFile=fullfile(root,'phase_preprocessing_aoi.json');writeText(areaFile,jsonencode(area));
+cfg.psi_area_mode='full';cfg.psi_source_dataset='';cfg.stamps_preparation=0;
+[groundMask,groundInfo]=phase_stamps_beta.preparePsiArea(cfg,base);
+assert(isfile(groundMask)&&groundInfo.includedPixels==4&&groundInfo.outsidePreprocessingAOIPixels==8);
+assert(groundInfo.invalidGeolocationPixels==0);
+preview=phase_stamps_beta.psiAreaMap(cfg);assert(numel(preview.footprints)==2);
+cfg.stamps_preparation=1;phase_stamps_beta.preparePsiArea(cfg,base);
+area.requestedBounds=[10.5 11.5 45.5 47.5];writeText(areaFile,jsonencode(area));
+mustFail(@()phase_stamps_beta.preparePsiArea(cfg,base),'PHASE:PsiAreaChanged');
+delete(areaFile);constellation='CSK';save(fullfile(fileparts(root),'input_preprocessing.mat'),'constellation');
+mustFail(@()phase_stamps_beta.psiAreaMap(cfg),'PHASE:CskTerrainRebuildRequired');
+fprintf('PSI area regression passed: byte order, masks, ground AOI/halo, legacy guard, isolation, resume, invalid pixels and date line.\n');
 
     function writeRaster(extension,values)
         fid=fopen(fullfile(root,'geo',['20200101.' extension]),'w','ieee-be');

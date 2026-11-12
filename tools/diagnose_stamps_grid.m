@@ -16,7 +16,8 @@ if ~isfile(fullfile(workDir,'input_StaMPS.mat'))
     error('PHASE:DiagnosticDataset','Select the PSI dataset containing input_StaMPS.mat, or its PATCH_1 folder.');
 end
 if nargin<2,outputPath=fullfile(selectedDir,'PHASE_PSI_grid_diagnostics.json');end
-report=struct('dataset',workDir,'config',struct(),'patches',{{}},'geolocation',struct());
+report=struct('diagnosticSchema',2,'generatedAt',char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
+    'dataset',workDir,'config',struct(),'patches',{{}},'geolocation',struct());
 configPath=fullfile(workDir,'input_StaMPS.mat');
 if isfile(configPath)
     names={'master_date','filter_grid_size','amplitude_threshold','stamps_preparation', ...
@@ -104,7 +105,11 @@ cleanup=onCleanup(@()fclose(fid)); %#ok<NASGU>
 fprintf(fid,'%s',jsonencode(report,PrettyPrint=true));
 fprintf('Diagnostic report saved: %s\nNo processing files or parameters were modified.\n',outputPath);
 clear cleanup
-if ispc && nargin<2,winopen(fileparts(outputPath));end
+if nargin<2
+    bundle=writeDiagnosticBundle(workDir,report,outputPath);
+    fprintf('Send this single ZIP: %s\n',bundle);
+    if ispc,winopen(fileparts(bundle));end
+end
 end
 
 function out=coordinateStats(values,checkBounds)
@@ -202,7 +207,7 @@ if isfile(config)
         {vars.name},'stable');
     cfg=load(config,names{:});out.preprocessingConfig=cfg;
 end
-for name={'CSK_subsetMgraph2run.xml','CSK_subsetgraph2run.xml','CSK_coreg_ifg2run.xml'}
+for name={'CSK_subsetMgraph2run.xml','CSK_subsetgraph2run.xml','CSK_coreg_ifg2run.xml','CSK_export2run.xml'}
     file=fullfile(preprocessing,'graphs',name{1});
     if isfile(file)
         content=fileread(file);key=matlab.lang.makeValidName(name{1});
@@ -273,4 +278,86 @@ end
 
 function value=dirDate(file)
 entry=dir(file);value=entry(1).date;
+end
+
+function destination=writeDiagnosticBundle(workDir,report,reportPath)
+% Package only geometry, metadata and logs; no SAR amplitudes or phases.
+staging=tempname;mkdir(staging);cleanup=onCleanup(@()rmdir(staging,'s')); %#ok<NASGU>
+copy(reportPath,'PHASE_PSI_grid_diagnostics.json');
+for name={'psi_area.json','psi_geolocation.json','psclonlat.in'}
+    copy(fullfile(workDir,name{1}),fullfile('PSI',name{1}));
+end
+geoInput=fullfile(workDir,'psclonlat.in');
+if isfile(geoInput)
+    lines=strtrim(splitlines(string(fileread(geoInput))));lines(lines=="")=[];
+    if numel(lines)>=3
+        for k=2:3
+            file=strip(char(lines(k)),'both','"');[~,name,ext]=fileparts(file);
+            copy(file,fullfile('export_geo',[name ext]));
+        end
+    end
+end
+if isfield(report,'processingAudit')&&isfield(report.processingAudit,'preprocessingFolder')
+    processing=report.processingAudit.preprocessingFolder;
+    for name={'CSK_subsetMgraph2run.xml','CSK_subsetgraph2run.xml','CSK_coreg_ifg2run.xml','CSK_export2run.xml'}
+        copy(fullfile(processing,'graphs',name{1}),fullfile('graphs',name{1}));
+    end
+    exportRoot=fileparts(fileparts(lonPathFromInput(workDir)));
+    copy(fullfile(exportRoot,'phase_preprocessing_aoi.json'),'phase_preprocessing_aoi.json');
+    geometries=dir(fullfile(processing,'graphs','*.geometry.json'));
+    for j=1:numel(geometries)
+        copy(fullfile(geometries(j).folder,geometries(j).name),fullfile('graphs',geometries(j).name));
+    end
+    if isfield(report.config,'master_date')
+        product(fullfile(processing,'master',[char(string(report.config.master_date)) '_sub.dim']),'master');
+    end
+    % The last export graph identifies the exact pair last written to geo/.
+    graph=fullfile(processing,'graphs','CSK_export2run.xml');
+    if isfile(graph)
+        document=xmlread(graph);nodes=document.getElementsByTagName('node');
+        for k=0:nodes.getLength()-1
+            node=nodes.item(k);id=char(node.getAttribute('id'));
+            if ~ismember(id,{'Read','Read(2)'}),continue;end
+            files=node.getElementsByTagName('file');if files.getLength()==0,continue;end
+            file=char(files.item(0).getTextContent());
+            if strcmp(id,'Read'),label='coreg';else,label='interferogram';end
+            product(strtrim(file),label);
+        end
+    end
+    for name={'CSK_coreg_ifg_proc_stdout.log','CSK_export_proc_stdout.log','CSK_subset_proc_stdout.log','CSK_master_proc_stdout.log'}
+        copy(fullfile(processing,'logs',name{1}),fullfile('logs',name{1}));
+    end
+end
+destination=fullfile(fileparts(reportPath),'PHASE_CSK_diagnostics.zip');
+zip(destination,{'*'},staging);
+
+    function copy(source,relative)
+        if ~isfile(source),return;end
+        target=fullfile(staging,relative);parent=fileparts(target);
+        if ~isfolder(parent),mkdir(parent);end
+        [ok,message]=copyfile(source,target);
+        if ~ok,error('PHASE:DiagnosticCopyFailed','Cannot collect %s: %s',source,message);end
+    end
+    function product(file,label)
+        if ~isfile(file),return;end
+        [parent,name]=fileparts(file);copy(file,fullfile(label,[name '.dim']));
+        data=fullfile(parent,[name '.data']);
+        grids=dir(fullfile(data,'tie_point_grids','*'));
+        for j=1:numel(grids)
+            if grids(j).isdir,continue;end
+            copy(fullfile(grids(j).folder,grids(j).name),fullfile(label,[name '.data'],'tie_point_grids',grids(j).name));
+        end
+        if strcmp(label,'interferogram')
+            for band={'orthorectifiedLat','orthorectifiedLon','elevation'}
+                for ext={'.img','.hdr'}
+                    copy(fullfile(data,[band{1} ext{1}]),fullfile(label,[name '.data'],[band{1} ext{1}]));
+                end
+            end
+        end
+    end
+end
+
+function file=lonPathFromInput(workDir)
+lines=strtrim(splitlines(string(fileread(fullfile(workDir,'psclonlat.in')))));lines(lines=="")=[];
+file=strip(char(lines(2)),'both','"');
 end

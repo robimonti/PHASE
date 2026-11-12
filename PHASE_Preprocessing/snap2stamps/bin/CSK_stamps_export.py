@@ -15,6 +15,7 @@
 
 import os
 from phase_subprocess import live_popen
+from phase_csk_geometry import finalize_export, product_paths
 from pathlib import Path
 import sys
 import glob
@@ -59,7 +60,7 @@ finally:
 coregfolder=PROJECT+'/coreg'
 ifgfolder=PROJECT+'/ifg'
 
-coreg_files = glob.glob(os.path.join(coregfolder, '*.dim'))
+coreg_files = product_paths(coregfolder)
 if coreg_files:
     first_file = os.path.basename(coreg_files[0])
     master_date = first_file[:8] # Grabs the first 8 digits (Master Date)
@@ -88,7 +89,7 @@ out_file.write(message)
 print(bar_message)
 out_file.write(bar_message)
 k=0
-for dimfile in glob.iglob(coregfolder + '/*.dim'):
+for dimfile in coreg_files:
     head, tail = os.path.split(os.path.join(coregfolder, dimfile))
     k=k+1
     message='['+str(k)+'] Exporting pair: master-slave pair '+tail+'\n'
@@ -131,3 +132,5 @@ for dimfile in glob.iglob(coregfolder + '/*.dim'):
             out_file.write(bar_message)
 out_file.close()
 err_file.close()
+
+finalize_export(PROJECT,outputexportfolder,master_date)

@@ -13,6 +13,13 @@ target=Path(sys.argv[1]); config=sys.argv[2]; stub=Path(sys.argv[3])
 sys.path.insert(0,str(target.parent))
 urllib.request.urlopen=lambda *a,**k:io.BytesIO(json.dumps({'daily':{'precipitation_sum':[0.0]}}).encode())
 import phase_subprocess
+import phase_csk_geometry
+
+def geometry(source,config,destination):
+    result=dict(schema=1,algorithm='terrain-aware-v1',requestedBounds=[float(config[k]) for k in ['LONMIN','LONMAX','LATMIN','LATMAX']],region=[0,0,512,512])
+    Path(destination).write_text(json.dumps(result))
+    return result
+phase_csk_geometry.calculate_region=geometry
 original=phase_subprocess._ORIGINAL_POPEN
 phase_subprocess._ORIGINAL_POPEN=lambda args,**kw:original([sys.executable,str(stub),*args[1:]],**kw)
 sys.argv=[str(target),config]
@@ -27,7 +34,7 @@ def make_project(tmp_path, phase_root, auto=False):
         (project / 'slaves' / f'CSKS1_SCS_B_{date}123456_{date}123500.h5').write_bytes(b'HDF fixture')
     config = project / 'project_master.conf'
     values = {'PROJECTFOLDER': project, 'GRAPHSFOLDER': phase_root / 'PHASE_Preprocessing/snap2stamps/graphs',
-              'AUTO_MASTER': int(auto), 'MASTER_DATE': '20210815', 'GPTBIN_PATH': sys.executable,
+              'DEMNAME':'SRTM 1Sec HGT','DEMFILE':'','AUTO_MASTER': int(auto), 'MASTER_DATE': '20210815', 'GPTBIN_PATH': sys.executable,
               'LONMIN': 9, 'LONMAX': 10, 'LATMIN': 45, 'LATMAX': 46, 'CPU': 1, 'CACHE': '128M'}
     config.write_text('\n'.join(f'{k}={v}' for k, v in values.items()))
     return project, config
@@ -50,6 +57,11 @@ def test_selected_master_reaches_real_subset_script(tmp_path, phase_root, auto):
     subset = run(phase_root, config, 'CSK_subset_master.py')
     assert subset.returncode == 0, subset.stdout + subset.stderr
     assert (project / 'master/20210815_sub.dim').is_file()
+    import json,xml.etree.ElementTree as ET
+    graph=project/'graphs/CSK_subsetMgraph2run.xml'
+    assert ET.parse(graph).find('.//geoRegion').text is None
+    assert ET.parse(graph).find('.//region').text=='0,0,512,512'
+    assert json.loads(graph.with_suffix('.geometry.json').read_text())['algorithm']=='terrain-aware-v1'
     log = (project / 'logs/CSK_subsetM_proc_stdout.log').read_text()
     assert 'TEST SNAP diagnostic: master reader started' in log
     assert 'subset complete' in log

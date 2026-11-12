@@ -8,6 +8,7 @@ import subprocess
 import time
 import re
 from phase_subprocess import live_popen
+from phase_csk_geometry import subset_product, save_products
 
 inputfile = sys.argv[1]
 bar_message='\n#####################################################################\n'
@@ -22,6 +23,8 @@ try:
                     PROJECT = line.split('=')[1].strip()
                     print("\n- PROJECT FOLDER: ")
                     print(PROJECT)
+            if "DEMNAME" in line: DEMNAME=line.split("=",1)[1].strip()
+            if "DEMFILE" in line: DEMFILE=line.split("=",1)[1].strip()
             if "GRAPHSFOLDER" in line:
                     GRAPH = line.split('=')[1].strip()
                     print("\n- GRAPH FOLDER: ")
@@ -70,6 +73,7 @@ outlog = os.path.join(logfolder, 'CSK_subset_proc_stdout.log')
 with open(outlog, 'a') as out_file:
     print(bar_message)
     k = 0
+    outputs=[]
     # Reading from subfolders just like your original script
     for acdatefolder in sorted(os.listdir(slavefolder)):
         folder_path = os.path.join(slavefolder, acdatefolder)
@@ -90,26 +94,16 @@ with open(outlog, 'a') as out_file:
         output_path = os.path.join(subsetfolder, outputname)
         graphxml = os.path.join(GRAPH, 'CSK_AOI_subset.xml')
 
-        with open(graphxml, 'r') as file:
-            filedata = file.read()
-
-        filedata = filedata.replace('INPUTFILE', files[0])
-        filedata = filedata.replace('OUTPUTFILE', output_path)
-        filedata = filedata.replace('POLYGON', polygon)
-
-        with open(graph2run, 'w') as file:
-            file.write(filedata)
-
-        args = [GPT, graph2run, '-c', CACHE, '-q', CPU]
-        process = live_popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        timeStarted = time.time()
-        stdout = process.communicate()[0].decode('utf-8', errors='ignore')
-        if stdout: out_file.write(stdout if isinstance(stdout, str) else stdout.decode('utf-8', errors='replace'))
-        out_file.flush()
-        if process.returncode != 0:
-            raise RuntimeError(f'SNAP failed (exit {process.returncode}); see the GPT output above and the stage log.')
-        timeDelta = time.time() - timeStarted
+        config = dict(PROJECTFOLDER=PROJECT,GRAPHSFOLDER=GRAPH,GPTBIN_PATH=GPT,
+                      DEMNAME=DEMNAME,DEMFILE=DEMFILE,LONMIN=LONMIN,LONMAX=LONMAX,
+                      LATMIN=LATMIN,LATMAX=LATMAX,CACHE=CACHE,CPU=CPU)
+        timeStarted=time.time()
+        subset_product(files[0],output_path,config,graph2run)
+        outputs.append(output_path)
+        timeDelta=time.time()-timeStarted
 
         msg = f'[{k}] Finished process in {timeDelta:.2f} seconds.\n'
         print(msg)
         out_file.write(msg)
+
+save_products(subsetfolder,outputs)

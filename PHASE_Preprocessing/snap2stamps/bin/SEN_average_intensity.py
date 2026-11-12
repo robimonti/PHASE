@@ -8,6 +8,8 @@ import time
 import glob
 import re
 from phase_subprocess import live_popen
+from phase_dem import prepare_external_dem
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 bar_message = '\n#####################################################################\n'
@@ -31,6 +33,8 @@ try:
 except Exception as e:
     print(f"Error reading config: {e}")
     sys.exit(1)
+
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
 
 polygon = f"POLYGON (({LONMIN} {LATMIN},{LONMAX} {LATMIN},{LONMAX} {LATMAX},{LONMIN} {LATMAX},{LONMIN} {LATMIN}))"
 
@@ -188,8 +192,8 @@ xml_content += f'''
     <parameters>
       <sourceBands>avgIntensity</sourceBands>
       <demName>{DEMNAME}</demName>
-      <externalDEMFile>{DEMFILE}</externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMFile>{escape(DEMFILE)}</externalDEMFile>
+      <externalDEMNoDataValue>{DEM_NODATA}</externalDEMNoDataValue>
       <demResamplingMethod>{DEMRESAMPLING}</demResamplingMethod>
       <imgResamplingMethod>{DEMRESAMPLING}</imgResamplingMethod>
       <pixelSpacingInMeter>13.95755</pixelSpacingInMeter>

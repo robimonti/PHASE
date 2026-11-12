@@ -5,6 +5,8 @@ import subprocess
 import shlex
 import time
 from phase_subprocess import live_popen
+from phase_dem import prepare_external_dem
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 
@@ -56,6 +58,8 @@ try:
             CPU = line.split('=')[1].strip()
 finally:
     in_file.close()
+
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
 
 #############################################################################
 ########### Coherence and LIA terrain correction and export (tif) ###########
@@ -147,7 +151,8 @@ if COH_FLAG == 0:
             filedata = filedata.replace('POLARISATION', POLARISATION)
             filedata = filedata.replace('SLAVE', dimfile)
             filedata = filedata.replace('DEMNAME', DEMNAME)
-            filedata = filedata.replace('DEMFILE', DEMFILE)
+            filedata = filedata.replace('DEMFILE', escape(DEMFILE))
+            filedata = filedata.replace('DEM_NODATA', DEM_NODATA)
             filedata = filedata.replace('DEM_RESAMPLING', DEMRESAMPLING)
             filedata = filedata.replace('SOURCEBAND_LIA', sourceband_lia)
             filedata = filedata.replace('OUTPUTFILE_LIA', outputname_lia)

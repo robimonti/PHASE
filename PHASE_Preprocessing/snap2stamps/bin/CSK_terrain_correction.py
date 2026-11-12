@@ -7,7 +7,9 @@ import glob
 import subprocess
 import time
 from phase_subprocess import live_popen
-from phase_dem import external_dem_nodata
+from phase_dem import prepare_external_dem
+from phase_csk_geometry import product_paths
+from xml.sax.saxutils import escape
 
 inputfile = sys.argv[1]
 bar_message = '\n#####################################################################\n'
@@ -29,7 +31,7 @@ except Exception as e:
     print(f"Error reading config: {e}")
     sys.exit(1)
 
-DEM_NODATA = external_dem_nodata(DEMNAME, DEMFILE)
+DEMFILE, DEM_NODATA = prepare_external_dem(DEMNAME, DEMFILE, PROJECT)
 
 coherencefolder = os.path.join(PROJECT, 'coherence')
 liafolder = os.path.join(PROJECT, 'lia')
@@ -60,7 +62,7 @@ if COH_FLAG == 0:
         out_file.write(bar_message)
 
         # Strictly scan top level of ifgfolder using glob to prevent deep dive into .data
-        interferogram_files = glob.glob(os.path.join(ifgfolder, '*.dim'))
+        interferogram_files = product_paths(ifgfolder)
         
         if not interferogram_files:
             print("No interferogram files found in the ifgfolder.")
@@ -99,7 +101,7 @@ if COH_FLAG == 0:
 
             filedata = filedata.replace('SLAVE', dimfile)
             filedata = filedata.replace('DEMNAME', DEMNAME)
-            filedata = filedata.replace('DEMFILE', DEMFILE)
+            filedata = filedata.replace('DEMFILE', escape(DEMFILE))
             filedata = filedata.replace('DEM_NODATA', DEM_NODATA)
             filedata = filedata.replace('DEM_RESAMPLING', DEMRESAMPLING)
             filedata = filedata.replace('SOURCEBAND_LIA', sourceband_lia)

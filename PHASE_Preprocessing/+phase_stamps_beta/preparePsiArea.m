@@ -2,6 +2,7 @@ function [mask,info] = preparePsiArea(cfg,workDir)
 %PREPAREPSIAREA Generate StaMPS's uint8 exclusion mask in radar pixel order.
 % 0 includes a pixel; 1 excludes it. Source SNAP rasters are read only.
 mask='';info=struct();
+[bounds,~]=phase_stamps_beta.preprocessingArea(phase_stamps_beta.exportPath(cfg.project_path,cfg.master_date));
 isSubarea=strcmp(cfg.psi_area_mode,'subarea');
 if ~isSubarea
     if isfile(fullfile(workDir,'psi_area.json'))
@@ -9,6 +10,13 @@ if ~isSubarea
     end
     if cfg.stamps_preparation~=0
         phase_stamps_beta.validatePreparedGeolocation(workDir);
+        if ~isempty(bounds)
+            grid=phase_stamps_beta.psiGrid(cfg);
+            file=fullfile(workDir,'psi_geolocation.json');
+            if ~isfile(file),error('PHASE:PsiAreaNeedsPreparation','Prepare the terrain-aware CSK ground AOI from Step 1 before resuming.');end
+            saved=jsondecode(fileread(file));
+            if ~isequaln(saved.grid,grid.signature),error('PHASE:PsiAreaChanged','The CSK ground AOI or source export changed. Prepare data again from Step 1.');end
+        end
         return
     end
     polygon=zeros(0,2);prefix='psi_geolocation';
@@ -22,7 +30,7 @@ else
 end
 grid=phase_stamps_beta.psiGrid(cfg);
 mask=fullfile(workDir,[prefix '.mask']);manifest=fullfile(workDir,[prefix '.json']);
-info=struct('polygon',polygon,'grid',grid.signature,'includedPixels',0,'totalPixels',grid.width*grid.height,'validPixels',0,'invalidGeolocationPixels',0);
+info=struct('polygon',polygon,'grid',grid.signature,'includedPixels',0,'totalPixels',grid.width*grid.height,'validPixels',0,'invalidGeolocationPixels',0,'preprocessingAOI',bounds,'outsidePreprocessingAOIPixels',0);
 if cfg.stamps_preparation==0 && ~strcmp(cfg.stamps_first_step,'1')
     error('PHASE:PsiAreaNeedsPreparation','Preparing new PSI candidates requires first step 1. Disable Prepare data to resume an existing area from a later step.');
 end
@@ -51,6 +59,10 @@ while remaining>0
     valid=isfinite(lon)&isfinite(lat)&abs(lon)<=180&abs(lat)<90&~(lon==0&lat==0);
     info.validPixels=info.validPixels+nnz(valid);
     inside=valid;
+    if ~isempty(bounds)
+        inside=inside&lon>=bounds(1)&lon<=bounds(2)&lat>=bounds(3)&lat<=bounds(4);
+        info.outsidePreprocessingAOIPixels=info.outsidePreprocessingAOIPixels+nnz(valid&~inside);
+    end
     if isSubarea
         lon=centre+mod(lon-centre+180,360)-180;
         inside=inside&inpolygon(lon,lat,p(:,1),p(:,2));
@@ -68,7 +80,7 @@ movefile(temporary,mask,'f');
 clear cleanup % Close readers before any other fopen can reuse their IDs.
 fid=fopen(manifest,'w');if fid<0,error('PHASE:PsiMaskIO','Cannot save PSI area metadata.');end
 fwrite(fid,jsonencode(info),'char');fclose(fid);
-if ~isSubarea && info.invalidGeolocationPixels==0
+if ~isSubarea && info.invalidGeolocationPixels==0 && info.outsidePreprocessingAOIPixels==0
     delete(mask);mask=''; % Preserve the original command for fully valid stacks.
 end
 end

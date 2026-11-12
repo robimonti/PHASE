@@ -7,9 +7,13 @@ python=phase_preprocessing_beta.resolvePython('python3');
 oldPath=path;folder=tempname;mkdir(folder);cleanup=onCleanup(@()cleanupTest(oldPath,folder)); %#ok<NASGU>
 installed=fullfile(folder,'installed engine');bin=fullfile(installed,'PHASE_Preprocessing','snap2stamps','bin');mkdir(bin);
 source=fullfile(root,'PHASE_Preprocessing','snap2stamps','bin');
-for name={'CSK_master_selector.py','CSK_subset_master.py','phase_subprocess.py'}
+for name={'CSK_master_selector.py','CSK_subset_master.py','phase_subprocess.py','phase_csk_geometry.py','phase_dem.py'}
     copyfile(fullfile(source,name{1}),fullfile(bin,name{1}));
 end
+geometry=fullfile(bin,'phase_csk_geometry.py');fid=fopen(geometry,'a');
+fprintf(fid,['\ndef calculate_region(source,config,destination):\n' ...
+    '    result=dict(schema=1,algorithm="terrain-aware-v1",requestedBounds=[float(config[k]) for k in ["LONMIN","LONMAX","LATMIN","LATMAX"]],region=[0,0,512,512])\n' ...
+    '    Path(destination).write_text(json.dumps(result))\n    return result\n']);fclose(fid);
 selector=fullfile(bin,'CSK_master_selector.py');text=fileread(selector);
 fid=fopen(selector,'w');fprintf(fid,'import io, json, urllib.request\nurllib.request.urlopen=lambda *a,**k:io.BytesIO(json.dumps({"daily":{"precipitation_sum":[0.0]}}).encode())\n%s',text);fclose(fid);
 graphs=fullfile(installed,'PHASE_Preprocessing','snap2stamps','graphs');mkdir(graphs);

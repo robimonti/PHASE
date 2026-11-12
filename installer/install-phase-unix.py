@@ -28,7 +28,7 @@ import venv
 PHASE_REPO = "https://github.com/robimonti/PHASE.git"
 STAMPS_COMMIT = "7cabf05eddf8ebe8694e5346fe0f9d48aaef4962"
 TRAIN_COMMIT = "6d0273ae67d2a9f07a696b6a14298ef2c31607d8"
-PYTHON_PACKAGES = ("openpyxl", "Pillow", "requests", "asf_search", "shapely", "certifi")
+PYTHON_PACKAGES = ("openpyxl", "Pillow", "requests", "asf_search", "shapely", "certifi", "rasterio")
 MACOS_PSI_TOOLS = (
     "bin/calamp", "bin/cpxsum", "bin/pscphase", "bin/pscdem",
     "bin/psclonlat", "bin/selpsc_patch", "bin/selsbc_patch",
@@ -53,6 +53,11 @@ REQUIRED_FILES = (
     "PHASE_Preprocessing/+phase_preprocessing_beta/ProcessingEngine.m",
     "PHASE_Preprocessing/+phase_stamps_beta/App.m",
     "PHASE_Preprocessing/+phase_stamps_beta/ProcessingContext.m",
+    "PHASE_Preprocessing/+phase_stamps_beta/preprocessingArea.m",
+    "PHASE_Preprocessing/snap2stamps/bin/phase_csk_geometry.py",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.class",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.java",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.build.json",
     "+phase_model_beta/App.m",
     "+phase_model_beta/ProcessingEngine.m",
 )
@@ -222,7 +227,7 @@ def ignored(directory: str, names: list[str]) -> set[str]:
         blocked.update({"selected_random_points_DSC_VV.xlsx"}.intersection(names))
     if current.name == "tools":
         blocked.update(name for name in names if name not in {
-            "srtm_precache.py", "snap_dim_version_check.py"
+            "srtm_precache.py", "snap_dim_version_check.py", "diagnose_stamps_grid.m"
         })
     return blocked
 
@@ -338,7 +343,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.1.15"
+            version = "v7.1.16"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],

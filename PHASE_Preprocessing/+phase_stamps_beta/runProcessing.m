@@ -326,6 +326,9 @@ workDirCleanup = onCleanup(@() restoreWorkDir(app.WorkDir)); %#ok<NASGU>
             updateOutput(app,sprintf('Warning: %d of %d export pixels (%.1f%%) have invalid/NoData geolocation and are excluded. Check DEM coverage and preprocessing outputs if this is unexpected.', ...
                 psiAreaInfo.invalidGeolocationPixels,psiAreaInfo.totalPixels,100*psiAreaInfo.invalidGeolocationPixels/psiAreaInfo.totalPixels));
         end
+        if isfield(psiAreaInfo,'outsidePreprocessingAOIPixels')&&psiAreaInfo.outsidePreprocessingAOIPixels>0
+            updateOutput(app,sprintf('CSK ground AOI: excluded %d valid pixels outside the requested preprocessing area (registration halo).',psiAreaInfo.outsidePreprocessingAOIPixels));
+        end
         mt_prep_snap = ('mt_prep_snap');
         source = ('source');
         space = (' ');

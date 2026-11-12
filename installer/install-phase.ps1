@@ -470,7 +470,7 @@ function Install-PythonPackages {
         [Parameter(Mandatory)] [scriptblock]$StatusCallback
     )
     # Existing Python installations need the same dependency check as new ones.
-    $probeCode = 'import openpyxl; import PIL.Image; import requests; import asf_search; import shapely; import certifi'
+    $probeCode = 'import openpyxl; import PIL.Image; import requests; import asf_search; import shapely; import certifi; import rasterio'
     $probe = Start-Process -FilePath $PythonExe -ArgumentList '-c', ('"' + $probeCode + '"') -Wait -PassThru -NoNewWindow
     if ($probe.ExitCode -eq 0) {
         & $StatusCallback '[OK] Python packages, including Pillow for Excel images, are available.'
@@ -481,7 +481,7 @@ function Install-PythonPackages {
     #   requests    -> download HTTP
     #   asf_search  -> ricerca e download dati SAR da ASF (Sentinel-1)
     #   shapely     -> geometrie / footprint AOI
-    $packages = @('openpyxl', 'Pillow', 'requests', 'asf_search', 'shapely', 'certifi')
+    $packages = @('openpyxl', 'Pillow', 'requests', 'asf_search', 'shapely', 'certifi', 'rasterio')
     foreach ($pkg in $packages) {
         & $StatusCallback "pip install $pkg..."
         $proc = Start-Process -FilePath $PythonExe -ArgumentList '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', $pkg -Wait -PassThru -NoNewWindow
@@ -1637,7 +1637,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.1.15 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.1.16 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2889,6 +2889,11 @@ function Assert-PhaseStandaloneRuntime {
         'PHASE_Preprocessing\+phase_stamps_beta\App.m',
         'PHASE_Preprocessing\+phase_stamps_beta\ProcessingContext.m',
         'PHASE_Preprocessing\+phase_stamps_beta\runProcessing.m',
+        'PHASE_Preprocessing\+phase_stamps_beta\preprocessingArea.m',
+        'PHASE_Preprocessing\snap2stamps\bin\phase_csk_geometry.py',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.class',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.java',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.build.json',
         '+phase_model_beta\App.m',
         '+phase_model_beta\ProcessingEngine.m',
         '+phase_model_beta\exportFigure.m',

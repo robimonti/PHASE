@@ -22,7 +22,7 @@
       <sourceBands>COHBAND</sourceBands>
       <demName>Copernicus 30m Global DEM</demName>
       <externalDEMFile> </externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMNoDataValue>DEM_NODATA</externalDEMNoDataValue>
       <externalDEMApplyEGM>true</externalDEMApplyEGM>
       <demResamplingMethod>DEM_RESAMPLING</demResamplingMethod>
       <imgResamplingMethod>DEM_RESAMPLING</imgResamplingMethod>
@@ -77,7 +77,7 @@
       <sourceBands>COHBAND</sourceBands>
       <demName>Copernicus 30m Global DEM</demName>
       <externalDEMFile> </externalDEMFile>
-      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <externalDEMNoDataValue>DEM_NODATA</externalDEMNoDataValue>
       <externalDEMApplyEGM>true</externalDEMApplyEGM>
       <demResamplingMethod>DEM_RESAMPLING</demResamplingMethod>
       <imgResamplingMethod>DEM_RESAMPLING</imgResamplingMethod>

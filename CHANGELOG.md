@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.16] - 2026-11-12
+
+- Compute CSK radar crops with native SNAP DEM/orbit geometry; mask the registration halo to the exact requested ground AOI in PSI.
+- Track terrain-aware provenance, changed DEMs and current product inventories; require rebuilding old CSK crops.
+
+- Normalize external DEM NoData into a cached, verified GeoTIFF without changing source files, grid geometry, valid elevations or scaling. Prefer zero; preserve valid zero elevations with a collision-free integer sentinel when needed. Apply consistently to CSK and Sentinel-1 DEM-consuming stages.
+- Prepare Rasterio in new installers and automatically for existing processing interpreters; read/write in bounded strips and verify cached copies.
+- Extend the read-only CSK diagnostic collector to package exact SNAP geometry bands, export coordinates, metadata and logs in one ZIP.
+- Align development application and installer labels to 7.1.16. Native CSK AOI geometry and NoData normalization address distinct problems.
+
 ## [7.1.13] - 2026-11-05
 - Correct CSK automatic/manual master orchestration and remove the Sentinel-1-only update guard from the CSK branch.
 - Persist early MATLAB and SNAP diagnostics and fail on unsuccessful master subsetting. Add Python and MATLAB orchestration regressions; align all app/installer versions to 7.1.13.

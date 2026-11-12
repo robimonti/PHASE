@@ -5,7 +5,8 @@ import subprocess
 import sys
 import time
 from xml.sax.saxutils import escape
-from phase_subprocess import live_popen, log_console
+from phase_subprocess import log_console
+from phase_csk_geometry import subset_product
 
 
 def subset(config):
@@ -30,28 +31,14 @@ def subset(config):
     source = products[0]  # Same first-product policy as the original CSK graph.
     if len(products) > 1:
         print(f'CSK master date {date}: {len(products)} products; subsetting {source.name}.', flush=True)
-    graph = Path(config['GRAPHSFOLDER']) / 'CSK_AOI_subset.xml'
-    polygon = ('POLYGON (({LONMIN} {LATMIN},{LONMAX} {LATMIN},'
-               '{LONMAX} {LATMAX},{LONMIN} {LATMAX},{LONMIN} {LATMIN}))').format(**config)
     output = master / f'{date}_sub.dim'
-    contents = graph.read_text(encoding='utf-8')
-    for key, value in [('INPUTFILE', str(source)), ('OUTPUTFILE', str(output)), ('POLYGON', polygon)]:
-        contents = contents.replace(key, escape(value))
     graphs = project / 'graphs'
     graphs.mkdir(parents=True, exist_ok=True)
     generated = graphs / 'CSK_subsetMgraph2run.xml'
-    generated.write_text(contents, encoding='utf-8')
-    command = [config['GPTBIN_PATH'], str(generated), '-c', config['CACHE'], '-q', config['CPU']]
     print('################ STEP 1: CSK master subsetting ################', flush=True)
     print(f'Master input: {source}\nMaster output: {output}', flush=True)
-    print('SNAP command: ' + repr(command), flush=True)
     started = time.time()
-    process = live_popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    process.communicate()
-    if process.returncode != 0:
-        raise RuntimeError(f'SNAP CSK master subsetting failed (exit {process.returncode}). See the SNAP output above.')
-    if not output.is_file():
-        raise RuntimeError(f'SNAP returned success but did not create the CSK master: {output}')
+    subset_product(source,output,config,generated)
     print(f'CSK master completed in {time.time() - started:.2f} seconds: {output}', flush=True)
 
 
