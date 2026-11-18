@@ -1,4 +1,15 @@
-# PHASE v7.2.0
+# PHASE v7.2.1
+
+- Fix quality screening after automatic master selection: read the actual Sentinel-1 or CSK master product path from the preprocessing configuration, including Windows paths, instead of using a stale saved date.
+- Resolve older projects from a retained master or one complete export. Refuse ambiguous exports, identify missing input paths clearly and avoid creating empty export folders when inputs are missing.
+- Move larger **Build quality map**, **Fit area** and **Open exports** buttons below the PSI suitability title, above the map.
+- Align application and Windows, macOS and Linux installer versions. Preserve preprocessing products, StaMPS/TRAIN runtimes and scientific processing settings.
+
+Update PHASE, close it and restart it; verify **v7.2.1**. Open the existing project, then **Preprocessing → PSI suitability → Build quality map**. **No preprocessing rerun is needed.**
+
+The macOS DMG uses ad-hoc signing and is not notarized.
+
+## PHASE v7.2.0
 
 - Add automatic preliminary PSI suitability maps after preprocessing, before optional SNAP-product cleanup. Inspect stack coverage, normalised amplitude stability, retained-interferogram coherence and terrain mapping risk without changing StaMPS preparation, selection, weeding or displacement modelling.
 - Add a PSI suitability page consistent with the hub, with English controls, selectable layers, opacity and per-cell values/reasons. Show the same layers on the optional PSI sub-area selection map.

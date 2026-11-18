@@ -992,3 +992,5 @@ button { color: inherit; }
 .quality-legend i { width:9px; height:9px; border-radius:50%; display:inline-block; }
 .quality-message { margin:16px 4px 6px; color:#65758e; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
 #quality-map { min-height:480px; }
+.quality-actions { display:flex; flex-wrap:wrap; gap:12px; margin:-4px 0 22px; }
+.quality-actions .button { min-height:42px; padding:0 20px; font-size:13px; }

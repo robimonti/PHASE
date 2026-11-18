@@ -1,5 +1,14 @@
 # Changelog
 
+## v7.2.1 — 2026-11-18
+
+- Resolve the quality-screening master from complete Sentinel-1 and CSK product
+  paths, including Windows paths, instead of using a stale saved master date.
+- Support existing projects with one unambiguous retained export; refuse
+  ambiguous datasets and report the requested master and missing input paths.
+- Place larger quality-map buttons below the section title, above the map.
+- Align application and installer versions across all three platforms.
+
 ## v7.2.0 — 2026-11-18
 
 - Add automatic preliminary PSI suitability screening after preprocessing, with

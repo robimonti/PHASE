@@ -1,6 +1,7 @@
 function data = readPsiQuality(exportFolder)
 %READPSIQUALITY Load current screening results; never silently reuse stale data.
 data=struct('available',false,'message','Quality screening has not been generated for this dataset.');
+if isempty(exportFolder),return;end
 path=fullfile(exportFolder,'quality','quality.json');
 if ~isfile(path),return;end
 try

@@ -191,7 +191,8 @@ classdef App < handle
                     case 'refreshmap', obj.refreshMap();
                     case 'maptilesrequested', obj.cacheMapTiles(payload);
                     case 'buildquality', obj.buildQualityMap();
-                    case 'openqualityfolder', openFolder(fullfile(phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,obj.SavedConfig),'quality'));
+                    case 'openqualityfolder'
+                        if obj.Quality.available,openFolder(obj.Quality.folder);end
                     case 'downloadaoichanged', obj.downloadAoiChanged(payload);
                     case 'downloadsearch', obj.searchAsf(payload);
                     case 'downloadlogin', obj.loginAsf(payload);
@@ -1067,15 +1068,7 @@ classdef App < handle
 
         function buildQualityMap(obj)
             if obj.IsRunning,return;end
-            cfg=obj.SavedConfig;[export,master]=phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,cfg);
-            request=struct('project',phase_preprocessing_beta.dataFolder(obj.ProjectDir), ...
-                'master',master,'sensor',cfg.constellation, ...
-                'bounds',[cfg.lon_min cfg.lon_max cfg.lat_min cfg.lat_max], ...
-                'demName',cfg.dem_name,'demFile',cfg.dem_file,'gpt',cfg.gptbin_path);
-            area=fullfile(export,'phase_preprocessing_aoi.json');
-            if isfile(area)
-                provenance=jsondecode(fileread(area));request.bounds=provenance.requestedBounds;
-            end
+            cfg=obj.SavedConfig;
             obj.requireEngine();obj.StopRequested=false;obj.Engine.StopFlag=false;
             obj.IsRunning=true;previousStatus=obj.Status;previousDetail=obj.StatusDetail;
             previousProgress=obj.RunProgress;obj.RunProgress.phase='Assessing PSI suitability';
@@ -1085,6 +1078,17 @@ classdef App < handle
             folder=tempname;mkdir(folder);path=fullfile(folder,'request.json');
             cleanup=onCleanup(@()removeQualityTemporary(folder)); %#ok<NASGU>
             try
+                [export,master,resolution]=phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,cfg);
+                if isempty(export),error('PHASE:PsiQualityExport','%s',resolution.message);end
+                request=struct('project',phase_preprocessing_beta.dataFolder(obj.ProjectDir), ...
+                    'master',master,'masterResolution',resolution,'sensor',cfg.constellation, ...
+                    'bounds',[cfg.lon_min cfg.lon_max cfg.lat_min cfg.lat_max], ...
+                    'demName',cfg.dem_name,'demFile',cfg.dem_file,'gpt',cfg.gptbin_path);
+                area=fullfile(export,'phase_preprocessing_aoi.json');
+                if isfile(area)
+                    provenance=jsondecode(fileread(area));request.bounds=provenance.requestedBounds;
+                end
+                obj.appendLog(sprintf('Quality screening master: %s (%s). Export: %s',master,resolution.source,export));
                 writeJson(path,request);
                 script=fullfile(obj.RootDir,'PHASE_Preprocessing','snap2stamps','bin','phase_psi_quality.py');
                 parts={phase_preprocessing_beta.resolvePython(cfg.python),script,'--request',path};

@@ -160,3 +160,24 @@ def test_incompatible_orbit_grid_cannot_produce_geometry_values(tmp_path, monkey
         quality.grid_definition(request['bounds'], 'CSK'), [(image, '>f4', 1)], folder)
     assert np.isnan(values).all() and info['status'] == 'unavailable'
     assert 'does not reproduce' in info['message']
+
+
+def test_missing_reference_identifies_the_requested_path_and_available_exports(tmp_path):
+    fixture(tmp_path)
+    with pytest.raises(ValueError) as caught:
+        quality.read_grid(tmp_path/'INSAR_20200722', '20200722')
+    message = str(caught.value)
+    assert '20200722.rslc.par' in message
+    assert str(tmp_path/'INSAR_20200722') in message
+    assert 'INSAR_20250101' in message
+
+
+def test_geolocation_prefers_exact_master_and_rejects_ambiguous_legacy_names(tmp_path):
+    fixture(tmp_path);export = tmp_path/'INSAR_20250101'
+    for suffix in ('lon', 'lat'):
+        (export/'geo'/f'19990101.{suffix}').write_bytes(b'wrong dimensions')
+    _, _, paths, _ = quality.read_grid(export, '20250101')
+    assert all(p.name.startswith('20250101.') for p in paths)
+    (export/'geo/20250101.lon').rename(export/'geo/legacy.lon')
+    with pytest.raises(ValueError, match='Ambiguous lon'):
+        quality.read_grid(export, '20250101')

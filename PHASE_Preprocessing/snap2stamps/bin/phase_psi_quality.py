@@ -108,7 +108,10 @@ def read_grid(export, master):
     export = Path(export)
     pars = sorted(export.glob(f'*slc/{master}.*slc.par'))
     if not pars:
-        raise ValueError('Master radar parameters are missing from the SNAP export.')
+        available = sorted(p.name for p in export.parent.glob('INSAR_*') if p.is_dir())
+        extra = ' Available export folders: '+', '.join(available)+'.' if available else ''
+        raise ValueError(f'Master {master}: radar parameters are missing in {export}. '
+                         f'Expected rslc/{master}.rslc.par or slc/{master}.slc.par.'+extra)
     text = pars[0].read_text(errors='replace')
     def number(key):
         match = re.search(r'^\s*'+key+r'\s*:?\s*(\d+)', text, re.M)
@@ -116,7 +119,14 @@ def read_grid(export, master):
             raise ValueError('Missing '+key+' in master radar parameters.')
         return int(match[1])
     width, height = number('range_samples'), number('azimuth_lines')
-    paths = [next(iter(sorted(export.glob('geo/*.'+suffix))), None) for suffix in ('lon', 'lat')]
+    paths = []
+    for suffix in ('lon', 'lat'):
+        exact = export/'geo'/f'{master}.{suffix}'
+        candidates = sorted(export.glob('geo/*.'+suffix))
+        if exact.is_file(): paths.append(exact)
+        elif len(candidates) == 1: paths.append(candidates[0])
+        elif not candidates: paths.append(None)
+        else: raise ValueError(f'Ambiguous {suffix} geolocation rasters in {export}/geo for master {master}.')
     if any(p is None or p.stat().st_size != 4*width*height for p in paths):
         raise ValueError('Export geolocation sizes do not match the radar grid.')
     return width, height, paths, pars[0]
@@ -360,7 +370,7 @@ def export_layers(folder, grid, layers):
 
 def run(request):
     project, master = Path(request['project']), str(request['master'])
-    export = project/('INSAR_'+master); output = export/'quality'; output.mkdir(parents=True, exist_ok=True)
+    export = project/('INSAR_'+master); output = export/'quality'
     width, height, paths, par = read_grid(export, master); grid = grid_definition(request['bounds'], request.get('sensor', ''))
     files = sorted(export.glob('rslc/*.rslc'))
     if not files:
@@ -369,6 +379,7 @@ def run(request):
         raise ValueError('Quality screening requires complete complex float32 SNAP SLC exports on one radar grid.')
     if master not in {p.stem for p in files} or any(not re.fullmatch(r'\d{8}', p.stem) for p in files):
         raise ValueError('The quality stack must contain its master and date-named SNAP acquisitions.')
+    output.mkdir(parents=True, exist_ok=True)
     lon, lat = [np.memmap(p, dtype='>f4', mode='r') for p in paths]
     with BoundedStack() as stack:
         slcs = [stack.raster(p) for p in files]
@@ -391,6 +402,7 @@ def run(request):
             sources = [par, *paths, *files, *(f for f, _, _ in products), *geo_sources]
             report = dict(schema=1, algorithm=ALGORITHM, generatedAt=datetime.now(timezone.utc).isoformat(),
                           grid=grid, master=master, acquisitionCount=len(files), interferogramCount=len(products),
+                          masterResolution=request.get('masterResolution', {}),
                           stackFiles=[p.relative_to(export).as_posix() for p in files],
                           interferogramBaselinesDays=[days for _, _, days in products],
                           thresholds=THRESHOLDS, geometry=info,
@@ -419,4 +431,8 @@ def run(request):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('--request', required=True)
-    args = parser.parse_args(); run(json.loads(Path(args.request).read_text(encoding='utf-8')))
+    args = parser.parse_args()
+    try:
+        run(json.loads(Path(args.request).read_text(encoding='utf-8')))
+    except (ValueError, FileNotFoundError) as exc:
+        parser.exit(1, f'Quality screening unavailable: {exc}\n')
