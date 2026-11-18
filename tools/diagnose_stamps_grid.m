@@ -1,7 +1,7 @@
 function report = diagnose_stamps_grid(workDir,outputPath)
 %DIAGNOSE_STAMPS_GRID Collect small, read-only PSI/geolocation diagnostics.
 % Select a PSI dataset containing input_StaMPS.mat and/or PATCH_*.
-% Only the JSON report is written; no inputs, parameters or results change.
+% Writes a JSON/ZIP diagnostic report only; no inputs, parameters or results change.
 if nargin<1 || isempty(workDir)
     workDir=uigetdir(pwd,'Select the PSI dataset folder (containing PATCH_*)');
     if isequal(workDir,0),report=struct();return;end
@@ -16,7 +16,7 @@ if ~isfile(fullfile(workDir,'input_StaMPS.mat'))
     error('PHASE:DiagnosticDataset','Select the PSI dataset containing input_StaMPS.mat, or its PATCH_1 folder.');
 end
 if nargin<2,outputPath=fullfile(selectedDir,'PHASE_PSI_grid_diagnostics.json');end
-report=struct('diagnosticSchema',2,'generatedAt',char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
+report=struct('diagnosticSchema',3,'generatedAt',char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')), ...
     'dataset',workDir,'config',struct(),'patches',{{}},'geolocation',struct());
 configPath=fullfile(workDir,'input_StaMPS.mat');
 if isfile(configPath)
@@ -99,6 +99,14 @@ try
 catch ME
     report.processingAuditError=ME.message;
 end
+try
+    report.coverageAudit=coverageAudit(workDir,report);
+catch ME
+    report.coverageAuditError=ME.message;
+end
+[selection,selectionErrors]=selectionStages(workDir);
+report.selectionStages=cellfun(@(v)struct('stage',v.name,'points',size(v.coordinates,1),'modified',v.modified),selection,'UniformOutput',false);
+report.selectionStageErrors=selectionErrors;
 fid=fopen(outputPath,'w','n','UTF-8');
 if fid<0,error('PHASE:DiagnosticWriteFailed','Cannot write %s.',outputPath);end
 cleanup=onCleanup(@()fclose(fid)); %#ok<NASGU>
@@ -284,7 +292,14 @@ function destination=writeDiagnosticBundle(workDir,report,reportPath)
 % Package only geometry, metadata and logs; no SAR amplitudes or phases.
 staging=tempname;mkdir(staging);cleanup=onCleanup(@()rmdir(staging,'s')); %#ok<NASGU>
 copy(reportPath,'PHASE_PSI_grid_diagnostics.json');
-for name={'psi_area.json','psi_geolocation.json','psclonlat.in'}
+[stages,~]=selectionStages(workDir);
+if ~isempty(stages),mkdir(fullfile(staging,'selection_stages'));end
+for j=1:numel(stages)
+    item=stages{j};data=array2table([item.coordinates item.metrics], ...
+        'VariableNames',[{'longitude','latitude'} item.metricNames]);
+    writetable(data,fullfile(staging,'selection_stages',[item.name '.csv']));
+end
+for name={'psi_area.json','psi_geolocation.json','psclonlat.in','selpsc.in','calamp.in','calamp.out','patch.list'}
     copy(fullfile(workDir,name{1}),fullfile('PSI',name{1}));
 end
 geoInput=fullfile(workDir,'psclonlat.in');
@@ -299,6 +314,16 @@ if isfile(geoInput)
 end
 if isfield(report,'processingAudit')&&isfield(report.processingAudit,'preprocessingFolder')
     processing=report.processingAudit.preprocessingFolder;
+    input=fullfile(processing,'input_preprocessing.mat');
+    if isfile(input)
+        vars=whos('-file',input);
+        if ismember('dem_file',{vars.name})
+            cfg=load(input,'dem_file');info=dir(cfg.dem_file);
+            if ~isempty(info)&&info.bytes<=100*1024^2
+                copy(cfg.dem_file,'dem/source.tif');
+            end
+        end
+    end
     for name={'CSK_subsetMgraph2run.xml','CSK_subsetgraph2run.xml','CSK_coreg_ifg2run.xml','CSK_export2run.xml'}
         copy(fullfile(processing,'graphs',name{1}),fullfile('graphs',name{1}));
     end
@@ -348,6 +373,13 @@ zip(destination,{'*'},staging);
             copy(fullfile(grids(j).folder,grids(j).name),fullfile(label,[name '.data'],'tie_point_grids',grids(j).name));
         end
         if strcmp(label,'interferogram')
+            coherence=dir(fullfile(data,'coh*'));
+            for j=1:numel(coherence)
+                [~,~,extension]=fileparts(coherence(j).name);
+                if ~coherence(j).isdir&&ismember(extension,{'.img','.hdr'})&&coherence(j).bytes<=100*1024^2
+                    copy(fullfile(data,coherence(j).name),fullfile(label,[name '.data'],coherence(j).name));
+                end
+            end
             for band={'orthorectifiedLat','orthorectifiedLon','elevation'}
                 for ext={'.img','.hdr'}
                     copy(fullfile(data,[band{1} ext{1}]),fullfile(label,[name '.data'],[band{1} ext{1}]));
@@ -360,4 +392,206 @@ end
 function file=lonPathFromInput(workDir)
 lines=strtrim(splitlines(string(fileread(fullfile(workDir,'psclonlat.in')))));lines(lines=="")=[];
 file=strip(char(lines(2)),'both','"');
+end
+
+function [stages,errors]=selectionStages(workDir)
+% Load coordinates/quality vectors only, never a phase or time-series matrix.
+stages={};errors={};patches=dir(fullfile(workDir,'PATCH_*'));patches=patches([patches.isdir]);
+folders=[{workDir},arrayfun(@(p)fullfile(p.folder,p.name),patches,'UniformOutput',false)];
+labels=[{'ROOT'},{patches.name}];
+for k=1:numel(folders)
+    folder=folders{k};label=labels{k};
+    try
+        initial=loadSmall(fullfile(folder,'ps1.mat'),{'lonlat'});
+        if isfield(initial,'lonlat')
+            xy=double(initial.lonlat);n=size(xy,1);
+            da=loadSmall(fullfile(folder,'da1.mat'),{'D_A'});
+            pm=loadSmall(fullfile(folder,'pm1.mat'),{'coh_ps'});
+            add('candidates',xy,{'amplitude_dispersion','initial_coherence'},[vector(da,'D_A',n) vector(pm,'coh_ps',n)],'ps1.mat');
+            sl=loadSmall(fullfile(folder,'select1.mat'),{'ix','ix2','keep_ix','coh_ps2','coh_thresh'});
+            if isfield(sl,'ix')
+                ix=indices(sl.ix,n);count=numel(ix);
+                quality=[vector(sl,'coh_ps2',count) vector(sl,'coh_thresh',count)];
+                add('selected',xy(ix,:),{'reestimated_coherence','coherence_threshold'},quality,'select1.mat');
+                if isfield(sl,'keep_ix')
+                    keep=sl.keep_ix(:);
+                    if numel(keep)~=count||any(~ismember(keep,[0 1])),error('Invalid keep_ix size/values.');end
+                    keep=logical(keep);
+                    add('reselected',xy(ix(keep),:),{'reestimated_coherence','coherence_threshold'},quality(keep,:),'select1.mat');
+                end
+            elseif isfield(sl,'ix2')
+                ix=indices(sl.ix2,n);
+                add('reselected',xy(ix,:),{'reestimated_coherence','coherence_threshold'},[vector(sl,'coh_ps2',numel(ix)) vector(sl,'coh_thresh',numel(ix))],'select1.mat');
+            end
+        end
+        final=loadSmall(fullfile(folder,'ps2.mat'),{'lonlat'});
+        if isfield(final,'lonlat'),add('retained',double(final.lonlat),{},zeros(size(final.lonlat,1),0),'ps2.mat');end
+        if k==1
+            files=dir(fullfile(folder,'ps_plot_ts_v*.mat'));
+            for j=1:numel(files)
+                exported=loadSmall(fullfile(files(j).folder,files(j).name),{'lonlat'});
+                if isfield(exported,'lonlat')
+                    [~,stem]=fileparts(files(j).name);
+                    add(['export_' stem],double(exported.lonlat),{},zeros(size(exported.lonlat,1),0),files(j).name);
+                end
+            end
+            files=dir(fullfile(folder,'EXPORT','*.csv'));
+            for j=1:numel(files)
+                file=fullfile(files(j).folder,files(j).name);opts=detectImportOptions(file,'VariableNamingRule','preserve');
+                names=lower(string(opts.VariableNames));
+                ilon=find(ismember(names,["lon","longitude"]),1);ilat=find(ismember(names,["lat","latitude"]),1);
+                if isempty(ilon)||isempty(ilat)
+                    if numel(names)<3,continue;end
+                    ilon=2;ilat=3; % PHASE exports: point, longitude, latitude, ...
+                end
+                opts.SelectedVariableNames=opts.VariableNames([ilon ilat]);tableData=readtable(file,opts);
+                xy=nan(height(tableData),2);
+                for axis=1:2
+                    v=tableData{:,axis};if isnumeric(v),xy(:,axis)=double(v);else,xy(:,axis)=str2double(string(v));end
+                end
+                valid=all(isfinite(xy),2)&abs(xy(:,1))<=180&abs(xy(:,2))<=90;
+                xy=xy(valid,:);
+                [~,stem]=fileparts(file);add(['csv_' stem],xy,{},zeros(size(xy,1),0),fullfile('EXPORT',files(j).name));
+            end
+        end
+    catch ME
+        errors{end+1}=struct('folder',folder,'error',ME.message); %#ok<AGROW>
+    end
+end
+    function add(name,coordinates,metricNames,metrics,source)
+        if size(coordinates,2)~=2,error('Invalid lonlat dimensions in %s.',source);end
+        stage=struct('name',regexprep([label '_' name],'[^a-zA-Z0-9_]','_'),'coordinates',coordinates, ...
+            'metricNames',{metricNames},'metrics',metrics,'modified',dirDate(fullfile(folder,source)));
+        stages{end+1}=stage;
+    end
+end
+
+function values=vector(data,name,n)
+values=nan(n,1);
+if ~isfield(data,name),return;end
+v=double(data.(name)(:));
+if isscalar(v),values(:)=v;elseif numel(v)==n,values=v;end
+end
+
+function ix=indices(values,n)
+if islogical(values)
+    if numel(values)~=n,error('Candidate selection mask length does not match ps1.');end
+    ix=find(values);
+else
+    ix=double(values(:));
+    if any(~isfinite(ix)|ix<1|ix>n|ix~=floor(ix)),error('Invalid candidate selection indices.');end
+end
+end
+
+function result=loadSmall(file,names)
+result=struct();if ~isfile(file),return;end
+vars=whos('-file',file);fields=intersect(names,{vars.name},'stable');
+if ~isempty(fields),result=load(file,fields{:});end
+end
+
+function out=coverageAudit(workDir,report)
+% Compare the actual input mask to the current expected rule and inspect
+% common nonzero/finite SLC support. No amplitudes/phases are exported.
+out=struct('gridOrder','Rows: south to north; columns: west to east. Counts are radar pixels, not ground-area fractions.');
+input=fullfile(workDir,'psclonlat.in');if ~isfile(input),out.message='No psclonlat.in retained.';return;end
+lines=strtrim(splitlines(string(fileread(input))));lines(lines=="")=[];
+if numel(lines)<3,out.message='Incomplete psclonlat.in.';return;end
+lonPath=strip(char(lines(2)),'both','"');latPath=strip(char(lines(3)),'both','"');
+if ~isfile(lonPath)||~isfile(latPath),out.message='The original geolocation rasters are unavailable.';return;end
+exportRoot=fileparts(fileparts(lonPath));area=struct();areaFile=fullfile(exportRoot,'phase_preprocessing_aoi.json');
+if isfile(areaFile),area=jsondecode(fileread(areaFile));end
+if isfield(area,'requestedBounds')
+    bounds=double(area.requestedBounds(:).');
+elseif isfield(report,'processingAudit')&&isfield(report.processingAudit,'preprocessingConfig')&& ...
+        all(isfield(report.processingAudit.preprocessingConfig,{'lon_min','lon_max','lat_min','lat_max'}))
+    c=report.processingAudit.preprocessingConfig;bounds=[c.lon_min c.lon_max c.lat_min c.lat_max];
+else,out.message='No geographic bounds available for spatial diagnostics.';return;end
+if any(~isfinite(bounds))||bounds(1)>=bounds(2)||bounds(3)>=bounds(4),error('Invalid diagnostic geographic bounds.');end
+out.bounds=bounds;nBins=64;out.bins=nBins;
+n=floor(dirBytes(lonPath)/4);if dirBytes(latPath)~=n*4,error('Geolocation sizes disagree.');end
+binIndex=zeros(n,1,'uint16');sourceCounts=zeros(nBins^2,1);includedCounts=sourceCounts;
+maskName='psi_geolocation.mask';
+if isfield(report.config,'psi_area_mode')&&strcmp(report.config.psi_area_mode,'subarea'),maskName='psi_area.mask';end
+maskPath=fullfile(workDir,maskName);hasMask=isfile(maskPath);
+if hasMask&&dirBytes(maskPath)~=n,error('The current PSI mask has a different size from the export.');end
+out.maskAudit=struct('maskPresent',hasMask,'file',maskName,'unexpectedlyExcludedPixels',0,'unexpectedlyIncludedPixels',0, ...
+    'note','Compares the retained mask to the current saved configuration, not a replay of historical preparation.');
+lo=fopen(lonPath,'r','ieee-be');la=fopen(latPath,'r','ieee-be');mask=-1;
+if hasMask,mask=fopen(maskPath,'r');end
+cleanup=onCleanup(@()closeMany([lo la mask])); %#ok<NASGU>
+if lo<0||la<0||(hasMask&&mask<0),error('Cannot open geolocation/mask diagnostics.');end
+polygon=[];
+if isfield(report.config,'psi_area_mode')&&strcmp(report.config.psi_area_mode,'subarea')&&isfield(report.config,'psi_polygon')
+    polygon=double(report.config.psi_polygon);
+    if size(polygon,2)~=2||size(polygon,1)<3,error('Invalid saved PSI polygon.');end
+    polygon(:,1)=rad2deg(unwrap(deg2rad(polygon(:,1))));centre=mean(polygon(:,1));
+end
+for start=1:500000:n
+    count=min(500000,n-start+1);x=fread(lo,count,'single=>double');y=fread(la,count,'single=>double');
+    valid=isfinite(x)&isfinite(y)&abs(x)<=180&abs(y)<90&~(x==0&y==0);
+    inBox=valid&x>=bounds(1)&x<=bounds(2)&y>=bounds(3)&y<=bounds(4);
+    index=zeros(count,1,'uint16');
+    col=min(nBins,floor((x(inBox)-bounds(1))/(bounds(2)-bounds(1))*nBins)+1);
+    row=min(nBins,floor((y(inBox)-bounds(3))/(bounds(4)-bounds(3))*nBins)+1);
+    index(inBox)=uint16(sub2ind([nBins nBins],row,col));binIndex(start:start+count-1)=index;
+    sourceCounts=sourceCounts+accumarray(double(index(index>0)),1,[nBins^2 1]);
+    expected=valid;
+    if isfield(area,'requestedBounds'),expected=expected&inBox;end
+    if ~isempty(polygon)
+        shifted=centre+mod(x-centre+180,360)-180;
+        expected=expected&inpolygon(shifted,y,polygon(:,1),polygon(:,2));
+    end
+    if hasMask
+        actual=fread(mask,count,'uint8')==0;
+        if numel(actual)~=count,error('Incomplete mask.');end
+    else,actual=true(count,1);end
+    out.maskAudit.unexpectedlyExcludedPixels=out.maskAudit.unexpectedlyExcludedPixels+nnz(expected&~actual);
+    out.maskAudit.unexpectedlyIncludedPixels=out.maskAudit.unexpectedlyIncludedPixels+nnz(~expected&actual);
+    selected=index>0&actual;
+    includedCounts=includedCounts+accumarray(double(index(selected)),1,[nBins^2 1]);
+end
+clear cleanup
+out.validGeolocationCounts=reshape(sourceCounts,nBins,nBins);
+out.currentMaskIncludedCounts=reshape(includedCounts,nBins,nBins);
+[stages,~]=selectionStages(workDir);out.selectionCounts={};
+for k=1:numel(stages)
+    p=stages{k}.coordinates;valid=all(isfinite(p),2);
+    counts=histcounts2(p(valid,2),p(valid,1),linspace(bounds(3),bounds(4),nBins+1),linspace(bounds(1),bounds(2),nBins+1));
+    out.selectionCounts{end+1}=struct('stage',stages{k}.name,'counts',counts); %#ok<AGROW>
+end
+calamp=fullfile(workDir,'calamp.in');out.slcSupport={};
+if ~isfile(calamp),out.slcSupportNote='calamp.in not retained; common stack support could not be audited.';return;end
+paths=strtrim(splitlines(string(fileread(calamp))));paths(paths=="")=[];
+common=true(n,1);complete=true;
+for k=1:numel(paths)
+    file=strip(char(paths(k)),'both','"');if ~isfile(file),file=fullfile(workDir,file);end
+    entry=struct('file',char(paths(k)),'status','unavailable');
+    if ~isfile(file)||dirBytes(file)~=8*n
+        complete=false;entry.status='Missing input or unsupported size (expected SNAP complex float32).';out.slcSupport{end+1}=entry;continue; %#ok<AGROW>
+    end
+    fprintf('Inspecting retained SLC support %d/%d (read only)...\n',k,numel(paths));
+    fid=fopen(file,'r','ieee-be');if fid<0,error('Cannot read %s.',file);end
+    cleanup=onCleanup(@()fclose(fid));validCount=0;counts=zeros(nBins^2,1);
+    for start=1:500000:n
+        count=min(500000,n-start+1);v=fread(fid,[2 count],'single=>double');
+        if size(v,2)~=count,error('Incomplete complex SLC.');end
+        valid=all(isfinite(v),1).'&any(v~=0,1).';validCount=validCount+nnz(valid);
+        indices=start:start+count-1;common(indices)=common(indices)&valid;
+        bins=binIndex(indices);keep=bins>0&valid;
+        counts=counts+accumarray(double(bins(keep)),1,[nBins^2 1]);
+    end
+    clear cleanup
+    entry.status='read';entry.finiteNonzeroPixels=validCount;entry.counts=reshape(counts,nBins,nBins);out.slcSupport{end+1}=entry; %#ok<AGROW>
+end
+if complete&&~isempty(paths)
+    counts=accumarray(double(binIndex(common&binIndex>0)),1,[nBins^2 1]);
+    out.commonSlcSupportCounts=reshape(counts,nBins,nBins);
+    out.commonSlcSupportNote='Finite, nonzero complex samples in every listed acquisition. This does not establish phase coherence or PS suitability.';
+else,out.slcSupportNote='Incomplete source stack: common support is unavailable; omitted files are not assumed valid.';end
+end
+
+function closeMany(handles)
+for handle=handles
+    if handle>=0,try,fclose(handle);catch,end,end
+end
 end

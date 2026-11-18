@@ -981,3 +981,14 @@ button { color: inherit; }
   .split-chip-groups { grid-template-columns: 1fr; }
   .results-heading, .transfer-footer { align-items: flex-start; flex-direction: column; }
 }
+
+/* Quality screening shares the existing cards, controls and map styling. */
+.quality-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:16px; padding:12px 4px 18px; }
+.quality-toolbar label { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text-muted, #63738a); }
+.quality-toolbar select { padding:9px 12px; border:1px solid var(--line, #d5def0); border-radius:12px; color:var(--text, #233751); background:white; font:inherit; }
+.quality-toolbar input[type=range] { width:105px; accent-color:var(--phase-blue, #3766d5); }
+.quality-legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:#60708a; }
+.quality-legend span { display:inline-flex; align-items:center; gap:5px; }
+.quality-legend i { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.quality-message { margin:16px 4px 6px; color:#65758e; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+#quality-map { min-height:480px; }

@@ -10,6 +10,8 @@ const PhaseUI = {
   logs: [],
   aoiMap: null,
   downloadMap: null,
+  qualityMap: null,
+  qualityControls: null,
   downloaderOpen: false,
   updateOpen: false,
   selectedAsfNames: new Set(),
@@ -48,6 +50,11 @@ function wireStaticControls() {
   listen("start-button", "click", start);
   listen("stop-button", "click", () => send("Stop", {}));
   listen("workdir", "click", () => send("OpenWorkDir", {}));
+  listen("quality-fit", "click", () => PhaseUI.qualityMap?.fitToFootprints());
+  listen("build-quality", "click", () => send("BuildQuality", {}));
+  listen("open-quality-folder", "click", () => send("OpenQualityFolder", {}));
+  PhaseUI.qualityMap = new PhaseQualityMap(byId("quality-map"), { onTilesRequested: requestMapTiles });
+  PhaseUI.qualityControls = new PhaseQualityControls(byId("quality-panel"), PhaseUI.qualityMap);
   listen("clear-log", "click", () => { PhaseUI.logs = []; renderLogs(); });
   listen("previous-section", "click", () => moveSection(-1));
   listen("next-section", "click", () => moveSection(1));
@@ -134,6 +141,7 @@ function handleMapTilesReady(data) {
   const keys = asArray(data?.keys);
   PhaseUI.aoiMap?.retryTiles(keys);
   PhaseUI.downloadMap?.retryTiles(keys);
+  PhaseUI.qualityMap?.retryTiles(keys);
   if (Number(data?.failedCount || 0) > 0 && !keys.length) {
     toast("Satellite background unavailable; the PHASE vector map remains active.");
   }
@@ -141,13 +149,15 @@ function handleMapTilesReady(data) {
 
 function receiveState(state) {
   if (!state || state.kind !== "state") return;
+  const completed = PhaseUI.state?.status === "running" && state.status === "success";
   PhaseUI.state = state;
   PhaseUI.schema = state.schema || { groups: [], items: [] };
   PhaseUI.config = { ...(state.config || {}) };
   PhaseUI.localDirty = Boolean(state.dirty);
   PhaseUI.logs = asArray(state.logs);
   PhaseUI.runProgress = { ...PhaseUI.runProgress, ...(state.runProgress || {}) };
-  if (!findGroup(PhaseUI.active) && PhaseUI.active !== "run") PhaseUI.active = "images";
+  if (!findGroup(PhaseUI.active) && !["run", "quality"].includes(PhaseUI.active)) PhaseUI.active = "images";
+  if (completed && state.quality?.available) PhaseUI.active = "quality";
   renderAll();
 }
 
@@ -176,6 +186,7 @@ function renderNavigation() {
   });
   nav.insertAdjacentHTML("beforeend", `<div class="nav-label">Tools</div>`);
   nav.appendChild(toolNav("run", "⌁", "Run monitor"));
+  nav.appendChild(toolNav("quality", "◈", "PSI suitability"));
 }
 
 function toolNav(id, icon, title) {
@@ -195,7 +206,10 @@ function switchPage(id) {
 }
 
 function renderPage() {
-  ["form-page", "run-page"].forEach(id => byId(id).classList.remove("active"));
+  ["form-page", "run-page", "quality-page"].forEach(id => byId(id).classList.remove("active"));
+  if (PhaseUI.active === "quality") {
+    byId("quality-page").classList.add("active"); renderQuality(); return;
+  }
   if (PhaseUI.active === "run") { byId("run-page").classList.add("active"); renderSummary(); return; }
   byId("form-page").classList.add("active");
   const group = findGroup(PhaseUI.active) || PhaseUI.schema.groups[0];
@@ -1054,3 +1068,20 @@ window.addEventListener("error", event => {
   if (!banner) return;
   banner.textContent = `Interface error: ${event.message}`; banner.classList.remove("hidden");
 });
+
+function renderQuality() {
+  const data = PhaseUI.state?.quality;
+  byId("build-quality").disabled = Boolean(PhaseUI.state?.running);
+  byId("open-quality-folder").disabled = !data?.available;
+  if (data?.available) {
+    const [w,e,s,n] = data.grid.bounds;
+    const signature = `${data.generatedAt}|${data.grid.bounds.join(",")}`;
+    if (PhaseUI.qualitySignature !== signature) PhaseUI.qualityMap.initialised = false;
+    PhaseUI.qualitySignature = signature;
+    PhaseUI.qualityMap.setData({ coastlines: PhaseUI.state?.map?.coastlines || [],
+      footprints: [{name:"Assessed preprocessing AOI", source:"PHASE", selected:true,
+        coordinates:[[w,s],[e,s],[e,n],[w,n],[w,s]]}] });
+  }
+  PhaseUI.qualityControls.update(data);
+  requestAnimationFrame(() => PhaseUI.qualityMap?.render());
+}

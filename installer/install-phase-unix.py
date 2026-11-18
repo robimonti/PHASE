@@ -58,6 +58,13 @@ REQUIRED_FILES = (
     "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.class",
     "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.java",
     "PHASE_Preprocessing/snap2stamps/java/PhaseCskGeometry.build.json",
+    "+phase_project/readPsiQuality.m",
+    "PHASE_Preprocessing/snap2stamps/bin/phase_psi_quality.py",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseQualityGeometry.class",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseQualityGeometry.java",
+    "PHASE_Preprocessing/snap2stamps/java/PhaseQualityGeometry.build.json",
+    "PHASE_Preprocessing/phase_preprocessing_beta_ui/quality.js",
+    "PHASE_Preprocessing/phase_stamps_beta_ui/quality.js",
     "+phase_model_beta/App.m",
     "+phase_model_beta/ProcessingEngine.m",
 )
@@ -343,7 +350,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.1.16"
+            version = "v7.2.0"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],

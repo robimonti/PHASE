@@ -17,6 +17,7 @@ const PhaseUI = {
   progressLineCount: 0,
   areaMap: null,
   areaMapSource: "",
+  qualityControls: null,
 };
 
 function setup(htmlComponent) {
@@ -26,6 +27,7 @@ function setup(htmlComponent) {
   htmlComponent.addEventListener("PsiMap", event => {
     PhaseUI.areaMapSource = `${PhaseUI.config.project_path}|${PhaseUI.config.master_date}`;
     PhaseUI.areaMap.setData({ ...event.Data, polygon: PhaseUI.config.psi_polygon || [] });
+    PhaseUI.qualityControls?.update(event.Data.quality);
     PhaseUI.state.psiMap = event.Data; updateAreaMessage();
   });
   htmlComponent.addEventListener("MapTilesReady", event => PhaseUI.areaMap?.retryTiles(asArray(event.Data.keys)));
@@ -50,7 +52,7 @@ function wireStaticControls() {
     send("OpenTsPicker", payload());
   });
   byId("clear-log").addEventListener("click", () => { PhaseUI.logs = []; renderLogs(); });
-  PhaseUI.areaMap = new PhaseMap(byId("psi-map"), {
+  PhaseUI.areaMap = new PhaseQualityMap(byId("psi-map"), {
     onPolygonChanged: polygon => { PhaseUI.config.psi_polygon = polygon; markDirty(); updateAreaMessage(); },
     onTilesRequested: requests => send("MapTilesRequested", { requests }),
     onDrawingChanged: drawing => {
@@ -58,6 +60,7 @@ function wireStaticControls() {
       byId("psi-finish").classList.toggle("hidden", !drawing);
     },
   });
+  PhaseUI.qualityControls = new PhaseQualityControls(byId("psi-map-panel"), PhaseUI.areaMap);
   byId("psi-draw").addEventListener("click", () => PhaseUI.areaMap.startDrawing());
   byId("psi-finish").addEventListener("click", () => PhaseUI.areaMap.finishDrawing());
   byId("psi-clear").addEventListener("click", () => {

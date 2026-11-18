@@ -38,6 +38,7 @@ classdef App < handle
         TransferTimer = []
         TransferDirectory = ''
         TransferLogPath = ''
+        Quality = struct('available',false,'message','Complete preprocessing to assess preliminary PSI suitability.')
     end
 
     methods
@@ -53,6 +54,7 @@ classdef App < handle
             [loadedConfig, info] = phase_preprocessing_beta.loadConfig(obj.ProjectDir);
             obj.Config = loadedConfig;
             obj.SavedConfig = loadedConfig;
+            obj.Quality=phase_project.readPsiQuality(phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,loadedConfig));
             pythonNotice = '';
             pythonChanged = false;
             try
@@ -188,6 +190,8 @@ classdef App < handle
                     case 'mapaoichanged', obj.mapAoiChanged(payload);
                     case 'refreshmap', obj.refreshMap();
                     case 'maptilesrequested', obj.cacheMapTiles(payload);
+                    case 'buildquality', obj.buildQualityMap();
+                    case 'openqualityfolder', openFolder(fullfile(phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,obj.SavedConfig),'quality'));
                     case 'downloadaoichanged', obj.downloadAoiChanged(payload);
                     case 'downloadsearch', obj.searchAsf(payload);
                     case 'downloadlogin', obj.loginAsf(payload);
@@ -221,6 +225,7 @@ classdef App < handle
             [cfg.gptbin_path,gptInfo] = ...
                 phase_preprocessing_beta.resolveGpt(cfg.gptbin_path);
             obj.Config = cfg; obj.SavedConfig = savedCfg;
+            obj.Quality=phase_project.readPsiQuality(phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,savedCfg));
             obj.IsDirty = pythonInfo.changed || gptInfo.changed;
             obj.MapPolygon = bboxPolygon(obj.Config);
             obj.applyToEngine();
@@ -302,6 +307,8 @@ classdef App < handle
                     obj.finishRunProgress('Stopped after current step',obj.RunProgress.percentage);
                     obj.appendLog('Preprocessing stopped. Selected cleanup actions were not applied.');
                 else
+                    obj.buildQualityMap();
+                    if obj.StopRequested,error('PHASE:ProcessingStopped','Quality screening stopped; cleanup was skipped.');end
                     obj.finalizeBetaProducts(candidate);
                     obj.Status = 'success';
                     obj.StatusDetail = 'Preprocessing completed';
@@ -1058,6 +1065,52 @@ classdef App < handle
             end
         end
 
+        function buildQualityMap(obj)
+            if obj.IsRunning,return;end
+            cfg=obj.SavedConfig;[export,master]=phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,cfg);
+            request=struct('project',phase_preprocessing_beta.dataFolder(obj.ProjectDir), ...
+                'master',master,'sensor',cfg.constellation, ...
+                'bounds',[cfg.lon_min cfg.lon_max cfg.lat_min cfg.lat_max], ...
+                'demName',cfg.dem_name,'demFile',cfg.dem_file,'gpt',cfg.gptbin_path);
+            area=fullfile(export,'phase_preprocessing_aoi.json');
+            if isfile(area)
+                provenance=jsondecode(fileread(area));request.bounds=provenance.requestedBounds;
+            end
+            obj.requireEngine();obj.StopRequested=false;obj.Engine.StopFlag=false;
+            obj.IsRunning=true;previousStatus=obj.Status;previousDetail=obj.StatusDetail;
+            previousProgress=obj.RunProgress;obj.RunProgress.phase='Assessing PSI suitability';
+            obj.RunProgress.percentage=94;obj.RunProgress.indeterminate=true;
+            obj.Status='running';obj.StatusDetail='Assessing preliminary PSI suitability';obj.sendState();
+            obj.appendLog('Assessing stack coverage, amplitude stability, interferogram coherence and terrain mapping risk.');
+            folder=tempname;mkdir(folder);path=fullfile(folder,'request.json');
+            cleanup=onCleanup(@()removeQualityTemporary(folder)); %#ok<NASGU>
+            try
+                writeJson(path,request);
+                script=fullfile(obj.RootDir,'PHASE_Preprocessing','snap2stamps','bin','phase_psi_quality.py');
+                parts={phase_preprocessing_beta.resolvePython(cfg.python),script,'--request',path};
+                command=strjoin(cellfun(@quoteCommandArgument,parts,'UniformOutput',false),' ');
+                if ispc,launch=fullfile(folder,'quality.cmd');else,launch=fullfile(folder,'quality.sh');end
+                fid=fopen(launch,'w');fileCleanup=onCleanup(@()fclose(fid));
+                if ispc,fprintf(fid,'@echo off\r\n%s\r\n',command);else,fprintf(fid,'#!/bin/bash\n%s\n',command);end
+                clear fileCleanup
+                [status,output]=phase_preprocessing_beta.runCommandLive(obj.Engine,launch,'PSI quality screening',94,99,1,1);
+                if status~=0
+                    obj.appendLog(strtrim(output));
+                    error('PHASE:PsiQualityFailed','Quality screening could not be completed. See the run monitor for details.');
+                end
+                obj.Quality=phase_project.readPsiQuality(export);
+                if ~obj.Quality.available,error('PHASE:PsiQualityFailed','%s',obj.Quality.message);end
+                phase_preprocessing_beta.exportQualityFigure(obj.Quality);
+                obj.appendLog(['Preliminary PSI suitability saved: ' obj.Quality.folder]);
+                obj.appendLog(['Terrain screening: ' obj.Quality.geometry.message]);
+            catch ME
+                obj.Quality=struct('available',false,'message',['Quality screening unavailable: ' ME.message]);
+                obj.appendLog(obj.Quality.message);
+            end
+            obj.IsRunning=false;obj.Status=previousStatus;obj.StatusDetail=previousDetail;
+            obj.RunProgress=previousProgress;obj.sendState();
+        end
+
         function removeSourceImages(obj)
             pathValue = fullfile(phase_preprocessing_beta.dataFolder(obj.ProjectDir),'slaves');
             try
@@ -1151,6 +1204,13 @@ classdef App < handle
 
         function sendState(obj)
             if isempty(obj.HTML) || ~isvalid(obj.HTML), return; end
+            qualityState=obj.Quality;
+            if obj.IsRunning
+                qualityState=struct('available',false,'message','Quality screening is available after preprocessing completes.');
+            elseif isfield(obj.Quality,'available') && obj.Quality.available
+                obj.Quality=phase_project.readPsiQuality(phase_preprocessing_beta.qualityExportFolder(obj.ProjectDir,obj.SavedConfig));
+                qualityState=obj.Quality;
+            end
             mapState = struct('coastlines',{obj.MapBase}, ...
                 'footprints',{obj.MapFootprints},'polygon',obj.MapPolygon);
             updateState = struct('context',obj.UpdateContext, ...
@@ -1164,6 +1224,7 @@ classdef App < handle
                 'status',obj.Status,'statusDetail',obj.StatusDetail,'logs',{obj.Logs}, ...
                 'runProgress',obj.RunProgress, ...
                 'map',mapState,'slaves',{obj.SlaveFiles}, ...
+                'quality',qualityState, ...
                 'downloader',obj.Downloader,'update',updateState, ...
                 'transfer',obj.Transfer);
             obj.HTML.Data = state; drawnow limitrate
@@ -1467,5 +1528,11 @@ end
 successful = result.successful;
 if isstruct(successful) && isfield(successful,'key')
     keys = cellstr(string({successful.key}));
+end
+end
+
+function removeQualityTemporary(folder)
+if isfolder(folder)
+    try,rmdir(folder,'s');catch,end
 end
 end

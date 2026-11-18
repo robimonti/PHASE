@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="map.css">
   <script src="map.js"></script>
+  <script src="quality.js"></script>
   <script src="app.js"></script>
 </head>
 <body>
@@ -83,12 +84,25 @@
               <button id="psi-refresh" class="button secondary" type="button">Refresh coverage</button>
             </div>
           </div>
+<div class="quality-toolbar">
+  <label>Layer <select data-quality-layer aria-label="Quality layer">
+    <option value="suitability">Preliminary suitability</option>
+    <option value="geometry">Terrain mapping risk</option>
+    <option value="stability">Amplitude stability</option>
+    <option value="coverage">Stack coverage</option>
+    <option value="coherence">Interferogram coherence</option>
+    <option value="off">Off</option>
+  </select></label>
+  <label>Opacity <input data-quality-opacity type="range" min="0" max="100" value="55" aria-label="Quality layer opacity"></label>
+  <div data-quality-legend class="quality-legend"></div>
+</div>
           <div id="psi-map" class="phase-map" tabindex="0" aria-label="PSI sub-area selection map">
             <svg role="img" aria-label="Radar coverage and selected PSI polygon"></svg>
             <div class="map-tooltip hidden"></div>
             <div class="map-coordinate">Scroll to zoom · drag to pan</div>
             <div class="map-attribution">Esri World Imagery · PHASE overlays</div>
           </div>
+          <p data-quality-message class="quality-message"></p>
           <p id="psi-map-message" class="psi-map-message">Load the SNAP coverage, then draw a polygon.</p>
         </div>
         <div id="form-grid" class="form-grid"></div>

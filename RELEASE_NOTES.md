@@ -1,4 +1,24 @@
-# PHASE v7.1.16
+# PHASE v7.2.0
+
+- Add automatic preliminary PSI suitability maps after preprocessing, before optional SNAP-product cleanup. Inspect stack coverage, normalised amplitude stability, retained-interferogram coherence and terrain mapping risk without changing StaMPS preparation, selection, weeding or displacement modelling.
+- Add a PSI suitability page consistent with the hub, with English controls, selectable layers, opacity and per-cell values/reasons. Show the same layers on the optional PSI sub-area selection map.
+- Export WGS84 GeoTIFF indicator layers, a reproducibility report and PNG/editable FIG overviews under `INSAR_<master>/quality/`. Rebuild maps for existing exports without repeating preprocessing; explicitly retain missing indicators as not evaluated when optional SNAP products are no longer available.
+- Gate terrain screening on agreement between the native SNAP orbit model and the exported radar grid. Report folding, back-facing slopes and coordinate inconsistency at the declared analysis scale. This remains preliminary screening, not a validated exhaustive layover/shadow mask or a probability of PS recovery.
+- Stream long stacks in bounded blocks and limit open file mappings. Detect source changes, new acquisitions, malformed reports and concurrent modifications before accepting a cached or newly built map. Missing evidence cannot produce a favourable class, and high radiometric stability cannot cancel observed terrain risk.
+- Improve the read-only single-ZIP diagnostic collector with stack support and candidate/selection/export comparisons. No personal test datasets are included.
+- Align the application and macOS, Windows and Linux installer versions. Verify 298 Python tests, MATLAB quality/export/mask regressions, the web interface and native SNAP geometry on the supplied CSK metadata/DEM. Windows and Linux release builds run their platform checks in GitHub Actions.
+
+## Updating and trying the quality map
+
+Use **Check for updates**, download the update, close PHASE/MATLAB and restart PHASE to apply it. Confirm **v7.2.0**.
+
+Open an existing processed project, then **Preprocessing → PSI suitability → Build quality map**. This does not rerun SNAP preprocessing. If the project cleanup removed optional interferograms or terrain metadata, the corresponding indicators remain not evaluated. Future preprocessing runs generate the maps automatically before cleanup.
+
+The screening classes are Favourable, Intermediate, Unfavourable and Not evaluated. They are explicit diagnostic rules, not calibrated PS probabilities. A favourable area is not guaranteed to produce persistent scatterers. See `Documenti/PSI_quality.md` for definitions, thresholds and limitations.
+
+The macOS DMG uses ad-hoc signing and is not notarized. Existing StaMPS/TRAIN runtimes and project data are preserved by the engine updater.
+
+## PHASE v7.1.16
 
 - Select CSK ground AOIs with SNAP's native orbit and DEM model before subsetting. Sample DEM pixel centres and AOI boundaries, and retain one registration-window halo. Complex SAR data stay in the original radar grid; the scientific phase operators are unchanged.
 - Apply an exact preprocessing ground-AOI mask during PSI preparation, including full-area mode, so the registration halo is not included in PSI results. Show the requested AOI together with DEM-corrected coverage in the PSI map. Measure and save geographic occupancy from the actual export; scene edges, shadow and layover may leave physical coverage gaps.

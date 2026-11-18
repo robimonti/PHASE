@@ -1,5 +1,16 @@
 # Changelog
 
+## v7.2.0 — 2026-11-18
+
+- Add automatic preliminary PSI suitability screening after preprocessing, with
+  stack coverage, normalised amplitude stability, interferogram coherence and
+  validated-orbit terrain mapping diagnostics.
+- View screening layers in Preprocessing and on the optional PSI area map;
+  export WGS84 GeoTIFFs, provenance and PNG/editable FIG overviews.
+- Keep missing evidence explicit, detect stale maps and preserve the existing
+  StaMPS preparation and scientific selection workflow.
+- Align app and installer source versions across macOS, Windows and Linux.
+
 ## v7.1.15 — 2026-11-10
 
 - Check CSK crop/AOI provenance before resume and preserve AOI precision.

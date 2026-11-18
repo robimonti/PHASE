@@ -13,9 +13,10 @@ if not compiler:
     raise RuntimeError('A JDK is required to rebuild the geometry helper; end users use the bundled SNAP JRE.')
 version=subprocess.run([compiler,'-version'],capture_output=True,text=True,check=True)
 flags=['-source','8','-target','8'] if '1.8.' in version.stdout+version.stderr else ['--release','8']
-subprocess.run([compiler,*flags,'-d',str(folder),str(folder/'PhaseCskGeometry.java')],check=True)
-saved={'sourceSHA256':hashlib.sha256((folder/'PhaseCskGeometry.java').read_bytes().replace(b'\r\n',b'\n')).hexdigest(),
-       'classSHA256':hashlib.sha256((folder/'PhaseCskGeometry.class').read_bytes()).hexdigest(),
-       'classMajorVersion':52}
-(folder/'PhaseCskGeometry.build.json').write_text(json.dumps(saved,indent=2)+'\n')
+for name in ('PhaseCskGeometry','PhaseQualityGeometry'):
+    subprocess.run([compiler,*flags,'-d',str(folder),str(folder/(name+'.java'))],check=True)
+    saved={'sourceSHA256':hashlib.sha256((folder/(name+'.java')).read_bytes().replace(b'\r\n',b'\n')).hexdigest(),
+           'classSHA256':hashlib.sha256((folder/(name+'.class')).read_bytes()).hexdigest(),
+           'classMajorVersion':52}
+    (folder/(name+'.build.json')).write_text(json.dumps(saved,indent=2)+'\n')
 print('Rebuilt PHASE CSK geometry helper (Java 8; uses installed SNAP classes).')

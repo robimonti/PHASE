@@ -1637,7 +1637,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.1.16 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.2.0 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2894,6 +2894,13 @@ function Assert-PhaseStandaloneRuntime {
         'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.class',
         'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.java',
         'PHASE_Preprocessing\snap2stamps\java\PhaseCskGeometry.build.json',
+        '+phase_project\readPsiQuality.m',
+        'PHASE_Preprocessing\snap2stamps\bin\phase_psi_quality.py',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseQualityGeometry.class',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseQualityGeometry.java',
+        'PHASE_Preprocessing\snap2stamps\java\PhaseQualityGeometry.build.json',
+        'PHASE_Preprocessing\phase_preprocessing_beta_ui\quality.js',
+        'PHASE_Preprocessing\phase_stamps_beta_ui\quality.js',
         '+phase_model_beta\App.m',
         '+phase_model_beta\ProcessingEngine.m',
         '+phase_model_beta\exportFigure.m',

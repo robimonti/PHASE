@@ -6,6 +6,7 @@
   <title>PHASE · Preprocessing</title>
   <link rel="stylesheet" href="styles.css">
   <script src="map.js"></script>
+  <script src="quality.js"></script>
   <script src="app.js"></script>
 </head>
 <body>
@@ -284,6 +285,35 @@
         <div class="page-controls">
           <button id="previous-section" class="button ghost" type="button">← Previous</button>
           <button id="next-section" class="button secondary" type="button">Next →</button>
+        </div>
+      </section>
+
+      <section id="quality-page" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Results</div>
+          <h1>PSI suitability</h1><p>Inspect the stack before selecting your PSI area.</p></div>
+          <div class="map-actions"><button id="build-quality" class="button secondary" type="button">Build quality map</button>
+            <button id="quality-fit" class="button ghost" type="button">Fit area</button>
+            <button id="open-quality-folder" class="button ghost" type="button">Open exports</button></div>
+        </div>
+        <div id="quality-panel" class="map-card">
+<div class="quality-toolbar">
+  <label>Layer <select data-quality-layer aria-label="Quality layer">
+    <option value="suitability">Preliminary suitability</option>
+    <option value="geometry">Terrain mapping risk</option>
+    <option value="stability">Amplitude stability</option>
+    <option value="coverage">Stack coverage</option>
+    <option value="coherence">Interferogram coherence</option>
+    <option value="off">Off</option>
+  </select></label>
+  <label>Opacity <input data-quality-opacity type="range" min="0" max="100" value="55" aria-label="Quality layer opacity"></label>
+  <div data-quality-legend class="quality-legend"></div>
+</div>
+          <div id="quality-map" class="phase-map" tabindex="0" aria-label="Preliminary PSI suitability map">
+            <svg role="img" aria-label="Preprocessing quality layers"></svg>
+            <div class="map-tooltip hidden"></div><div class="map-coordinate">Move over the map to inspect quality</div>
+            <div class="map-attribution">Esri World Imagery · PHASE screening</div>
+          </div>
+          <p data-quality-message class="quality-message"></p>
         </div>
       </section>
 
