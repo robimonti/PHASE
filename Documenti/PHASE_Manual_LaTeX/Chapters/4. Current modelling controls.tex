@@ -1,0 +1,55 @@
+\section{Automatic and custom deterministic models}\label{sec:custom-model}
+For spatio-temporal DET and STC in either 1D or 2D, \textbf{Model design} offers \textbf{Automatic} (the default) and \textbf{Custom}. Automatic keeps the established model-selection workflow. Custom replaces its deterministic component with an assigned mathematical model or one whose free parameters PHASE estimates. The original outlier rejection remains before fitting; it is not replaced by the custom surface.
+
+\subsection{Expression or MATLAB function}
+At the top of \textbf{Custom deterministic model}, choose \textbf{Enter expression} or \textbf{Load MATLAB function (.m)}. Only the active source is evaluated. Define parameters in the shared table, choose assigned or estimated values, and give sensible initial estimates and bounds for free parameters. A self-contained function follows this contract:
+\begin{lstlisting}[basicstyle=\ttfamily\small,breaklines=true,frame=single]
+function displacement = myModel(x,y,s,t,p)
+displacement = (p.a+p.b*x).* ...
+    (-expm1(-max(t-p.te,0)./p.tau));
+end
+\end{lstlisting}
+This is a contract example, not a recommended universal deformation law. Return one finite real LOS displacement in millimetres per input row. Use element-wise arithmetic for vector inputs. MATLAB files execute as user code; inspect files received from others and keep the function self-contained.
+
+PHASE supplies coordinates at PS, output-grid and query positions. The default metric project coordinates require no manual coordinate-array preparation. Optional coordinate settings select metric coordinates or WGS84 longitude/latitude, with X/Y origins on the same row. Empty origins use the mean selected PS coordinate. Fixed external coefficients must retain their original units and origin or be transformed consistently. Centering is a coordinate convention, not a deformation correction. The 1D chainage is \texttt{s}; \texttt{t} is days since the first input acquisition, with no separate time-offset control. Physical model values are referenced using the input master epoch.
+
+\textbf{Preview} evaluates assigned or initial values at illustrative coordinates; it does not fit observations or validate agreement with a GNSS station. A time-independent physical offset removed by temporal referencing must not be treated as an identifiable free deformation parameter.
+
+\subsection{Reduction, residual fit and prediction target}
+After outlier rejection, PHASE evaluates the assigned model or estimates free parameters once. It subtracts that contribution. DET then applies its native residual spline procedure; STC uses the existing empirical product covariances, analytical covariance fits and collocation equations, not an experimental variogram method. Parameter fitting may iterate internally, but there is no outer loop alternately refitting the custom model and covariance.
+
+An additional automatic deterministic residual field can be selected using blocked temporal/spatial validation. It can vary in both space and time; assigned custom coefficients themselves remain unchanged. Numeric outputs record its selection, validation scores and observation reduction. Such checks do not prove stationarity or uniquely identify a physical, atmospheric or instrumental cause.
+
+Let $m$ denote the custom contribution, $a$ the extra automatic field and $r$ the residual supplied to the native fit. Reduction always uses
+\begin{equation} y=m+a+r. \end{equation}
+\textbf{Restore automatic residual trend} is enabled by default, giving
+\begin{equation} \widehat d=m+\widehat a+\widehat r. \end{equation}
+When disabled, the target is $m+\widehat r$: the removed automatic field is interpreted as a systematic observation contribution excluded from the desired deformation. Both choices use the same reduced observations and residual fit; the original custom model is restored in both. Exclusion is a scientific interpretation, not a way to guarantee a desired GNSS match. Covariance shape alone cannot justify that interpretation.
+
+\subsection{Parameter uncertainty and memory}
+Assigned fixed parameters have zero uncertainty by default unless standard deviations are provided. Parameters estimated from the observations correlate with residual spline/collocation estimates. The custom workflow propagates shared-data sensitivities and cross terms, including the selected automatic field. Do not add component standard deviations independently. Assigned external parameter uncertainty assumes independence from observation errors; this needs justification when those values were fitted to the same observations. Uncertainty is conditional on field selection, outlier mask, covariance/spline settings and regularization. It excludes model-selection uncertainty, smoothing bias and physical model discrepancy.
+
+\textbf{STC memory budget} is in GiB and concerns estimated dense collocation matrices, not all MATLAB memory. Their size grows approximately quadratically with the retained space-time observation count. Coarsening the output grid or output time step reduces prediction work but does not remove observations from those matrices. Leave RAM for MATLAB, the operating system and other applications. Reducing AOI or using a scientifically justified observation subset reduces the retained input count.
+
+\section{Residual and covariance controls}\label{sec:covariance-controls}
+The \textbf{1D model} and \textbf{2D model} pages group \textbf{Temporal covariance} and \textbf{Spatial covariance} controls: covariance model, automatic/manual lag bin, and optional suggested/maximum correlation lengths. Spatial lengths use metres and temporal lengths use days. \textbf{Shared correlation-length refinement} bounds fitting around supplied suggestions; it has no effect when both suggestions are empty. Manual lengths are optional.
+
+The correlation length is the e-folding length of the kernel envelope: $L=1/c_2$ for exponential and $L=1/\sqrt{c_2}$ for Gaussian or Gaussian--cosine. A maximum is a hard length bound, not a bin width. Without constraints the native fit is used. Restricting its range is not evidence of a good fit: inspect empirical data and the fitted curve.
+
+Automatic \textbf{Residual temporal trend} offers Diagnose only, Auto, Linear correction and Quadratic correction. Auto checks the AOI mean and individual PS with held-out time blocks and can refit the native polynomial, restoring the selected correction in prediction. It fits displacement residuals, not a polynomial to the covariance plot. With STC residual-atmosphere estimation, a common time trend is not separately identifiable from epoch atmospheric means: Auto diagnoses without refitting and explicit linear/quadratic correction is rejected. Use the clean-observation mode if such a time trend is to be retained as deformation.
+
+Custom workflows select their extra residual field automatically. A small global mean does not rule out local trends, and covariance fitting does not enforce zero residual mean. Finite-sample empirical covariances may have negative or noisy tails, particularly with few pairs. Inspect numeric mean/trend diagnostics and pair counts alongside the original two-panel temporal/spatial covariance figure. PHASE does not keep increasing deterministic complexity merely to force a tail to zero. No extra residual-diagnostic figures are generated by default.
+
+\section{Query points and reproducibility}\label{sec:custom-outputs}
+\textbf{Outputs} separates PS time-series export and \textbf{Interpolate query-point time series}. For query points choose \textbf{Load TXT / CSV} or \textbf{Enter points}. The list accepts station ID, WGS84 longitude and latitude; Save writes \texttt{query\_points\_gui.txt} in the project. Both sources follow the same AOI checks and prediction path. After changing points, rerun modeling. Custom DET/STC evaluates requested coordinates, not the nearest output-grid cell.
+
+The general Excel report stays at the \texttt{output\_NNN} level. Custom numeric data are in \path{files/customModel/}, Automatic residual diagnostics in \path{files/residualDiagnostics/}, and all figures, including native covariance plots, in \texttt{figures/} as PNG and editable FIG. Useful custom outputs include:
+\begin{description}[style=nextline]
+\item[Model JSON/MAT and copied source] \texttt{custom\_model.json} and \texttt{custom\_model\_results.mat} retain model definition, parameters, coordinates/references, settings, uncertainty scope and components. The selected MATLAB source is copied when applicable.
+\item[Observation components] \texttt{custom\_observation\_components.csv} retains observations, custom reduction, extra automatic field and the residual actually fitted.
+\item[Prediction components] \texttt{custom\_model\_components.csv} records target components and uncertainty terms. Total equals custom model plus restored automatic trend plus residual prediction; removed and restored trend columns are distinct.
+\item[Query series] \texttt{custom\_query\_timeseries.csv} contains enabled point predictions, dates, station coordinates, components and conditional standard deviation, referenced to the first input acquisition.
+\item[Numeric checks] Covariance and residual CSV/JSON files record empirical/fitted values, pair counts, means and temporal-check scores without replacing the native covariance plot.
+\end{description}
+
+For GNSS comparisons, align LOS projection/sign, spatial reference, temporal zero and dates. A GNSS station used to calibrate the custom surface is not independent validation. An external surface alone cannot guarantee identical predictions after changing the observation subset, residual model or restore-trend target. Preserve the model profile and component files with reported comparisons.

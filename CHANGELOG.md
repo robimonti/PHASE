@@ -1,5 +1,16 @@
 # Changelog
 
+## v7.2.5 — 2026-11-19
+
+- Enable close zoom through level 23 in all shared HTML map panels, including
+  preprocessing/search, PSI area/quality and modeling AOI maps. Retain level-18
+  basemap tiles and fit small geographic extents correctly.
+- Update the English manual to 7.2.5, retaining its LaTeX style and scientific
+  diagrams. Document suitability, CSK ground AOIs/DEM handling, PSI sub-areas,
+  radar-grid inspection, Custom models, covariance controls and outputs.
+- Publish the rebuilt PDF and editable Overleaf source ZIP with the release;
+  align application and all installer versions.
+
 ## v7.2.4 — 2026-11-19
 
 - Allow the radar-grid panel to zoom to level 23 while keeping basemap requests

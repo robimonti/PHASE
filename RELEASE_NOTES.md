@@ -1,6 +1,15 @@
-# PHASE v7.2.4
+# PHASE v7.2.5
 
-- Fix the radar-grid map's inherited level-13 wheel-zoom limit. The **Radar grid & PS** panel now supports zoom up to level 23 to inspect individual radar sampling cells. Other map panels retain their existing limits.
+- Extend close zoom to level 23 across the shared search, preprocessing AOI, PSI area/quality and modeling AOI maps, as well as the radar-grid panel. Fit small geographic extents directly; satellite tile requests remain capped at level 18 and are magnified at closer views.
+- Publish the updated English **PHASE Manual 7.2.5** as a PDF and an editable Overleaf source ZIP, preserving the existing LaTeX layout, colours and scientific diagrams. Cover PSI suitability, CSK ground AOIs and DEM normalization, optional PSI sub-areas, Radar grid & PS, Automatic/Custom modeling, residual/covariance controls, query points and component outputs.
+- Replace obsolete manual instructions about mandatory DEM NoData=0 and hidden advanced PSI parameters. Explain current uncertainty/reference conventions and distinguish screening cells from radar sampling cells.
+- Align application and Windows, macOS and Linux installer versions. Existing data, model settings and scientific processing results are preserved.
+
+Update PHASE, close MATLAB and relaunch from the application shortcut. Confirm **v7.2.5**. Existing PSI and modeling projects can use the maps without reprocessing. The manual is also linked from the repository README; its versioned source ZIP can be uploaded to Overleaf with `main.tex` selected.
+
+## PHASE v7.2.4
+
+- Fix the radar-grid map's inherited level-13 wheel-zoom limit. The **Radar grid & PS** panel now supports zoom up to level 23 to inspect individual radar sampling cells. Other map panels retain their existing limits in that intermediate patch; 7.2.5 extends them too.
 - Keep satellite tile requests capped at level 18 and magnify the basemap at closer zoom without suggesting additional imagery resolution. Grid and candidate coordinates remain unchanged.
 - Retain grid curves for cells intersecting a narrow viewport even when no pixel centre lies inside it. Candidate counts still refer only to the actual viewport.
 - Align the app and Windows, macOS and Linux installer versions to 7.2.4.

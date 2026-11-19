@@ -1,4 +1,5 @@
 \chapter{SAR images preprocessing}
+\chaptermark{SAR preprocessing}
 
 \begin{figure}[H]
 \centering\includegraphics[width=0.8\columnwidth]{images/PHASE_mod1a.png}
@@ -44,10 +45,15 @@ Open the \textbf{Area of Interest} panel and draw the processing box on the map 
 \label{fig:phase7-aoi}
 \end{figure}
 
+\subsection{CSK ground AOIs and safe resume}
+For CSK, PHASE uses the installed SNAP orbit model and the selected DEM to map the requested ground AOI into the radar grid. The crop retains a 128-pixel registration halo; complex SAR samples are not reprojected onto a map grid. PSI preparation removes this halo outside the requested ground AOI, even in full-area mode. The DEM-corrected PSI coverage map and its requested-AOI overlay are the appropriate checks. SNAP World View may still show approximate radar-product geocoding and the halo.
+
+Changing the AOI or DEM requires rebuilding the master and slave crops from Step 1 with master processing enabled. Starting at Step 3 cannot redefine an existing crop; PHASE checks crop provenance and refuses incompatible resume. Pre-v7.1.16 CSK crops need rebuilding under the corrected ground-AOI workflow. Back up the old project and keep its results for comparison rather than mixing old and new crops. Full ground-AOI inclusion still does not guarantee usable observations in shadow, layover, DEM gaps or low-coherence areas.
+
 \section{Master selection and parameters}
 PHASE can propose a master based on the available stack. Review its position in time and spatial overlap. For manual selection, use the date picker: it is constrained to acquisition dates found in the imported slaves and writes the date in the format required by the processing engine. Do not type an arbitrary date that is absent from the stack. For Sentinel-1, PHASE derives the needed swath/burst choices from scene metadata and AOI; verify them when the footprint is marginal or crosses burst boundaries.
 
-In the \textbf{Master processing}, \textbf{Slaves processing}, \textbf{Coherence and LIA}, and \textbf{Computational resources} sections, review the active controls before launching a run. SNAP's \texttt{gpt} location, memory, concurrency, temporary storage and DEM choice affect performance and reproducibility. PHASE applies platform-aware limits where available, but an unusually large AOI or stack can still exceed system resources. Reduce AOI or concurrency if repeated runs exhaust memory. Use an external DEM only after checking its reference system, NoData value and full spatial coverage (see Appendix A).
+In \textbf{Setup \& resources}, \textbf{Master processing}, \textbf{Slave processing}, and \textbf{Output products}, review the active controls before launching a run. SNAP's \texttt{gpt} location, memory, concurrency, temporary storage and DEM choice affect performance and reproducibility. PHASE applies platform-aware limits where available, but an unusually large AOI or stack can still exceed system resources. Reduce AOI or concurrency if repeated runs exhaust memory. Use an external DEM only after checking its reference system, NoData value and full spatial coverage (see Appendix A).
 
 \section{Run and interpret progress}
 Save the configuration, then choose \textbf{Start preprocessing}. The \textbf{Run monitor} shows the current operation, elapsed time, a progress estimate, the slave being handled and a live log. Major operations include split/orbit handling, coregistration, interferogram and topographic-phase processing, StaMPS export, average intensity, and optional coherence/local-incidence-angle outputs. A percentage is an estimate of completed operations, not a time-to-finish prediction; an individual SNAP operation may take much longer than its neighbors.
@@ -56,6 +62,26 @@ If a run fails, preserve its error log and identify the exact scene and operatio
 
 \section{Processing outline}
 For Sentinel-1, the principal SNAP operations include TOPSAR splitting and orbit application, back-geocoding and optional enhanced spectral diversity, interferogram formation, debursting, topographic-phase removal, StaMPS export, and terrain-corrected auxiliary layers. COSMO-SkyMed follows its own subset, stack, registration, interferogram and export path. The order and optional operations depend on the selected configuration; the run log is the authoritative record for a specific project.
+
+\section{Preliminary PSI suitability}\label{sec:psi-quality}
+After a successful SNAP export, PHASE builds a preliminary suitability map before optional product cleanup. Open \textbf{Preprocessing $\rightarrow$ PSI suitability}. For an existing complete export, \textbf{Build quality map} generates it without repeating preprocessing. The actual processed master is resolved from the saved preprocessing configuration; PHASE refuses ambiguous retained exports rather than selecting an arbitrary date.
+
+Use \textbf{Layer}, opacity, map navigation and hover inspection to examine the evidence. \textbf{Fit area} restores the extent and \textbf{Open exports} opens the screening output. The same layers are available on the optional PSI sub-area map. They do not change the PSI mask, PS selection, weeding or modeling.
+
+\begin{description}[style=nextline]
+\item[Preliminary suitability] Favourable, Intermediate, Unfavourable or Not evaluated, derived from explicit screening rules. These classes are not calibrated probabilities of recovering PS.
+\item[Stack coverage] Mean fraction of acquisitions with finite, nonzero complex samples at the geolocated radar pixels.
+\item[Amplitude stability] Fraction of sufficiently observed pixels with amplitude dispersion below 0.4 after normalizing acquisition gains. The colour scale saturates at 5\%; exported and hover values retain the actual fraction.
+\item[Interferogram coherence] Median across retained pairs of the cell's spatial mean coherence. This is not StaMPS temporal coherence.
+\item[Terrain mapping risk] Fraction of sampled ground positions showing folding, back-facing terrain or an inconsistent terrain/radar/coordinate round trip in the validated native SNAP geometry model.
+\end{description}
+
+The geographic screening cells are at least 50 m for CSK and 100 m for Sentinel-1, and can be coarser for large AOIs. They are different from the native radar sampling cells in the later \textbf{Radar grid \& PS} panel. At least five acquisitions and twenty geolocated samples per cell are required. Missing evidence remains explicit; favourable classification requires every indicator. The report records the actual thresholds, sampling interval, contributing pairs and geometry checks. A high stability value cannot cancel measured terrain risk.
+
+Terrain screening is accepted only when its native model reproduces the export grid: the 95th-percentile round-trip discrepancy must not exceed one pixel and the maximum must not exceed three. This is not an exhaustive, validated shadow/layover mask or a guarantee of roof visibility, absolute geolocation accuracy or PS density. Suitable-looking urban roofs can still be unfavourable in a particular viewing geometry.
+
+Outputs: \path{INSAR_<master>/quality/}.\par
+The files include WGS84 \texttt{.tif} layers, \texttt{quality.json}, optional \texttt{geometry.log}, and \path{figures/PSI_quality.png} plus editable \texttt{.fig}. Source data are not changed. Rebuilding after optional SNAP cleanup can leave coherence or geometry unavailable; an already completed report retains its recorded evidence. See the report for cell-specific reasons rather than treating missing data as poor quality.
 
 \section{Troubleshooting}
 \begin{description}[style=nextline]

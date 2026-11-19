@@ -23,7 +23,7 @@ class PhaseQualityMap extends PhaseMap {
     const padding = Math.min(82, Math.min(width, height)*0.12);
     const scale = Math.min((width-2*padding)/Math.max(maxX-minX, 1e-7), (height-2*padding)/Math.max(maxY-minY, 1e-7));
     this.center = {x:wrap01((minX+maxX)/2), y:clamp((minY+maxY)/2, 0.002, 0.998)};
-    this.zoom = clamp(Math.log2(scale/256), 0.45, 18); this.render();
+    this.zoom = clamp(Math.log2(scale/256), 0.45, this.maxZoom); this.render();
   }
 
   setQuality(data, layer = "suitability", opacity = 0.55) {

@@ -1,4 +1,5 @@
 \chapter{StaMPS Persistent Scatterer Interferometry}
+\chaptermark{StaMPS PSI}
 
 \begin{figure}[H]
 \centering\includegraphics[width=0.8\columnwidth]{images/PHASE_mod1b.png}
@@ -10,7 +11,7 @@ After preprocessing, select \textbf{StaMPS PSI} in the same PHASE window. Choose
 Windows and macOS Apple Silicon have been exercised with end-to-end PSI runs. Linux is distributed with an experimental native build path, but a complete PSI run has not yet been independently validated there. Always review the current release notes and prerequisites before relying on a result.
 
 \section{Configure the analysis}
-The sidebar contains \textbf{Project}, \textbf{Global variables}, \textbf{Steps 1--8}, \textbf{Export}, \textbf{Run monitor} and \textbf{TS Points}. \textbf{Show all parameters} is enabled by default; hide advanced controls if you prefer a shorter view. Set the first and last StaMPS steps deliberately: the first full run normally includes data preparation and the steps needed for phase-noise estimation, PS selection, weeding, unwrapping, spatially correlated look-angle error estimation, and optional Step 8 filtering. A partial rerun depends on the preceding intermediate products.
+The sidebar contains \textbf{Project}, \textbf{Global variables}, \textbf{Steps 1--8}, \textbf{Export}, \textbf{Run monitor}, \textbf{TS Points} and \textbf{Radar grid \& PS}. All parameters are shown; the obsolete advanced-parameter visibility switch has been removed. Method-dependent controls still appear only when applicable. Set the first and last StaMPS steps deliberately: the first full run normally includes data preparation and the steps needed for phase-noise estimation, PS selection, weeding, unwrapping, spatially correlated look-angle error estimation, and optional Step 8 filtering. A partial rerun depends on the preceding intermediate products.
 
 \begin{figure}[htbp]
 \centering
@@ -31,6 +32,11 @@ PHASE detects key metadata where possible, including the master date and acquisi
 \end{description}
 
 Consult the StaMPS manual for the scientific definition and interaction of individual parameters. PHASE presents them in a GUI but does not change their interpretation.
+
+\section{Optional PSI sub-area}\label{sec:psi-subarea}
+In \textbf{Project}, use \textbf{PSI processing area} to choose \textbf{Use full preprocessing area} or \textbf{Select sub-area on map}. Draw and finish the polygon, refine its vertices if needed, then enable preparation and start from Step 1 for a new area. PHASE saves before starting. The source SNAP stack is read-only: a byte mask on its native radar grid selects valid pixels inside the polygon; no complex-data reprojection or resampling is introduced. The preview outline may contain gaps, whereas the preparation mask evaluates individual pixels. An empty selection is rejected.
+
+Each polygon/master selection has an isolated sibling dataset with an \texttt{\_AOI\_} identifier. Returning to full-area mode selects the original dataset and preserves sub-area results. The mask and \texttt{psi\_area.json} record the polygon and source-grid identity; unchanged metadata and preparation are required for resume. Changing the grid or area requires preparation again. A sub-area run is not guaranteed to equal a geographic clip of the full-area result: the network, reference, filtering and unwrapping context can change. Keep adequate coherent coverage and a suitable reference.
 
 \section{Atmospheric correction and export choice}\label{ss:tropo}
 PHASE offers an explicit \textbf{Standard} or \textbf{Corrected} displacement export. The choice controls both the automatic full CSV/XLSX series and the optional TS Points export. It is not inferred from whether the processing reached Step 8.
@@ -54,7 +60,7 @@ Here \texttt{d} denotes SCLA/DEM error and \texttt{o} an orbital ramp. Standard 
 TRAIN can be configured with a linear phase--topography model (\texttt{a\_linear}) or, when appropriate data are available, GACOS (\texttt{a\_gacos}). GACOS requires externally supplied atmospheric products and may pause the workflow while they are obtained; follow the paths and instructions displayed by the running application rather than an old, hard-coded folder example. Validate availability, date coverage and units before resuming. Correction can remove a geophysical component along with noise, so compare Standard and Corrected series when interpreting broad spatial signals.
 
 \section{Run monitor and outputs}
-Save the configuration and choose \textbf{Start processing}. The \textbf{Run monitor} displays the selected step range, correction and export summary, the current operation, a progress estimate, elapsed time and the processing log. Progress is based on StaMPS steps and patches; it is not proportional to elapsed time. Keep the run/error log for reproducibility, especially if native binaries or MATLAB stop unexpectedly.
+Choose \textbf{Start processing}; PHASE saves the visible configuration automatically before running. The \textbf{Run monitor} displays the selected step range, correction and export summary, the current operation, a progress estimate, elapsed time and the processing log. Progress is based on StaMPS steps and patches; it is not proportional to elapsed time. Keep the run/error log for reproducibility, especially if native binaries or MATLAB stop unexpectedly.
 
 PHASE automatically exports the complete point time series to CSV and XLSX. Displacements are in millimetres and velocity is in millimetres per year. The master epoch is the temporal zero; PHASE inserts a zero-valued master epoch only when it is absent from the StaMPS time axis. Export metadata record the chosen StaMPS value type in a \texttt{\_series.json} file. Inspect that metadata before comparing results produced with different correction modes. The exports are placed in the project's results area, while detailed processing files and logs remain separated.
 
@@ -65,6 +71,15 @@ The \textbf{TS Points} section and the \textbf{Explore TS Points} action in the 
 \includegraphics[width=0.9\textwidth]{images/PHASE_v7_PSI_output_example.png}
 \caption{Example LOS velocity visualization from a PHASE 7 macOS PSI run. This operational test image does not independently validate the deformation estimates or establish the export correction mode.}
 \end{figure}
+
+\section{Interactive radar grid and candidate history}\label{sec:radar-grid}
+Open \textbf{Radar grid \& PS} after StaMPS steps 1--4. Existing runs are supported without reprocessing. The panel loads the same native radar geolocation and candidate history used by the map exporter. \textbf{Load / refresh map} rereads the dataset; \textbf{Fit area} returns to its candidate extent. Drag and zoom to inspect individual sampling cells (Section~\ref{sec:map-navigation}). Grid boundaries lie half a pixel from the zero-based sample centres. When original SNAP geolocation is unavailable, interpolation from the candidate coordinates is identified explicitly.
+
+Choose \textbf{Selection stage} or \textbf{Amplitude dispersion}, filter candidates by stage and toggle \textbf{Radar grid}. Hover over a point for its dispersion, stage and azimuth/range indices. ``Retained after weeding'' means patch-local survivors, not necessarily the final merged PS set. The native sampling grid must not be interpreted as the physical radar resolution or an independent cell for every PS.
+
+At wide extents, the displayed spacing can be several radar cells; its azimuth/range step is shown. Zoom in for unit-cell spacing. Curves use up to 512 sampled positions per line and the browser displays up to 40,000 candidates per viewport; any point subsampling is disclosed. This only bounds rendering, not the source data or exported candidate table. Empty scientific-data regions remain empty even if the basemap shows buildings.
+
+\textbf{Export maps \& CSV} writes both the amplitude-dispersion and selection-stage maps for the current geographic extent as PNG and editable MATLAB FIG, together with the complete candidate CSV and metadata, in the dataset's \texttt{EXPORT} folder. Both maps contain all candidate stages in that extent; interactive colour/stage filters do not discard source data. Managed projects also receive these files in their regular result exports. \textbf{Open exports} opens the native folder. The former diagnostic toggle in \textbf{Export} and automatic diagnostic-map generation have been removed; map export now belongs to this panel. Existing exported files are preserved.
 
 \section{Quality checks and troubleshooting}
 Before modeling, inspect the spatial distribution of PS points, temporal coverage, coherence/phase quality, the reference area and the sign and scale of LOS rates. Investigate large jumps, isolated outliers and differences between Standard and Corrected series; a visually plausible map alone is insufficient validation. Compare with independent measurements where available.

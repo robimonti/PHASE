@@ -78,7 +78,7 @@
     %\noindent\makebox[\linewidth]{\rule{\textwidth}{1pt}} \\[0.5cm]
 
     {\fontsize{40}{48}\selectfont \textbf{USER MANUAL}}\\[0.5cm]
-    {\Large \textcolor{PhaseGray}{Version 7.0.0}}
+    {\Large \textcolor{PhaseGray}{Version 7.2.5}}
 
     \vspace{3cm}
 
@@ -91,7 +91,7 @@
     \large Roberto Monti, Lorenzo Rossi, Mirko Reguzzoni\\[0.2cm]
     \textit{\color{PhaseBlue}\large Politecnico di Milano}\\[1cm]
 
-    {\small Last update: \today}
+    {\small Last update: 19 November 2026}
 \end{titlepage}
 
 \pagenumbering{roman}
@@ -112,7 +112,7 @@ PHASE (Persistent Scatterer Highly Automated Suite for Environmental Monitoring)
 \end{figure}
 
 \subsection*{What changed in version 7}
-PHASE is installed \emph{once per computer}; a project contains data and outputs, not another copy of the application. The hub keeps the same project open across all three modules, shows stage status, and provides a \textbf{Check for updates} control. The Preprocessing and StaMPS run monitors display progress and diagnostics. The optional TS Points picker is integrated into StaMPS PSI; complete time-series exports are produced automatically. PSI exports now offer an explicit standard/corrected choice, documented in Chapter 3.
+PHASE is installed \emph{once per computer}; a project contains data and outputs, not another copy of the application. The hub keeps the same project open across all three modules, shows stage status, and provides a \textbf{Check for updates} control. The Preprocessing and StaMPS run monitors display progress and diagnostics. The optional TS Points picker is integrated into StaMPS PSI; complete time-series exports are produced automatically. PSI exports offer an explicit standard/corrected choice. Later version 7 updates add preliminary PSI suitability screening, optional map-defined PSI sub-areas, an interactive radar-grid and candidate-history panel, and custom deterministic models for the spatio-temporal workflows. These additions are described in the relevant chapters.
 
 \vspace{\baselineskip}
 \noindent This manual covers the version 7 user workflow and the principal scientific choices. Consult the original SNAP, StaMPS and TRAIN documentation for full algorithmic details and parameter definitions.
@@ -144,7 +144,15 @@ The app is installed only once. Launch \textbf{PHASE}, then select \textbf{New p
     \item[\texttt{04\_LOGS}] Execution logs and, if applicable, a legacy-import catalog.
 \end{description}
 
-Existing projects retain their original folder names because processing state may refer to those paths. In the hub, a green stage indicator means PHASE found outputs for that stage; it does not certify scientific quality. The highlighted stage is a suggested next action. Use \textbf{Check for updates} to download a compatible stable engine; close and relaunch PHASE to apply it. Projects and installed StaMPS/TRAIN runtimes are kept separate from the update. See the release notes for update availability and platform-specific instructions.
+Existing projects retain their original folder names because processing state may refer to those paths. In the hub, a green stage indicator means PHASE found outputs for that stage; it does not certify scientific quality. The highlighted stage is a suggested next action. Use \textbf{Check for updates} to download a compatible stable engine; close MATLAB completely and relaunch PHASE from its application shortcut to apply it. Projects and installed StaMPS/TRAIN runtimes are kept separate from the update. See the release notes for update availability and platform-specific instructions.
+
+\subsection{Python support after installation and update}
+The installer checks the selected Python interpreter. PHASE also checks GeoTIFF support when preparing an update and at the first managed launch of a new release, including updates applied by an older updater. Missing Rasterio/NumPy packages are installed automatically; a small WGS84 GeoTIFF is written and read to verify the native libraries. Keep internet access available and wait for the first-launch check. The quality-map command repeats the check in the actual processing interpreter if a project selects a different Python. Excel report image embedding is checked with openpyxl and Pillow. Do not install packages into an unrelated Python and assume PHASE will use them.
+
+\subsection{Interactive maps and navigation}\label{sec:map-navigation}
+The search, preprocessing AOI, PSI area/quality and modeling AOI maps support dragging to pan and mouse-wheel or trackpad zoom, up to level 23. Keep the pointer over the target while zooming; \textbf{Fit area} or \textbf{Fit coverage} returns to the relevant extent. Small extents can be fitted directly. The satellite service is requested only up to level 18; at closer views its images are magnified, while vector polygons, radar-cell boundaries and PS coordinates retain their positions. Additional zoom does not create additional image resolution. A missing basemap does not imply missing scientific data. The integrated MATLAB TS Points picker uses its own geographic-axis navigation tools.
+
+The screenshots in this manual illustrate the PHASE 7 workflow. Some were captured with an earlier version 7 interface: follow the current control names in the text rather than copying a pictured version number or project-specific numerical settings.
 
 %\vspace{\baselineskip}
 \subsection*{References and acknowledgments}
@@ -187,17 +195,17 @@ To prepare the DEM, you can use QGIS to reproject the input DEM according to the
     \item Open QGIS and load your DEM.
     \item Open the \textbf{Warp (Reproject)} tool.
     \item Set the \textbf{Target CRS} to \texttt{EPSG:4326}.
-    \item \textbf{Important:} Define \texttt{0} as the \enquote{Nodata value} in the reproject toolbox settings. \textit{(Note: While 0 is not a standard NoData value in general GIS practices, it is strictly required here because the value 0.0 is hardcoded into the snap2stamps XML graph parameters. Using any other value will cause SNAP to crash during processing).}
+    \item Preserve a correctly declared NoData value and the valid elevations, including sea-level values if present. PHASE reads the declared value and, when needed, prepares a verified cached GeoTIFF with a SNAP-compatible NoData sentinel. Zero is preferred only if it does not mask valid zero elevations. The original DEM, raster grid and valid elevations are not overwritten or resampled by this normalization.
 \end{enumerate}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{images/qgis_reproject.png}
-    \caption{QGIS Reprojection Settings.}
+    \caption{Example QGIS reprojection settings. A correctly declared NoData value is normalized by current PHASE releases when required; valid zero elevations must not be discarded.}
 \end{figure}
 
 \begin{quote}
-    \textcolor{cyan}{\textbf{SUGGESTION:}} For successful processing, it is recommended that the External DEM covers an area that is approximately \textbf{10\% larger} than the Area of Interest (AOI) set for the subset of the SAR images.
+    \textcolor{PhaseBlue}{\textbf{COVERAGE CHECK:}} The DEM must contain valid terrain heights throughout the processing area and an adequate surrounding margin for the selected geometry and registration. A fixed percentage margin cannot guarantee coverage in every scene. Cropping a DEM in SNAP and choosing a WGS84 label does not by itself prove that its coordinate transform, NoData declaration, height units or vertical datum are correct. Check these properties against the source dataset. PHASE does not invent heights for missing terrain, and NoData normalization does not convert a vertical datum.
 \end{quote}
 
 \bibliographystyle{plainnat}

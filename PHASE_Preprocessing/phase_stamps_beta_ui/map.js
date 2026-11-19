@@ -23,7 +23,7 @@ class PhaseMap {
     this.initialised = false;
     this.center = { x: 0.535, y: 0.375 };
     this.zoom = 4;
-    this.maxZoom = options.maxZoom || 13;
+    this.maxZoom = options.maxZoom || 23;
     this.pan = null;
     this.vertexDrag = null;
     this.resizeFrame = 0;
@@ -137,8 +137,8 @@ class PhaseMap {
     const ys = projected.map(point => point.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const spanX = Math.max(maxX - minX, 0.00015);
-    const spanY = Math.max(maxY - minY, 0.00015);
+    const spanX = Math.max(maxX - minX, 1e-9);
+    const spanY = Math.max(maxY - minY, 1e-9);
     const padding = Math.min(82, Math.max(38, Math.min(width, height) * 0.12));
     const scale = Math.min((width - padding * 2) / spanX, (height - padding * 2) / spanY);
     this.center = { x: wrap01((minX + maxX) / 2), y: clamp((minY + maxY) / 2, 0.002, 0.998) };
