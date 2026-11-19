@@ -25,6 +25,8 @@ classdef App < handle
         LiveLogUrl = ''
         DiaryActive = false
         MapTileBusy = false
+        GridMapSource = []
+        GridMapBusy = false
     end
 
     methods
@@ -171,12 +173,22 @@ classdef App < handle
                         obj.refreshPsiMap();
                     case 'maptilesrequested'
                         obj.cachePsiTiles(payload);
+                    case 'refreshgridmap'
+                        obj.updateGridMap(payload);
+                    case 'exportgridmap'
+                        obj.exportGridMap(payload);
+                    case 'opengridexports'
+                        openFolder(fullfile(obj.WorkDir,'EXPORT'));
                     case 'load'
                         obj.loadFromDisk();
                     case 'save'
                         obj.saveFromPayload(payload);
                     case 'start'
-                        obj.startFromPayload(payload);
+                        if obj.GridMapBusy
+                            obj.appendLog('Wait for the radar-grid map operation to finish before starting processing.');
+                        else
+                            obj.startFromPayload(payload);
+                        end
                     case 'browse'
                         obj.browseFromPayload(payload);
                     case 'opentspicker'
@@ -292,6 +304,7 @@ classdef App < handle
             drawnow;
 
             adapter = phase_stamps_beta.ProcessingContext(obj, candidate);
+            obj.GridMapSource=[];
             try
                 result = phase_stamps_beta.runProcessing(adapter);
             catch ME
@@ -299,23 +312,6 @@ classdef App < handle
                     'identifier', ME.identifier);
                 obj.appendLog(['Processing engine failed before its internal error handler [' ...
                     ME.identifier ']: ' ME.message]);
-            end
-            if result.ok && candidate.export_grid_diagnostics
-                try
-                    obj.appendLog('Exporting radar-grid diagnostics...');
-                    diagnostic = phase_stamps_beta.exportGridDiagnostics( ...
-                        obj.WorkDir, candidate, @(message)obj.appendLog(message));
-                    obj.appendLog(sprintf( ...
-                        'Radar-grid diagnostics exported: %d candidates from %d patch(es).', ...
-                        diagnostic.candidateCount, diagnostic.patchCount));
-                catch ME
-                    result = struct('ok', false, ...
-                        'message', ['StaMPS completed, but the requested radar-grid ' ...
-                            'diagnostic export failed: ' ME.message], ...
-                        'identifier', ME.identifier);
-                    obj.appendLog(['Radar-grid diagnostic export failed [' ...
-                        ME.identifier ']: ' ME.message]);
-                end
             end
             if result.ok
                 try
@@ -398,6 +394,7 @@ classdef App < handle
             obj.closeTsPicker();
             if ~isfolder(target),mkdir(target);end
             obj.WorkDir=target;
+            obj.GridMapSource=[];
             obj.SavedConfig=[];obj.IsDirty=true;
             obj.configureLiveLog();
             obj.appendLog(['PSI dataset selected: ' target]);
@@ -413,6 +410,48 @@ classdef App < handle
                 data=struct('footprints',{{}},'coastlines',{{}},'message',ME.message);
             end
             sendEventToHTMLSource(obj.HTML,'PsiMap',data);
+        end
+
+        function updateGridMap(obj,payload)
+            if obj.IsRunning||obj.GridMapBusy,return;end
+            obj.GridMapBusy=true;cleanup=onCleanup(@()obj.finishGridMapOperation()); %#ok<NASGU>
+            try
+                if isempty(obj.GridMapSource)|| ...
+                        (isfield(payload,'refresh')&&payload.refresh)
+                    obj.GridMapSource=phase_stamps_beta.exportGridDiagnostics( ...
+                        obj.WorkDir,obj.SavedConfig,@(m)obj.appendLog(m),struct('interactiveOnly',true));
+                end
+                data=phase_stamps_beta.radarGridMap(obj.GridMapSource,payload);
+            catch ME
+                data=struct('available',false,'message',ME.message);
+                obj.appendLog(['Radar-grid map unavailable: ' ME.message]);
+            end
+            sendEventToHTMLSource(obj.HTML,'RadarGridMap',data);
+        end
+
+        function exportGridMap(obj,payload)
+            if obj.IsRunning||obj.GridMapBusy,return;end
+            obj.GridMapBusy=true;cleanup=onCleanup(@()obj.finishGridMapOperation()); %#ok<NASGU>
+            try
+                if isempty(obj.GridMapSource)
+                    obj.GridMapSource=phase_stamps_beta.exportGridDiagnostics( ...
+                        obj.WorkDir,obj.SavedConfig,[],struct('interactiveOnly',true));
+                end
+                view=phase_stamps_beta.radarGridMap(obj.GridMapSource,payload);
+                phase_stamps_beta.exportGridDiagnostics(obj.WorkDir,obj.SavedConfig, ...
+                    @(m)obj.appendLog(m),struct('bounds',view.bounds));
+                phase_stamps_beta.publishExports(obj.WorkDir);
+                message='Exported PNG and editable FIG maps for the current extent, plus the complete candidate CSV.';
+                sendEventToHTMLSource(obj.HTML,'RadarGridExport',struct('ok',true,'message',message));
+                obj.appendLog(message);
+            catch ME
+                sendEventToHTMLSource(obj.HTML,'RadarGridExport',struct('ok',false,'message',ME.message));
+                obj.appendLog(['Radar-grid export failed: ' ME.message]);
+            end
+        end
+
+        function finishGridMapOperation(obj)
+            if isvalid(obj),obj.GridMapBusy=false;end
         end
 
         function cachePsiTiles(obj,payload)

@@ -1,16 +1,16 @@
-function report = exportGridDiagnostics(workDir, cfg, logFcn)
+function report = exportGridDiagnostics(workDir, cfg, logFcn, options)
 %EXPORTGRIDDIAGNOSTICS Export radar sampling grid and PS selection history.
 %
 % The grid is the SLC/interferometric sampling grid, not the physical SAR
 % resolution. SNAP longitude/latitude rasters are preferred. Candidate
 % interpolation is used only when those source rasters are unavailable.
 
+if nargin < 4, options=struct(); end
 if nargin < 3 || isempty(logFcn)
     logFcn = @(message) fprintf('%s\n', message);
 end
 workDir = char(java.io.File(workDir).getCanonicalPath());
 exportDir = fullfile(workDir, 'EXPORT');
-if ~isfolder(exportDir), mkdir(exportDir); end
 
 [width, imageLength] = readDimensions(workDir);
 threshold = readAmplitudeThreshold(workDir, cfg.amplitude_threshold);
@@ -41,6 +41,16 @@ candidateTable.GeolocationMode(:) = string(geolocationMode);
 
 runName = safeRunName(cfg.export_name, workDir);
 candidateTable.RunName(:) = string(runName);
+extent = bufferedExtent(candidates.lon, candidates.lat, 25);
+if isfield(options,'interactiveOnly') && options.interactiveOnly
+    report=struct('geo',geo,'candidates',candidates,'extent',extent, ...
+        'runName',runName,'geolocationMode',geolocationMode,'threshold',threshold);
+    return;
+end
+if ~isfolder(exportDir), mkdir(exportDir); end
+if isfield(options,'bounds') && ~isempty(options.bounds)
+    extent=options.bounds;
+end
 csvPath = fullfile(exportDir, ...
     sprintf('DiagnosticaGriglia_Stadi_%s.csv', runName));
 writetable(candidateTable, csvPath);
@@ -48,7 +58,6 @@ writetable(candidateTable, csvPath);
 maxGridLines = 150;
 bufferMetres = 25;
 [lineStepAz, lineStepRg] = gridSteps(imageLength, width, maxGridLines);
-extent = bufferedExtent(candidates.lon, candidates.lat, bufferMetres);
 
 daPath = fullfile(exportDir, sprintf('DiagnosticaGriglia_DA_%s.png', runName));
 stagePath = fullfile(exportDir, sprintf('DiagnosticaGriglia_Stadi_%s.png', runName));
@@ -80,8 +89,11 @@ metadata.gridLineStepAzimuthPixels = lineStepAz;
 metadata.gridLineStepRangePixels = lineStepRg;
 metadata.maxGridLinesPerDirection = maxGridLines;
 metadata.bufferMetres = bufferMetres;
+metadata.figureBounds = extent;
 metadata.outputs = struct('amplitudeDispersionFigure', daPath, ...
-    'processingStageFigure', stagePath, 'candidateCsv', csvPath);
+    'processingStageFigure', stagePath, 'candidateCsv', csvPath, ...
+    'amplitudeDispersionEditableFigure',strrep(daPath,'.png','.fig'), ...
+    'processingStageEditableFigure',strrep(stagePath,'.png','.fig'));
 metadataPath = fullfile(exportDir, ...
     sprintf('DiagnosticaGriglia_Metadata_%s.json', runName));
 writeJson(metadataPath, metadata);
@@ -245,6 +257,9 @@ function [geo, mode, details] = loadGeolocationGrid(workDir, cfg, width, imageLe
 if ~isempty(lonPath) && ~isempty(latPath)
     [lonGrid, latGrid, byteOrder, residual] = readAndValidateGeoRasters( ...
         lonPath, latPath, width, imageLength, candidates);
+    invalid=~isfinite(lonGrid)|~isfinite(latGrid)|abs(lonGrid)>180| ...
+        abs(latGrid)>90|(lonGrid==0&latGrid==0);
+    lonGrid(invalid)=NaN;latGrid(invalid)=NaN;
     geo = struct('mode','grid','lon',lonGrid,'lat',latGrid, ...
         'lonF',griddedInterpolant({1:imageLength,1:width},lonGrid,'linear','linear'), ...
         'latF',griddedInterpolant({1:imageLength,1:width},latGrid,'linear','linear'), ...
@@ -386,9 +401,10 @@ valid = isfinite(candidates.lon) & isfinite(candidates.lat) & isfinite(candidate
 geoscatter(ax,candidates.lat(valid),candidates.lon(valid),8,candidates.da(valid),'filled');
 colorbar(ax); colormap(ax,parula(256));
 geolimits(ax,extent(3:4),extent(1:2));
-title(ax,{sprintf('Dispersione d''ampiezza dei candidati - run %s, D_A <= %.4g',runName,threshold), ...
+title(ax,{sprintf('Candidate amplitude dispersion - run %s, D_A <= %.4g',runName,threshold), ...
     gridSubtitle(azStep,rgStep,mode)},'Interpreter','none');
 exportgraphics(fig,path,'Resolution',220);
+savefig(fig,strrep(path,'.png','.fig'));
 end
 
 function createStageFigure(path, geo, candidates, extent, azStep, rgStep, threshold, runName, mode)
@@ -397,8 +413,8 @@ cleanup = onCleanup(@() close(fig)); %#ok<NASGU>
 ax = geoaxes(fig); hold(ax,'on'); setBasemap(ax);
 drawRadarGrid(ax,geo,azStep,rgStep);
 colours = [0.55 0.55 0.55; 0.95 0.50 0.08; 0.78 0.12 0.55];
-names = {'Eliminato in ps_select','Eliminato al weeding', ...
-    'Sopravvive al weeding (patch-local ps2)'};
+names = {'Rejected during selection','Rejected during weeding', ...
+    'Retained after weeding (patch-local ps2)'};
 handles = gobjects(0); labels = {};
 for stage = 1:3
     use = candidates.stage == stage & isfinite(candidates.lon) & isfinite(candidates.lat);
@@ -408,14 +424,15 @@ for stage = 1:3
 end
 legend(ax,handles,labels,'Location','best','Interpreter','none');
 geolimits(ax,extent(3:4),extent(1:2));
-title(ax,{sprintf('Stadio massimo raggiunto dai candidati StaMPS - run %s, D_A <= %.4g',runName,threshold), ...
+title(ax,{sprintf('StaMPS candidate selection stages - run %s, D_A <= %.4g',runName,threshold), ...
     gridSubtitle(azStep,rgStep,mode)},'Interpreter','none');
 exportgraphics(fig,path,'Resolution',220);
+savefig(fig,strrep(path,'.png','.fig'));
 end
 
 function subtitle = gridSubtitle(azStep,rgStep,mode)
-subtitle = sprintf(['Griglia di campionamento radar: linee ogni %d celle azimuth ', ...
-    'e %d celle range; geolocalizzazione %s'],azStep,rgStep,strrep(mode,'_',' '));
+subtitle = sprintf(['Radar sampling grid: lines every %d azimuth ', ...
+    'and %d range cells; geolocation %s'],azStep,rgStep,strrep(mode,'_',' '));
 end
 
 function setBasemap(ax)
@@ -447,8 +464,8 @@ function [lon,lat] = evaluateGeo(geo,azBoundary,rgBoundary)
 % Candidate indices are zero-based centres. Convert them to the one-based
 % centre coordinate system used by MATLAB interpolation. Boundaries remain
 % at +/- 0.5 around each integer-valued candidate centre.
-azCentreCoordinate = azBoundary + 1;
-rgCentreCoordinate = rgBoundary + 1;
+azCentreCoordinate = azBoundary(:) + 1;
+rgCentreCoordinate = rgBoundary(:) + 1;
 if strcmp(geo.mode,'grid')
     lon = geo.lonF(azCentreCoordinate,rgCentreCoordinate);
     lat = geo.latF(azCentreCoordinate,rgCentreCoordinate);

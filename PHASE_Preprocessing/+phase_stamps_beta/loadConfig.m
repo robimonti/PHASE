@@ -12,6 +12,8 @@ end
 
 raw = load(matPath);
 cfg = raw;
+% Diagnostic maps now belong to the dedicated interactive results panel.
+if isfield(cfg,'export_grid_diagnostics'),cfg=rmfield(cfg,'export_grid_diagnostics');end
 defaultNames = fieldnames(defaults);
 for k = 1:numel(defaultNames)
     name = defaultNames{k};

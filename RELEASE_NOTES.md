@@ -1,4 +1,16 @@
-# PHASE v7.2.2
+# PHASE v7.2.3
+
+- Add **StaMPS PSI → Radar grid & PS**, a navigable map using the diagnostic exporter's existing radar geolocation and candidate selection history. Pan, zoom, fit the area, colour by amplitude dispersion or selection stage, filter stages and inspect point values.
+- Adapt grid detail to the viewport. Bound browser payloads to 40,000 displayed candidates and 512 samples per grid curve; disclose subsampling without changing the complete source table or scientific PSI processing.
+- Export both diagnostic maps for the current geographic extent as PNG and editable MATLAB FIG, together with the complete candidate CSV and metadata. Publish the files in the existing project export location.
+- Remove the former **Export radar-grid diagnostics** toggle and automatic diagnostic-map generation from the Export tab. Existing saved configurations and result files remain usable; the new panel owns viewing and map export.
+- Break diagnostic grid curves at missing/invalid geolocation and align application and installer versions across Windows, macOS and Linux.
+
+Update PHASE, close MATLAB and relaunch PHASE from its application shortcut. Verify **v7.2.3**. Open an existing dataset, then **StaMPS PSI → Radar grid & PS**. Steps 1–4 must have completed; no PSI rerun is needed. Use **Export maps & CSV** to save the maps for the current extent and the complete candidate table. Both exported maps show all candidate stages in that extent; interactive filters do not discard source data.
+
+The radar grid represents sampling, not physical SAR resolution. Retained points are patch-local weeding survivors; merging and later StaMPS steps may change the final set. The macOS DMG uses ad-hoc signing and is not notarized.
+
+## PHASE v7.2.2
 
 - Install missing Rasterio/NumPy support automatically in the interpreter used by PSI quality screening, before processing the stack. Verify WGS84 GeoTIFF compression, writing and reading rather than only checking imports.
 - Prepare dependencies during update downloads with the new updater. On the first managed launch of each release, complete the check and installation even when an older updater applied the package. Screening also rechecks a different Python interpreter selected for a project.

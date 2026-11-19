@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="map.css">
   <script src="map.js"></script>
   <script src="quality.js"></script>
+  <script src="radar-grid.js"></script>
   <script src="app.js"></script>
 </head>
 <body>
@@ -147,6 +148,31 @@
         </div>
       </section>
 
+      <section id="grid-page" class="page">
+        <div class="page-heading"><div><div class="eyebrow">PSI results</div>
+          <h1>Radar grid &amp; PS</h1><p>Explore radar sampling cells and the candidate selection history.</p></div></div>
+        <div class="radar-actions">
+          <button id="grid-refresh" class="button secondary" type="button">Load / refresh map</button>
+          <button id="grid-fit" class="button ghost" type="button">Fit area</button>
+          <button id="grid-export" class="button secondary" type="button" disabled>Export maps &amp; CSV</button>
+          <button id="grid-open" class="button ghost" type="button">Open exports</button>
+        </div>
+        <div class="map-card">
+          <div class="radar-toolbar">
+            <label>Colour by <select id="grid-layer"><option value="stage">Selection stage</option><option value="da">Amplitude dispersion</option></select></label>
+            <label>Points <select id="grid-stage"><option value="0">All candidates</option><option value="3">Retained after weeding</option><option value="2">Rejected during weeding</option><option value="1">Rejected during selection</option></select></label>
+            <label><input id="grid-lines" type="checkbox" checked> Radar grid</label>
+          </div>
+          <div id="radar-map" class="phase-map" tabindex="0" role="region" aria-label="Interactive radar grid and PS map">
+            <svg aria-hidden="true"></svg><div class="map-tooltip hidden"></div>
+            <div class="map-coordinate">Drag to pan · scroll to zoom · move over a point to inspect it</div>
+            <div class="map-attribution">Esri World Imagery · PHASE radar grid</div>
+          </div>
+          <div id="grid-legend" class="radar-legend"></div>
+          <p id="grid-message" class="map-message" role="status">Complete StaMPS steps 1–4, then load the map. Existing runs are supported.</p>
+          <p class="radar-note">This is the radar sampling grid. Retained points are patch-local weeding survivors; merging may change the final PS set. Exports include both colour maps for the current extent and the complete candidate table.</p>
+        </div>
+      </section>
       <section id="ts-page" class="page">
         <div class="page-heading">
           <div>

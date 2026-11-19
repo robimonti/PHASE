@@ -153,16 +153,17 @@ def test_beta_exports_only_ps_time_series_not_atmospheric_delay(phase_root):
     assert "save(strcat('Atmosphere_'" not in backend
 
 
-def test_beta_optionally_exports_radar_grid_candidate_diagnostics(phase_root):
+def test_beta_radar_grid_diagnostics_belong_to_interactive_panel(phase_root):
     package = phase_root / "PHASE_Preprocessing" / "+phase_stamps_beta"
     defaults = _text(package / "defaultConfig.m")
     schema = _text(package / "schema.m")
     controller = _text(package / "App.m")
     exporter = _text(package / "exportGridDiagnostics.m")
 
-    assert "cfg.export_grid_diagnostics = false" in defaults
-    assert "item('export_grid_diagnostics', 'Export radar-grid diagnostics'" in schema
-    assert "candidate.export_grid_diagnostics" in controller
+    assert "export_grid_diagnostics" not in defaults
+    assert "export_grid_diagnostics" not in schema
+    assert "candidate.export_grid_diagnostics" not in controller
+    assert "case 'exportgridmap'" in controller
     assert "phase_stamps_beta.exportGridDiagnostics" in controller
     for source in ("ps1.mat", "da1.mat", "select1.mat", "weed1.mat"):
         assert source in exporter
@@ -347,7 +348,7 @@ def test_beta_ui_uses_local_assets_and_matlab_events(phase_root):
     assert 'item.id === "percent_rand"' in js
     assert 'item.id === "density_rand"' in js
     assert 'item.id === "select_method"' in js
-    assert '["run", "ts"].includes(PhaseUI.active)' in js
+    assert '["run", "ts", "grid"].includes(PhaseUI.active)' in js
     assert "TRAIN tropospheric correction" in html
     assert '"Not applied"' in js
 

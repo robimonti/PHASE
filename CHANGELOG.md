@@ -1,5 +1,17 @@
 # Changelog
 
+## v7.2.3 — 2026-11-19
+
+- Add a navigable Radar grid & PS panel to PSI, with selection-stage and
+  amplitude-dispersion colours, stage filters and point inspection.
+- Load existing runs on demand; adapt radar cell detail to the viewport,
+  bound displayed candidates and keep complete candidate exports.
+- Export PNG/editable FIG maps for the current extent and the full diagnostic
+  CSV, using the same native geolocation and selection history as before.
+- Remove the former diagnostic toggle and automatic map export from the Export
+  configuration; keep map actions in the interactive panel. Reject invalid
+  geolocation cells in diagnostic grid curves.
+
 ## v7.2.2 — 2026-11-19
 
 - Prepare missing Rasterio/NumPy packages in the actual screening interpreter

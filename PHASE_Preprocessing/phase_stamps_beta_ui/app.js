@@ -18,6 +18,7 @@ const PhaseUI = {
   areaMap: null,
   areaMapSource: "",
   qualityControls: null,
+  gridView: null,
 };
 
 function setup(htmlComponent) {
@@ -30,7 +31,12 @@ function setup(htmlComponent) {
     PhaseUI.qualityControls?.update(event.Data.quality);
     PhaseUI.state.psiMap = event.Data; updateAreaMessage();
   });
-  htmlComponent.addEventListener("MapTilesReady", event => PhaseUI.areaMap?.retryTiles(asArray(event.Data.keys)));
+  htmlComponent.addEventListener("MapTilesReady", event => {
+    PhaseUI.areaMap?.retryTiles(asArray(event.Data.keys));
+    PhaseUI.gridView?.map.retryTiles(asArray(event.Data.keys));
+  });
+  htmlComponent.addEventListener("RadarGridMap", event => PhaseUI.gridView?.receive(event.Data));
+  htmlComponent.addEventListener("RadarGridExport", event => PhaseUI.gridView?.exported(event.Data));
   document.addEventListener("DOMContentLoaded", wireStaticControls, { once: true });
   if (document.readyState !== "loading") wireStaticControls();
   htmlComponent.sendEventToMATLAB("Ready", {});
@@ -61,6 +67,7 @@ function wireStaticControls() {
     },
   });
   PhaseUI.qualityControls = new PhaseQualityControls(byId("psi-map-panel"), PhaseUI.areaMap);
+  PhaseUI.gridView = new PhaseRadarGridView(send);
   byId("psi-draw").addEventListener("click", () => PhaseUI.areaMap.startDrawing());
   byId("psi-finish").addEventListener("click", () => PhaseUI.areaMap.finishDrawing());
   byId("psi-clear").addEventListener("click", () => {
@@ -92,9 +99,10 @@ function receiveState(state) {
   if (wasRunning && !state.running && state.status === "success") {
     PhaseUI.runProgress = { ...PhaseUI.runProgress, percentage: 100, phase: "StaMPS PSI completed" };
   }
-  if (!findGroup(PhaseUI.active) && !["run", "ts"].includes(PhaseUI.active)) {
+  if (!findGroup(PhaseUI.active) && !["run", "ts", "grid"].includes(PhaseUI.active)) {
     PhaseUI.active = "project";
   }
+  PhaseUI.gridView?.setState(state);
   renderAll();
   syncLiveLogPolling();
 }
@@ -128,6 +136,7 @@ function renderNavigation() {
   nav.insertAdjacentHTML("beforeend", `<div class="nav-label">Tools</div>`);
   nav.appendChild(toolNav("run", "⌁", "Run monitor"));
   nav.appendChild(toolNav("ts", "⌖", "TS Points"));
+  nav.appendChild(toolNav("grid", "▦", "Radar grid & PS"));
 }
 
 function toolNav(id, icon, title) {
@@ -148,7 +157,8 @@ function switchPage(id) {
 }
 
 function renderPage() {
-  ["form-page", "run-page", "ts-page"].forEach(id => byId(id).classList.remove("active"));
+  ["form-page", "run-page", "ts-page", "grid-page"].forEach(id => byId(id).classList.remove("active"));
+  if (PhaseUI.active === "grid") { byId("grid-page").classList.add("active"); PhaseUI.gridView?.show(); return; }
   if (PhaseUI.active === "run") { byId("run-page").classList.add("active"); renderSummary(); return; }
   if (PhaseUI.active === "ts") { byId("ts-page").classList.add("active"); return; }
   byId("form-page").classList.add("active");
