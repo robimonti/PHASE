@@ -43,6 +43,11 @@ runName = safeRunName(cfg.export_name, workDir);
 candidateTable.RunName(:) = string(runName);
 extent = bufferedExtent(candidates.lon, candidates.lat, 25);
 if isfield(options,'interactiveOnly') && options.interactiveOnly
+    if strcmp(geo.mode,'grid')
+        % A narrow viewport can intersect a cell without containing a pixel
+        % centre. Retain a conservative native-cell halo for grid queries.
+        geo.cellPadding=[cellPadding(geo.lon) cellPadding(geo.lat)];
+    end
     report=struct('geo',geo,'candidates',candidates,'extent',extent, ...
         'runName',runName,'geolocationMode',geolocationMode,'threshold',threshold);
     return;
@@ -107,6 +112,16 @@ report = struct('ok', true, 'candidateCount', height(candidateTable), ...
     'patchCount', numel(records), 'geolocationMode', geolocationMode, ...
     'daFigure', daPath, 'stageFigure', stagePath, 'csv', csvPath, ...
     'metadata', metadataPath);
+end
+
+function padding=cellPadding(values)
+steps=zeros(1,2);
+for dimension=1:2
+    increments=abs(diff(values,1,dimension));
+    valid=increments(isfinite(increments));
+    if ~isempty(valid),steps(dimension)=max(valid);end
+end
+padding=max(sum(steps),1e-10);
 end
 
 function record = emptyRecord()

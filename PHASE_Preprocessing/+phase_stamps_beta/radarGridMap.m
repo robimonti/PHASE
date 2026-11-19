@@ -23,7 +23,10 @@ if total>limit,ix=ix(unique(round(linspace(1,total,limit))));end
 points=[c.lon(ix) c.lat(ix) c.da(ix) c.stage(ix) c.azimuth(ix) c.range(ix)];
 az=[0 g.length-1];rg=[0 g.width-1];found=false;
 if strcmp(g.mode,'grid')
-    visible=isfinite(g.lon)&isfinite(g.lat)&g.lon>=b(1)&g.lon<=b(2)&g.lat>=b(3)&g.lat<=b(4);
+    padding=[0 0];if isfield(g,'cellPadding'),padding=g.cellPadding;end
+    visible=isfinite(g.lon)&isfinite(g.lat)& ...
+        g.lon>=b(1)-padding(1)&g.lon<=b(2)+padding(1)& ...
+        g.lat>=b(3)-padding(2)&g.lat<=b(4)+padding(2);
     rows=find(any(visible,2));cols=find(any(visible,1));
     if ~isempty(rows)&&~isempty(cols)
         az=[rows(1)-1 rows(end)-1];rg=[cols(1)-1 cols(end)-1];found=true;

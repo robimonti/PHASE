@@ -1,4 +1,13 @@
-# PHASE v7.2.3
+# PHASE v7.2.4
+
+- Fix the radar-grid map's inherited level-13 wheel-zoom limit. The **Radar grid & PS** panel now supports zoom up to level 23 to inspect individual radar sampling cells. Other map panels retain their existing limits.
+- Keep satellite tile requests capped at level 18 and magnify the basemap at closer zoom without suggesting additional imagery resolution. Grid and candidate coordinates remain unchanged.
+- Retain grid curves for cells intersecting a narrow viewport even when no pixel centre lies inside it. Candidate counts still refer only to the actual viewport.
+- Align the app and Windows, macOS and Linux installer versions to 7.2.4.
+
+Update PHASE, close MATLAB and relaunch it from the application shortcut. Verify **v7.2.4**, then open **StaMPS PSI → Radar grid & PS** and zoom with the mouse wheel or trackpad. No PSI rerun is required.
+
+## PHASE v7.2.3
 
 - Add **StaMPS PSI → Radar grid & PS**, a navigable map using the diagnostic exporter's existing radar geolocation and candidate selection history. Pan, zoom, fit the area, colour by amplitude dispersion or selection stage, filter stages and inspect point values.
 - Adapt grid detail to the viewport. Bound browser payloads to 40,000 displayed candidates and 512 samples per grid curve; disclose subsampling without changing the complete source table or scientific PSI processing.

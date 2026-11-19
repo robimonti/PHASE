@@ -1,5 +1,12 @@
 # Changelog
 
+## v7.2.4 — 2026-11-19
+
+- Allow the radar-grid panel to zoom to level 23 while keeping basemap requests
+  capped at level 18; preserve the zoom limits of the other map panels.
+- Keep intersecting radar cells visible at close zoom even when no cell centre
+  lies inside the viewport. Align application and installer versions.
+
 ## v7.2.3 — 2026-11-19
 
 - Add a navigable Radar grid & PS panel to PSI, with selection-stage and

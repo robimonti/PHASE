@@ -5,7 +5,7 @@ const radarStageColours = ["", "#a7acb4", "#f29936", "#df408f"];
 
 class PhaseRadarMap extends PhaseMap {
   constructor(container, options) {
-    super(container, options);
+    super(container, {...options, maxZoom:23});
     this.viewportChanged = options.viewportChanged;
     this.canvas = document.createElement("canvas");
     Object.assign(this.canvas.style, {position:"absolute", inset:"0", zIndex:"2", pointerEvents:"none"});

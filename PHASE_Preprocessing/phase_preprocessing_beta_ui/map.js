@@ -23,6 +23,7 @@ class PhaseMap {
     this.initialised = false;
     this.center = { x: 0.535, y: 0.375 };
     this.zoom = 4;
+    this.maxZoom = options.maxZoom || 13;
     this.pan = null;
     this.vertexDrag = null;
     this.resizeFrame = 0;
@@ -141,7 +142,7 @@ class PhaseMap {
     const padding = Math.min(82, Math.max(38, Math.min(width, height) * 0.12));
     const scale = Math.min((width - padding * 2) / spanX, (height - padding * 2) / spanY);
     this.center = { x: wrap01((minX + maxX) / 2), y: clamp((minY + maxY) / 2, 0.002, 0.998) };
-    this.zoom = clamp(Math.log2(scale / 256), 0.45, 13);
+    this.zoom = clamp(Math.log2(scale / 256), 0.45, this.maxZoom);
     if (animate) {
       this.container.classList.add("map-moving");
       window.setTimeout(() => this.container.classList.remove("map-moving"), 220);
@@ -264,7 +265,7 @@ class PhaseMap {
     const py = event.clientY - rect.top;
     const before = this.worldAtScreen(px, py);
     const delta = clamp(-event.deltaY * 0.0018, -0.9, 0.9);
-    const nextZoom = clamp(this.zoom + delta, 0.45, 13);
+    const nextZoom = clamp(this.zoom + delta, 0.45, this.maxZoom);
     if (nextZoom === this.zoom) return;
     this.zoom = nextZoom;
     const scale = this.worldScale();

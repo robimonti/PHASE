@@ -5,6 +5,8 @@ patch outputs; viewing it does not require rerunning PSI. The former diagnostic-
 has been removed from Export; map export belongs to this results panel.
 
 - Drag and scroll to navigate; **Fit area** returns to the candidate extent.
+  Radar overlays support zoom up to level 23. Satellite tiles stop at level 18
+  and are magnified beyond that; this adds no imagery resolution.
 - Colour candidates by selection stage or amplitude dispersion. Filter points
   by stage and switch radar-grid lines on or off. Move over a point to inspect
   its D_A, stage and zero-based azimuth/range indices.

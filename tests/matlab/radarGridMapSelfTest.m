@@ -27,6 +27,10 @@ assert(isequal(source.candidates.stage,[1;2;3]));
 frame=phase_stamps_beta.radarGridMap(source,struct('bounds',[8.99 9.01 44.99 45.01]));
 assert(frame.visibleCount==3&&isequal(frame.stageCounts,[1 1 1]));
 assert(frame.azimuthStep==1&&frame.rangeStep==1);
+% At high zoom a cell remains visible even with no centre or candidate in view.
+edge=phase_stamps_beta.radarGridMap(source,struct('bounds',[9.00045 9.00055 45.00045 45.00055]));
+assert(edge.visibleCount==0&&~isempty(edge.lines));
+assert(edge.azimuthStep==1&&edge.rangeStep==1);
 % Grid lines run at half-pixel boundaries around zero-based pixel centres.
 assert(max(abs(frame.lines{1}(1,:)-[8.9995 44.9995]))<2e-6);
 % Missing geolocation breaks curves rather than drawing a line to (0,0).
