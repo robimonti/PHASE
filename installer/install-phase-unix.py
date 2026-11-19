@@ -350,7 +350,7 @@ def create_macos_app(stage: Path, prefix: Path) -> None:
     with (bundle / "Info.plist").open("wb") as stream:
         version = payload_version(stage / "engine")
         if version == "dev":
-            version = "v7.2.1"
+            version = "v7.2.2"
         plistlib.dump({
             "CFBundleName": "PHASE", "CFBundleDisplayName": "PHASE",
             "CFBundleIdentifier": "org.phaseinsar.phase", "CFBundleVersion": version[1:],
@@ -470,6 +470,8 @@ def install(args: argparse.Namespace) -> dict[str, str]:
             ], check=True)
             subprocess.run([str(staged_python),
                 str(stage / "engine" / "pythonScripts" / "reportDependencies.py")], check=True)
+            subprocess.run([str(staged_python), str(stage / "engine" /
+                "PHASE_Preprocessing/snap2stamps/bin/phase_python_dependencies.py")], check=True)
             installed_python = prefix / "venv" / "bin" / "python"
         write_launcher(stage / "launch-phase.sh", prefix, matlab, gpt, installed_python)
         if system == "macos":

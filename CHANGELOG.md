@@ -1,5 +1,16 @@
 # Changelog
 
+## v7.2.2 — 2026-11-19
+
+- Prepare missing Rasterio/NumPy packages in the actual screening interpreter
+  before analysis and validate WGS84 GeoTIFF writing and reading.
+- Check dependencies while preparing updates and on the first managed launch
+  after an update, including updates applied by older updater versions.
+- Verify GeoTIFF support in Windows, macOS and Linux installers, and isolate
+  bundled GDAL/PROJ databases from incompatible inherited environment paths.
+- Preserve optional screening retries when dependency downloads are unavailable;
+  align all application and installer versions.
+
 ## v7.2.1 — 2026-11-18
 
 - Resolve the quality-screening master from complete Sentinel-1 and CSK product

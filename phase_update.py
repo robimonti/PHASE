@@ -18,6 +18,7 @@ import re
 import shutil
 import stat
 import ssl
+import subprocess
 import sys
 import tempfile
 import urllib.request
@@ -194,6 +195,19 @@ def prepare(prefix: Path, installed: dict) -> dict:
         download_verified(release["url"], release["digest"], archive)
         engine = temporary / "engine"
         extract_engine(archive, engine, release["version"])
+        # Optional screening support must not prevent an engine update while
+        # offline. The screening entry point retries in its actual processing
+        # interpreter, including when this update is applied by an older updater.
+        dependency_warning = ""
+        probe = engine / "PHASE_Preprocessing/snap2stamps/bin/phase_python_dependencies.py"
+        if probe.is_file():
+            try:
+                result = subprocess.run([sys.executable, str(probe), "--ensure"],
+                                        capture_output=True, text=True, timeout=300)
+                if result.returncode:
+                    dependency_warning = (result.stdout + result.stderr)[-4000:]
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                dependency_warning = str(exc)
         staged = temporary / "ready"
         staged.mkdir()
         engine.rename(staged / "engine")
@@ -213,8 +227,11 @@ def prepare(prefix: Path, installed: dict) -> dict:
             if previous.exists():
                 previous.rename(pending)
             raise
-    return {"prepared": True, "version": release["version"],
-            "message": "Close MATLAB, then launch PHASE again to apply the update."}
+    result = {"prepared": True, "version": release["version"],
+              "message": "Close MATLAB, then launch PHASE again to apply the update."}
+    if dependency_warning:
+        result["dependencyWarning"] = dependency_warning
+    return result
 
 
 def apply(prefix: Path, installed: dict) -> dict:

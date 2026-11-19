@@ -37,6 +37,7 @@ classdef App < handle
                 phase_project.open(projectRoot);
             end
             obj.buildWindow();
+            phase_hub.ensurePythonDependencies(obj.InstallRoot,obj.UIFigure);
             if nargin >= 2 && ~isempty(projectRoot)
                 obj.openProject(projectRoot);
             else

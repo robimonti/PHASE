@@ -16,6 +16,15 @@ import re
 import subprocess
 import tempfile
 
+# Updates can introduce GeoTIFF exports into an older Python environment.
+# Bootstrap before importing NumPy and before performing any stack analysis.
+if __name__ == '__main__':
+    from phase_python_dependencies import ensure_geotiff
+    try:
+        ensure_geotiff()
+    except RuntimeError as exc:
+        raise SystemExit(f'Quality screening unavailable: {exc}')
+
 import numpy as np
 
 ALGORITHM = 'psi-screening-v1'

@@ -1637,7 +1637,7 @@ function Install-TriangleRuntime {
                 </Border>
                 <TextBlock FontFamily="JetBrains Mono, Cascadia Code, Consolas" FontSize="10" Foreground="#8C95B8">
                     <Run Text="PHASE" Foreground="#B0B8C8"/>
-                    <Run Text="  v7.2.1 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
+                    <Run Text="  v7.2.2 preview  " Foreground="#1A4FE0" FontWeight="SemiBold"/>
                     <Run Text="·  Roberto Monti · pyccino" Foreground="#8C95B8"/>
                 </TextBlock>
             </StackPanel>
@@ -2998,6 +2998,9 @@ function Invoke-FullSetup {
     $reportProbe = Join-Path $phaseDir 'pythonScripts\reportDependencies.py'
     $probe = Start-Process -FilePath $Script:State.PythonExe -ArgumentList ('"' + $reportProbe + '"'), '--ensure' -Wait -PassThru -NoNewWindow
     if ($probe.ExitCode -ne 0) { throw 'Python cannot embed Excel report images. Check the selected interpreter and dependency installation.' }
+    $qualityProbe = Join-Path $phaseDir 'PHASE_Preprocessing\snap2stamps\bin\phase_python_dependencies.py'
+    $probe = Start-Process -FilePath $Script:State.PythonExe -ArgumentList ('"' + $qualityProbe + '"'), '--ensure' -Wait -PassThru -NoNewWindow
+    if ($probe.ExitCode -ne 0) { throw 'Python cannot write GeoTIFF quality maps. Check the selected interpreter and dependency installation.' }
     Update-Task -Key 'clone-phase' -Status 'done'
     Add-SetupLog "[OK] PHASE cloned at $phaseDir"
 

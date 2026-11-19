@@ -1,4 +1,15 @@
-# PHASE v7.2.1
+# PHASE v7.2.2
+
+- Install missing Rasterio/NumPy support automatically in the interpreter used by PSI quality screening, before processing the stack. Verify WGS84 GeoTIFF compression, writing and reading rather than only checking imports.
+- Prepare dependencies during update downloads with the new updater. On the first managed launch of each release, complete the check and installation even when an older updater applied the package. Screening also rechecks a different Python interpreter selected for a project.
+- Validate GeoTIFF support in fresh Windows, macOS and Linux installations. Use wheel-bundled GDAL/PROJ databases within the Python process when MATLAB or Conda supplies incompatible environment paths.
+- Keep PHASE usable if optional dependencies cannot be downloaded; report the failure and retry on the next launch or quality-map build. Align app and installer versions to 7.2.2.
+
+Update PHASE, close MATLAB and relaunch PHASE from its application shortcut. The first launch checks Python support and installs missing packages; keep the internet connection active and wait for the check to finish. Confirm **v7.2.2**, then choose **Preprocessing → PSI suitability → Build quality map**. No manual pip command or preprocessing rerun is required.
+
+The macOS DMG uses ad-hoc signing and is not notarized.
+
+## PHASE v7.2.1
 
 - Fix quality screening after automatic master selection: read the actual Sentinel-1 or CSK master product path from the preprocessing configuration, including Windows paths, instead of using a stale saved date.
 - Resolve older projects from a retained master or one complete export. Refuse ambiguous exports, identify missing input paths clearly and avoid creating empty export folders when inputs are missing.
